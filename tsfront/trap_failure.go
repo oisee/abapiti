@@ -233,9 +233,10 @@ func (l *lowerer) repairFailedBodies() {
 				}
 			}
 		}
+		verifyBody := hir.NewBodyVerifier(l.out)
 		for _, entry := range entries {
 			m := entry.m
-			if errors := hir.VerifyBody(l.out, entry.c, m); len(errors) > 0 {
+			if errors := verifyBody(entry.c, m); len(errors) > 0 {
 				m.Body = failureBody(m.Node, fmt.Sprintf("%s: HIR verification: %s", m.Source, errors[0]))
 				changed = true
 			}

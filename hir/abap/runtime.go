@@ -27,6 +27,9 @@ func (e *emitter) runtime(t hir.Type) {
 				s = liveArrayMethod(n, s)
 			}
 		}
+		if t.Kind == hir.OrderedMap {
+			s = e.mapViewMethod(t, n, s)
+		}
 		impl.WriteString("METHOD " + n + ".\n" + s + "ENDMETHOD.\n")
 	}
 	switch t.Kind {
@@ -139,6 +142,7 @@ func (e *emitter) runtime(t hir.Type) {
 		}
 		method("get", code+"ENDIF.\n")
 	case hir.OrderedMap, hir.OrderedSet:
+		line(e.mapViewDefinition(t))
 		if t.Kind == hir.OrderedMap {
 			e.chaiMaps = append(e.chaiMaps, t)
 		}
@@ -174,6 +178,12 @@ func (e *emitter) runtime(t hir.Type) {
 		}
 		line("METHODS " + op + " IMPORTING p0 TYPE " + key + params + " RETURNING VALUE(result) TYPE REF TO " + name + ".")
 		method(op, "READ TABLE entries WITH KEY "+lookupKey+" = p0 ASSIGNING FIELD-SYMBOL(<row>).\nIF sy-subrc = 0.\n<row>-v = "+val+".\nELSE.\nAPPEND VALUE #( k = p0 v = "+val+" ) TO entries.\nENDIF.\nresult = me.\n")
+		if t.Kind == hir.OrderedMap && e.types["runtime.mapView"] && t.Args[0].Kind == hir.String {
+			line("METHODS delete IMPORTING p0 TYPE string RETURNING VALUE(result) TYPE abap_bool.")
+			method("delete", "DELETE TABLE entries WITH TABLE KEY by_k COMPONENTS k = p0.\nresult = xsdbool( sy-subrc = 0 ).\n")
+			line("METHODS clear.")
+			method("clear", "CLEAR entries.\n")
+		}
 		if t.Kind == hir.OrderedMap {
 			opt := e.typ(hir.T(hir.Optional, value))
 			line("METHODS get IMPORTING p0 TYPE " + key + " RETURNING VALUE(result) TYPE " + opt + ".")
@@ -218,6 +228,9 @@ func (e *emitter) runtime(t hir.Type) {
 		method(op, "result = NEW #( ).\nLOOP AT entries INTO DATA(row).\nAPPEND row-k TO result->items.\nENDLOOP.\n")
 	}
 	e.files[name+".clas.abap"] = "CLASS " + name + " DEFINITION PUBLIC CREATE PUBLIC.\nPUBLIC SECTION.\n" + def.String() + "PROTECTED SECTION.\nPRIVATE SECTION.\nENDCLASS.\nCLASS " + name + " IMPLEMENTATION.\n" + impl.String() + "ENDCLASS.\n"
+	if extra := e.mapStorageImplementation(t); extra != "" {
+		e.files[name+".clas.abap"] = strings.TrimSuffix(e.files[name+".clas.abap"], "ENDCLASS.\n") + extra + "ENDCLASS.\n"
+	}
 	e.liveRecordMapRuntime(t)
 	if t.Kind == hir.Array && e.arrayViews {
 		e.liveArrayRuntime(t)

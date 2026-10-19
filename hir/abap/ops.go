@@ -7,6 +7,7 @@ import (
 )
 
 var supportedOps = map[string]bool{
+	"map.checkedGet": true, "map.checkedSet": true, "map.checkedValues": true,
 	"string.splitRegex": true, "string.padStart": true, "string.parseFloatNumber": true, "string.toNumber": true,
 	"string.sha1Hex": true, "xml.parseWithErrors": true,
 	"json5.parse": true,
@@ -23,9 +24,10 @@ var supportedOps = map[string]bool{
 	"json.indent":          true,
 	"dynamic.keys":         true,
 	"dynamic.classView":    true,
-	"dynamic.asObject":     true,
-	"dynamic.arrayView":    true,
-	"object.get":           true, "object.hasOwn": true, "object.has": true, "xml.validate": true,
+	"dynamic.mapView":      true, "map.markJS": true,
+	"dynamic.asObject":  true,
+	"dynamic.arrayView": true,
+	"object.get":        true, "object.hasOwn": true, "object.has": true, "xml.validate": true,
 	"regexp.exec": true, "regexp.boxMatch": true, "regexp.lastIndex": true, "regexp.setLastIndex": true,
 	"string.repeat": true, "string.match": true, "array.matchIndex": true,
 	"string.replaceRegex":     true,
@@ -67,7 +69,7 @@ var unsupportedOps = map[string]bool{
 	// Number(boxed) needs the dynamic ToPrimitive ABI; ABAP refuses at the call.
 	"dynamic.toNumber": true,
 	// JS Map/Set tests on a tagged value need the dynamic collection ABI.
-	"dynamic.isMap": true, "dynamic.isSet": true, "map.markJS": true,
+	"dynamic.isMap": true, "dynamic.isSet": true,
 	// JSON.stringify replacer callbacks need a per-property callback ABI.
 	"json.stringifyReplacer": true,
 }

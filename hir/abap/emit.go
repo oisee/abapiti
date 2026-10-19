@@ -159,6 +159,11 @@ func emitNamed(p *hir.Program, refusals *[]error, assertionOwners map[string]boo
 		if x.Type.Kind == hir.Dynamic && x.X != nil && x.X.Type.Kind == hir.OrderedMap && x.X.Type.Args[0].Kind == hir.String {
 			mapViews = true
 		}
+		if x.Kind == hir.RuntimeOp && x.Op == "dynamic.mapView" {
+			e.types["runtime.mapView"] = true
+			e.arrayViews = true
+			mapViews = true
+		}
 		if x.Kind == hir.RuntimeOp && x.Op == "dynamic.keys" {
 			e.ownKeysUsed = true
 		}
@@ -205,6 +210,9 @@ func emitNamed(p *hir.Program, refusals *[]error, assertionOwners map[string]boo
 	}
 	if e.arrayViews || mapViews {
 		e.liveRuntime()
+		if e.types["runtime.mapView"] {
+			e.mapStorageRuntime()
+		}
 	}
 	e.scanUsage()
 	if e.ownKeysUsed {
@@ -2076,6 +2084,11 @@ func tableIndex(x *hir.Expr) (string, bool) {
 }
 
 func (b *body) runtimeOp(x *hir.Expr, n string) {
+	if base := hir.CheckedMapBaseOp(x.Op); base != x.Op {
+		copy := *x
+		copy.Op = base
+		x = &copy
+	}
 	if x.Op == "map.set" && x.X.Type.Args[0].Kind == hir.Dynamic {
 		b.e.refuse(fmt.Errorf("node %d (%s): ABAP boxed Map writes require value-based SameValueZero", x.ID, x.Source))
 		return
@@ -2824,6 +2837,13 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 		b.line("ENDIF.")
 		b.line("ENDIF.")
 		return
+	case "dynamic.mapView":
+		b.dynamicMapView(x, n, a)
+		return
+	case "map.markJS":
+		b.line(a + "->js_map = abap_true.")
+		b.line(n + " = " + a + ".")
+		return
 	case "dynamic.isNumber", "dynamic.asNumber", "dynamic.isString", "dynamic.isFunction", "dynamic.asString", "dynamic.asClassValue", "dynamic.asRef":
 		if x.Op == "dynamic.asRef" && x.Owner != "" {
 			view := b.e.structuralUnionProjection(hir.Type{Kind: hir.InterfaceRef, Name: x.Owner}, x.Type.Name)
@@ -2933,6 +2953,14 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 		if b.e.arrayViews {
 			b.line(a + "->save( ).")
 		}
+		return
+	}
+	if x.Op == "map.delete" && b.e.types["runtime.mapView"] && x.X.Type.Args[0].Kind == hir.String {
+		b.line(n + " = " + a + "->delete( " + args[0] + " ).")
+		return
+	}
+	if x.Op == "map.clear" && b.e.types["runtime.mapView"] && x.X.Type.Args[0].Kind == hir.String {
+		b.line(a + "->clear( ).")
 		return
 	}
 	if x.Op == "map.delete" {

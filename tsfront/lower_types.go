@@ -184,9 +184,9 @@ func (l *lowerer) mapTypeReference(n *ast.Node) hir.Type {
 	case "ReadonlySet":
 		return hir.T(hir.OrderedSet, arg(0))
 	case "Map":
-		return hir.T(hir.OrderedMap, arg(0), arg(1))
+		return jsMapType(arg(0), arg(1))
 	case "ReadonlyMap":
-		return hir.T(hir.OrderedMap, arg(0), arg(1))
+		return jsMapType(arg(0), arg(1))
 	case "Array", "ReadonlyArray":
 		return hir.T(hir.Array, arg(0))
 	case "Readonly":
@@ -701,7 +701,7 @@ func (l *lowerer) mapCheckerType(n *ast.Node, t *checker.Type) (mapped hir.Type)
 				case t.Symbol() != nil && (t.Symbol().Name == "Set" || t.Symbol().Name == "ReadonlySet"):
 					return hir.T(hir.OrderedSet, args...)
 				case t.Symbol() != nil && (t.Symbol().Name == "Map" || t.Symbol().Name == "ReadonlyMap"):
-					return hir.T(hir.OrderedMap, args...)
+					return jsMapType(args[0], args[1])
 				default:
 					return hir.T(hir.Array, args...)
 				}
@@ -1500,4 +1500,10 @@ func (l *lowerer) pickedMethodsSource(n *ast.Node, t *checker.Type) (hir.Type, b
 		return hir.Type{}, false
 	}
 	return typ, true
+}
+
+func jsMapType(key, value hir.Type) hir.Type {
+	t := hir.T(hir.OrderedMap, key, value)
+	t.JSMap = true
+	return t
 }

@@ -85,10 +85,10 @@ func emitPackage(p *hir.Program, pkg string, profile bool) (map[string]string, *
 					e.recordDeletion = true
 					e.extraRuntimeKeys = true
 				}
-				if x.Kind == hir.RuntimeOp && (x.Op == "dynamic.asObject" || x.Op == "dynamic.keys" || x.Op == "dynamic.arrayView" || x.Op == "dynamic.asRef" && x.Type.Kind == hir.Array && (x.Type.Args[0].Kind == hir.Dynamic || p.StructuralArrayUnion(x.Type))) {
+				if x.Kind == hir.RuntimeOp && (x.Op == "dynamic.mapView" || x.Op == "dynamic.asObject" || x.Op == "dynamic.keys" || x.Op == "dynamic.arrayView" || x.Op == "dynamic.asRef" && x.Type.Kind == hir.Array && (x.Type.Args[0].Kind == hir.Dynamic || p.StructuralArrayUnion(x.Type))) {
 					e.usesLiveArrays = true
 				}
-				if x.Kind == hir.RuntimeOp && (x.Op == "dynamic.isMap" || x.Op == "dynamic.isSet" || x.Op == "map.markJS") {
+				if x.Kind == hir.RuntimeOp && (x.Op == "dynamic.isMap" || x.Op == "dynamic.isSet" || x.Op == "map.markJS" || x.Op == "dynamic.mapView") {
 					e.collectionProbe = true // before record allocations are emitted
 				}
 				if x.Kind == hir.RuntimeOp && (x.Op == "dynamic.keys" ||
@@ -183,6 +183,9 @@ func emitPackage(p *hir.Program, pkg string, profile bool) (map[string]string, *
 	}
 	if e.usesMapViews() {
 		runtime = mapViewRuntime(runtime)
+		if _, ok := hir.UsedRuntimeOps(p)["dynamic.mapView"]; ok {
+			runtime += dynamicMapStorageSource
+		}
 	}
 	if e.recordString {
 		runtime += recordStringSource
@@ -207,7 +210,7 @@ func emitPackage(p *hir.Program, pkg string, profile bool) (map[string]string, *
 			runtime += recordDeletionSource
 		}
 	}
-	if e.liveStorage() {
+	if e.liveStorage() || e.usesMapViews() {
 		runtime = strings.Replace(runtime, "return a == b\n}", "return dynEqual(box(a), box(b))\n}", 1)
 		runtime = strings.Replace(runtime, "return equal(a.Value, b.Value)", "return a.Value == b.Value", -1)
 	}
@@ -361,6 +364,7 @@ type emitter struct {
 	usesArrayDeletion bool
 	recordString      bool
 	mapViews          bool
+	dynamicMaps       bool
 	mapViewsKnown     bool
 	nonfiniteNumbers  bool
 	toNumber          bool

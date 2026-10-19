@@ -9,7 +9,11 @@ import (
 
 func (e *emitter) usesMapViews() bool {
 	if !e.mapViewsKnown {
-		_, e.mapViews = hir.UsedRuntimeOps(e.p)["map.view"]
+		ops := hir.UsedRuntimeOps(e.p)
+		_, a := ops["map.view"]
+		_, b := ops["dynamic.mapView"]
+		e.mapViews = a || b
+		e.dynamicMaps = b
 		e.mapViewsKnown = true
 	}
 	return e.mapViews
@@ -47,7 +51,7 @@ func (b *body) mapView(x *hir.Expr) string {
 // Every access delegates to original storage; boxing unwraps the proxy so
 // identity, keys, and subsequent writes through the original alias stay live.
 func mapViewRuntime(source string) string {
-	source = strings.Replace(source, "type orderedMap[K comparable, V any] struct {", "type orderedMap[K comparable, V any] struct { proxy *mapProxy[K,V];", 1)
+	source = strings.Replace(source, "type orderedMap[K comparable, V any] struct {", "type orderedMap[K comparable, V any] struct { proxy *mapProxy[K,V];decode func(*dynamic)V;", 1)
 	guards := map[string]string{
 		"set(k K, v V) *orderedMap[K, V]": "if m.proxy!=nil {m.proxy.set(k,v);return m}",
 		"get(k K) optional[V]":            "if m.proxy!=nil {return m.proxy.get(k)}",
@@ -105,3 +109,31 @@ func storageIdentityRuntime(source string) string {
 	source = strings.Replace(source, "func setKey(v any) any {", "func setKey(v any) any {if s,ok:=v.(interface{dynamicSource()*dynamic});ok && s.dynamicSource()!=nil {return setKey(s.dynamicSource().Value)};", 1)
 	return source
 }
+
+// Erased Maps use a branded storage protocol, independent of value generics.
+// The proxy retains source identity and delegates each read to current storage.
+func (b *body) dynamicMapView(x *hir.Expr) string {
+	e := b.e
+	t := e.typ(x.Type)
+	v := e.typ(x.Type.Args[1])
+	decode := e.viewValue(x.Type.Args[1], "value")
+	return fmt.Sprintf(`func(d *dynamic) %s {
+ if d==nil || d.Tag!=2 {panic(newRangeFault())}
+ src,ok:=d.Value.(stringMapStorage);if !ok || !src.stringMapBrand() {panic(newRangeFault())}
+ return &%s{jsMap:true,proxy:&mapProxy[jsString,%s]{source:d,
+ get:func(k jsString) optional[%s] {value,has:=src.stringMapGet(k);if !has{return optional[%s]{}};return present(%s)},
+ set:func(k jsString,v %s){src.stringMapSet(k,mapValueBox(v))},has:src.stringMapHas,remove:src.stringMapDelete,keys:src.stringMapKeys,size:src.mapSize,insertions:src.mapInsertions}}
+ }(%s)`, t, strings.TrimPrefix(t, "*"), v, v, v, decode, v, b.expr(x.X))
+}
+
+const dynamicMapStorageSource = `
+func mapValueBox(v any)*dynamic {if x,ok:=v.(interface{mapValueBox()*dynamic});ok{return x.mapValueBox()};return box(v)}
+func(o optional[T])mapValueBox()*dynamic{if !o.Has{return nil};return mapValueBox(o.Value)}
+type stringMapStorage interface {stringMapBrand()bool;stringMapGet(jsString)(*dynamic,bool);stringMapSet(jsString,*dynamic);stringMapHas(jsString)bool;stringMapDelete(jsString)bool;stringMapKeys()*array[jsString];mapSize()int32;mapInsertions()int32}
+func(m *orderedMap[K,V]) stringMapBrand()bool {var k K;_,ok:=any(k).(jsString);if m==nil || !ok{return false};if m.proxy!=nil {src,ok:=m.proxy.source.Value.(stringMapStorage);return ok && src.stringMapBrand()};return m.jsMap}
+func(m *orderedMap[K,V]) stringMapGet(k jsString)(*dynamic,bool){key,ok:=any(k).(K);if !ok{panic(newRangeFault())};v:=m.get(key);if !v.Has{return nil,false};return mapValueBox(v.Value),true}
+func(m *orderedMap[K,V]) stringMapSet(k jsString,v *dynamic){key,ok:=any(k).(K);if !ok{panic(newRangeFault())};if m.decode!=nil{m.set(key,m.decode(v));return};m.set(key,unboxValue[V](v))}
+func(m *orderedMap[K,V]) stringMapHas(k jsString)bool{key,ok:=any(k).(K);if !ok{panic(newRangeFault())};return m.has(key)}
+func(m *orderedMap[K,V]) stringMapDelete(k jsString)bool{key,ok:=any(k).(K);if !ok{panic(newRangeFault())};return m.delete(key)}
+func(m *orderedMap[K,V]) stringMapKeys()*array[jsString]{out:=&array[jsString]{};for _,k:=range m.keys().Items{key,ok:=any(k).(jsString);if !ok{panic(newRangeFault())};out.push(key)};return out}
+`

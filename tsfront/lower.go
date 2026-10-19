@@ -434,6 +434,7 @@ func (p *Program) lowerWithOptions(files []string, registry *overrides.Registry,
 	if l.unprunedFeatures {
 		l.completeStructuralUnionMembers()
 	}
+	hir.SealCheckedMapAccess(l.out)
 	if options.TrapOnFailure {
 		l.repairFailedBodies()
 	}

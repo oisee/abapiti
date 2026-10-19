@@ -45,6 +45,9 @@ var RuntimeSpecs = map[string]RuntimeSpec{
 	"dynamic.keys":              {Dynamic, 0, false},
 	"dynamic.spread":            {Dynamic, 0, false},
 	"dynamic.isMap":             {Dynamic, 0, false},
+	"map.checkedGet":            {OrderedMap, 1, false},
+	"map.checkedSet":            {OrderedMap, 2, true},
+	"map.checkedValues":         {OrderedMap, 0, false},
 	"map.markJS":                {OrderedMap, 0, true},
 	"dynamic.isSet":             {Dynamic, 0, false},
 	"dynamic.get":               {Dynamic, 1, false},
@@ -126,6 +129,7 @@ var SpecialOps = map[string]bool{
 	"dynamic.of":              true, // any value -> Dynamic (tagged box)
 	"dynamic.asRef":           true,
 	"dynamic.asObject":        true, // checked broad object carrier, never a nominal class projection
+	"dynamic.mapView":         true, // branded live string-key Map, checked values on access
 	"dynamic.classView":       true, // live structural storage, never a nominal assertion
 	"dynamic.arrayView":       true, // checked live primitive storage
 	"dynamic.materialize":     true, // Dynamic -> a class or interface reference
@@ -294,7 +298,7 @@ func RuntimeSignature(op string, t Type) ([]Type, Type, bool) {
 		return nil, optionalOf(t.Args[0]), true
 	case "set.delete", "map.delete":
 		return []Type{t.Args[0]}, b, true
-	case "map.values":
+	case "map.values", "map.checkedValues":
 		return nil, T(Array, t.Args[1]), true
 	case "string.at":
 		// Absent when the index is out of range (JavaScript s[i] === undefined).
@@ -323,9 +327,9 @@ func RuntimeSignature(op string, t Type) ([]Type, Type, bool) {
 			return nil, Type{}, false
 		}
 		return []Type{T(Optional, T(String))}, T(String), true
-	case "map.set":
+	case "map.set", "map.checkedSet":
 		return []Type{t.Args[0], t.Args[1]}, t, true
-	case "map.get":
+	case "map.get", "map.checkedGet":
 		// get observes a value, not membership: stored undefined and a missing
 		// key both yield undefined. map.has keeps membership independent.
 		return []Type{t.Args[0]}, optionalOf(t.Args[1]), true

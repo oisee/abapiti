@@ -37,6 +37,10 @@ type Type struct {
 	Kind Kind
 	Name string
 	Args []Type
+	// JSMap retains the library Map/ReadonlyMap origin for erased conversion.
+	// Records share its storage layout and equality, but need a different checked
+	// conversion operation. This flag grants no runtime Map brand.
+	JSMap bool `json:",omitempty"`
 }
 
 func T(k Kind, args ...Type) Type { return Type{Kind: k, Args: args} }

@@ -2978,33 +2978,9 @@ func (l *lowerer) instanceOf(n *ast.Node) *hir.Expr {
 	return nil
 }
 
-// usesMapProbe reports (syntactically, once per program) whether a source
-// file contains `x instanceof Map`.
-func (l *lowerer) usesMapProbe() bool {
-	p := l.prog
-	p.mapProbeOnce.Do(func() {
-		var visit func(*ast.Node) bool
-		visit = func(n *ast.Node) bool {
-			if n.Kind == ast.KindBinaryExpression {
-				b := n.AsBinaryExpression()
-				if b.OperatorToken.Kind == ast.KindInstanceOfKeyword && b.Right.Kind == ast.KindIdentifier && b.Right.Text() == "Map" {
-					p.mapProbe = true
-					return true
-				}
-			}
-			return n.ForEachChild(visit)
-		}
-		for _, f := range p.prog.SourceFiles() {
-			if !f.IsDeclarationFile && visit(f.AsNode()) {
-				return
-			}
-		}
-	})
-	return p.mapProbe
-}
-
 // sealJSMap marks the value of a `new Map(...)` expression as a JavaScript
-// Map. Records share the ordered-map storage; only this marker, set by the
+// Map, independently of whether this program uses instanceof. Records share
+// the ordered-map storage; only this marker, set by the
 // Map constructor and nothing else, makes `instanceof Map` true at run time.
 func (l *lowerer) sealJSMap(n *ast.Node, x *hir.Expr) *hir.Expr {
 	if x == nil || !l.unprunedFeatures || x.Type.Kind != hir.OrderedMap {
@@ -3014,7 +2990,7 @@ func (l *lowerer) sealJSMap(n *ast.Node, x *hir.Expr) *hir.Expr {
 	if callee == nil || callee.Kind != ast.KindIdentifier || callee.Text() != "Map" {
 		return x
 	}
-	if sym := l.resolve(callee); sym == nil || !l.librarySymbol(sym) || !l.usesMapProbe() {
+	if sym := l.resolve(callee); sym == nil || !l.librarySymbol(sym) {
 		return x
 	}
 	return l.rtOp("map.markJS", x, x.Type)

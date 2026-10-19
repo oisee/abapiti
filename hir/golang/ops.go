@@ -10,7 +10,9 @@ import (
 )
 
 var supportedOps = map[string]bool{
+	"map.checkedGet": true, "map.checkedSet": true, "map.checkedValues": true,
 	"union.declarations": true,
+	"dynamic.mapView":    true,
 	"map.view":           true, "set.view": true, "union.check": true, "union.admit": true,
 	"union.widen":            true,
 	"union.project":          true,
@@ -81,6 +83,11 @@ func RuntimeOps() (supported, unsupported []string) {
 }
 
 func (b *body) runtime(x *hir.Expr) string {
+	if base := hir.CheckedMapBaseOp(x.Op); base != x.Op {
+		copy := *x
+		copy.Op = base
+		x = &copy
+	}
 	if x.Op == "set.view" {
 		return b.expr(x.X)
 	}
@@ -407,6 +414,11 @@ func (b *body) runtime(x *hir.Expr) string {
 		if b.e.directCollectionKey(x.X.Type.Args[0]) {
 			code = "markJSFastMap(" + a + ")"
 		}
+		if b.e.usesMapViews() && b.e.dynamicMaps {
+			value := x.Type.Args[1]
+			decoder := b.e.viewValue(value, "d")
+			code = "func(m " + b.e.typ(x.Type) + ") " + b.e.typ(x.Type) + " {m.decode=func(d *dynamic) " + b.e.typ(value) + " {return " + decoder + "};return m}(" + code + ")"
+		}
 		b.e.collectionProbe = true
 	case "dynamic.isMap", "dynamic.isSet":
 		kind := "orderedMap["
@@ -425,6 +437,8 @@ func (b *body) runtime(x *hir.Expr) string {
 		code = b.unionOperation(x, a)
 	case "dynamic.asObject":
 		code = "dynObject(" + a + ")"
+	case "dynamic.mapView":
+		code = b.dynamicMapView(x)
 	case "dynamic.classView":
 		code = b.e.liveView(x.Type) + "(" + a + ")"
 	case "dynamic.arrayView":

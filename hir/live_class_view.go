@@ -36,6 +36,7 @@ func SealLiveClassViewBoundary(p *Program) {
 
 func classViewTargets(p *Program) map[string]bool {
 	out := map[string]bool{}
+	_, dynamicMaps := UsedRuntimeOps(p)["dynamic.mapView"]
 	for _, u := range p.Unions {
 		if u != nil {
 			for _, a := range u.Alternatives {
@@ -49,12 +50,36 @@ func classViewTargets(p *Program) map[string]bool {
 		if x == nil {
 			return
 		}
+		if dynamicMaps && x.Kind == RuntimeOp && x.Op == "map.markJS" && len(x.Type.Args) == 2 {
+			t := x.Type.Args[1]
+			for t.Kind == Optional || t.Kind == Array {
+				t = t.Args[0]
+			}
+			out[t.Name] = true
+			if t.Kind == InterfaceRef {
+				for _, m := range p.StructuralUnion(t.Name) {
+					out[m.Type.Name] = true
+				}
+			}
+		}
 		if x.Kind == RuntimeOp && x.Op == "set.view" && len(x.Type.Args) == 1 {
 			out[x.Type.Args[0].Name] = true
 		}
 		if x.Kind == RuntimeOp && x.Op == "map.view" {
 			out[x.Type.Args[1].Name] = true
 			out[x.X.Type.Args[1].Name] = true
+		}
+		if x.Kind == RuntimeOp && x.Op == "dynamic.mapView" {
+			t := x.Type.Args[1]
+			for t.Kind == Optional || t.Kind == Array {
+				t = t.Args[0]
+			}
+			out[t.Name] = true
+			if t.Kind == InterfaceRef {
+				for _, m := range p.StructuralUnion(t.Name) {
+					out[m.Type.Name] = true
+				}
+			}
 		}
 		if x.Kind == RuntimeOp && x.Op == "dynamic.classView" {
 			out[x.Type.Name] = true

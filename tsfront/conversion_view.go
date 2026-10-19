@@ -7,6 +7,9 @@ import "github.com/oisee/abapiti/hir"
 // a view never runs a constructor or invents prototype methods.
 func (l *lowerer) dynamicReference(x *hir.Expr, target hir.Type) *hir.Expr {
 	op := "dynamic.asRef"
+	if l.unprunedFeatures && target.Kind == hir.OrderedMap && target.JSMap && target.Args[0].Kind == hir.String {
+		op = "dynamic.mapView"
+	}
 	if l.unprunedFeatures && target.Equal(hir.Ref(hir.RootObject)) {
 		op = "dynamic.asObject"
 	}

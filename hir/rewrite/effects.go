@@ -42,6 +42,9 @@ var RuntimeEffects = map[string]OpEffect{
 	"bigint.toString":        {Reads: OpReads{Receiver: true}, Writes: "None", Allocates: true, MayRaise: "None", Aliases: "None"},
 	"bigint.compare":         {Reads: OpReads{Receiver: true, Args: true}, Writes: "None", MayRaise: "None", Aliases: "None"},
 	"dynamic.asBigInt":       {Reads: OpReads{Receiver: true}, Writes: "None", MayRaise: "Catchable", Aliases: "None", Conservative: "Go uses a located refusal for a wrong tag; ABAP raises a cast exception."},
+	"map.checkedGet":         {Reads: OpReads{Receiver: true, Args: true}, Writes: "None", Allocates: true, MayRaise: "Catchable", Aliases: "Receiver", Conservative: "Lazy checked value conversion over live Map storage; unsupported value domains can also trap."},
+	"map.checkedValues":      {Reads: OpReads{Receiver: true}, Writes: "None", Allocates: true, MayRaise: "Catchable", Aliases: "Receiver", Conservative: "Snapshot iterator values retain live element references; checked conversions can also trap."},
+	"map.checkedSet":         {Reads: OpReads{Receiver: true, Args: true}, Writes: "Receiver", Allocates: true, MayRaise: "Catchable", Aliases: "Receiver", Conservative: "Checks the original typed storage's write ABI; unsupported structural writes can also trap."},
 	"map.view":               {Reads: OpReads{Receiver: true}, Writes: "None", Allocates: true, MayRaise: "Catchable", Aliases: "Receiver"},
 	"set.view":               {Reads: OpReads{Receiver: true}, Writes: "None", MayRaise: "None", Aliases: "Receiver", Conservative: "Reference Set keys share erased storage; checked element views are applied on reads."},
 	"host.stderrWrite":       {Reads: OpReads{Receiver: true}, Writes: "Global", MayRaise: "None", Aliases: "None"},
@@ -95,6 +98,7 @@ var RuntimeEffects = map[string]OpEffect{
 	"dynamic.isSet":          {Reads: OpReads{Receiver: true}, Writes: "None", MayRaise: "None", Aliases: "None"},
 	"map.markJS":             {Reads: OpReads{Receiver: true}, Writes: "Receiver", MayRaise: "None", Aliases: "Receiver"},
 	"dynamic.asObject":       {Reads: OpReads{Receiver: true}, Writes: "None", Allocates: false, MayRaise: "Catchable", Aliases: "Receiver", Conservative: "Checks a non-null object/reference tag and retains original storage; Go host range refusal and ABAP cast error do not invent source payloads."},
+	"dynamic.mapView":        {Reads: OpReads{Receiver: true}, Writes: "None", Allocates: true, MayRaise: "Catchable", Aliases: "Receiver", Conservative: "Checks Map brand and string-key storage without reading entries; live value conversion occurs only on subsequent reads. Host refusal does not invent source exception payloads."},
 	"dynamic.classView":      {Reads: OpReads{Receiver: true}, Writes: "None", Allocates: true, MayRaise: "Trap", Aliases: "Receiver", Conservative: "A class view aliases structural storage; unsupported prototype behaviour refuses."},
 	"dynamic.arrayView":      {Reads: OpReads{Receiver: true}, Writes: "None", Allocates: true, MayRaise: "Trap", Aliases: "Receiver", Conservative: "A typed array view aliases original storage and checks each element read."},
 	// Erased array references can allocate live views of the same storage.

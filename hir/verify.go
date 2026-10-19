@@ -14,25 +14,40 @@ type Error struct {
 func (e Error) Error() string { return fmt.Sprintf("node %d (%s): %s", e.ID, e.Source, e.Message) }
 
 type verifier struct {
-	p          *Program
-	errors     []error
-	classes    map[string]*Class
-	interfaces map[string]*Interface
+	p           *Program
+	errors      []error
+	classes     map[string]*Class
+	interfaces  map[string]*Interface
+	checkedMaps map[string]bool
 }
 
 // VerifyBody checks one body against all declarations in p. This is also used
 // by opt-in partial lowering to attribute failures without relying on node IDs
 // (synthetic operands may have ID zero).
-func VerifyBody(p *Program, c *Class, m *Method) []error {
-	v := &verifier{p: p, classes: map[string]*Class{}, interfaces: map[string]*Interface{}}
+func VerifyBody(p *Program, c *Class, m *Method) []error { return NewBodyVerifier(p)(c, m) }
+
+// NewBodyVerifier shares declaration and erased-Map layout discovery across
+// bodies of the same program. Replacing rejected bodies with traps is safe;
+// adding declarations or conversion paths requires a new verifier.
+func NewBodyVerifier(p *Program) func(*Class, *Method) []error {
+	classes := map[string]*Class{}
+	interfaces := map[string]*Interface{}
 	for _, x := range p.Classes {
-		v.classes[x.Name] = x
+		if x != nil {
+			classes[x.Name] = x
+		}
 	}
 	for _, x := range p.Interfaces {
-		v.interfaces[x.Name] = x
+		if x != nil {
+			interfaces[x.Name] = x
+		}
 	}
-	v.body(c, m)
-	return v.errors
+	checked := CheckedMapLayouts(p)
+	return func(c *Class, m *Method) []error {
+		v := &verifier{p: p, classes: classes, interfaces: interfaces, checkedMaps: checked}
+		v.body(c, m)
+		return v.errors
+	}
 }
 
 func Verify(p *Program) []error {
@@ -61,6 +76,7 @@ func Verify(p *Program) []error {
 		}
 		v.interfaces[i.Name] = i
 	}
+	v.checkedMaps = CheckedMapLayouts(p)
 	v.unionDeclarations()
 	v.structuralUnions()
 	for _, c := range p.Classes {
@@ -195,6 +211,9 @@ const classConstructor = "class_constructor"
 var RootObject = "builtin.object"
 
 func (v *verifier) typ(n Node, t Type) {
+	if t.JSMap && t.Kind != OrderedMap {
+		v.fail(n, "JSMap conversion origin requires ordered-map storage")
+	}
 	arity := 0
 	switch t.Kind {
 	case UnionRef:
@@ -954,6 +973,9 @@ func (v *verifier) expr(c *Class, m *Method, e *Expr, env map[string]Type) Type 
 			v.specialOp(e, a, check, args, eq, t)
 			break
 		}
+		if (e.Op == "map.get" || e.Op == "map.set" || e.Op == "map.values") && v.checkedMaps[a.String()] {
+			v.fail(e.Node, "erased Map storage requires an explicit checked access operation")
+		}
 		ps, r, ok := RuntimeSignature(e.Op, a)
 		if !ok {
 			v.fail(e.Node, "unsupported runtime op "+e.Op+" on "+a.String())
@@ -1060,6 +1082,11 @@ func (v *verifier) specialOp(e *Expr, a Type, check func(*Expr) Type, args func(
 	case "dynamic.asObject":
 		if a.Kind != Dynamic || !t.Equal(Ref(RootObject)) || e.Owner != "" || e.Name != "" {
 			v.fail(e.Node, "dynamic.asObject needs Dynamic in and the unqualified object root out")
+		}
+		args(nil)
+	case "dynamic.mapView":
+		if a.Kind != Dynamic || t.Kind != OrderedMap || len(t.Args) != 2 || t.Args[0].Kind != String || t.Name != "" || e.Owner != "" || e.Name != "" {
+			v.fail(e.Node, "dynamic.mapView needs Dynamic in and an unqualified string-key Map out")
 		}
 		args(nil)
 	case "dynamic.classView":

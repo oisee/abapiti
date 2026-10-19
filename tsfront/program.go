@@ -14,7 +14,6 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
-	"sync"
 
 	"github.com/oisee/abapiti/internal/tsgo/ast"
 	"github.com/oisee/abapiti/internal/tsgo/bundled"
@@ -35,10 +34,6 @@ type Program struct {
 	// packageNames names files of separate package checkouts outside
 	// configDir by their path inside the package (see packageSourceNames).
 	packageNames map[string]string
-	// mapProbe caches whether any source tests `x instanceof Map`; only then
-	// do Map constructions carry the runtime JS Map marker.
-	mapProbeOnce sync.Once
-	mapProbe     bool
 }
 
 // Load builds a Program for the project described by tsconfigPath. The
