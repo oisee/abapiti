@@ -2777,7 +2777,9 @@ func (l *lowerer) binary(n *ast.Node) *hir.Expr {
 		}
 		left := x
 		if x.Type.Kind == hir.Optional {
-			left = &hir.Expr{Kind: hir.Narrow, Type: base, X: x}
+			// The fallback may select a different array ABI; presence
+			// unwraps only the actual stored element, then conversion checks it.
+			left = &hir.Expr{Kind: hir.Narrow, Node: l.node(b.Left), Type: x.Type.Args[0], X: x}
 		}
 		result := y.Type
 		if !base.Equal(y.Type) {
@@ -2799,7 +2801,7 @@ func (l *lowerer) binary(n *ast.Node) *hir.Expr {
 			return nil
 		}
 		test := &hir.Expr{Kind: hir.IsUndefined, Node: l.node(n), Type: hir.T(hir.Bool), X: x}
-		if x.Type.Kind == hir.Dynamic || base.Kind == hir.Dynamic {
+		if left.Type.Kind == hir.Dynamic {
 			test = l.rtOp("dynamic.isNullish", left, hir.T(hir.Bool))
 		}
 		return &hir.Expr{Kind: hir.Conditional, Node: l.node(n), Type: result, X: test, Y: l.convertConditionalBranch(b.Right, y, result, false), Z: l.convertConditionalBranch(b.Left, left, result, false)}
