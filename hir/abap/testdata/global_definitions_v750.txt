@@ -294,6 +294,8 @@ ENDCLASS.
 z_runtime_map__294b9108fab6db.clas.abap
 CLASS z_runtime_map__294b9108fab6db DEFINITION PUBLIC CREATE PUBLIC.
   PUBLIC SECTION.
+    DATA js_map TYPE abap_bool.
+
     TYPES: BEGIN OF entry, k TYPE REF TO z_collection_f_24b4cd4887dc68, v TYPE int8, END OF entry.
     TYPES entries_type TYPE STANDARD TABLE OF entry WITH DEFAULT KEY.
     DATA entries TYPE entries_type.
@@ -310,6 +312,8 @@ ENDCLASS.
 z_runtime_map__bdc9cedddb3dfe.clas.abap
 CLASS z_runtime_map__bdc9cedddb3dfe DEFINITION PUBLIC CREATE PUBLIC.
   PUBLIC SECTION.
+    DATA js_map TYPE abap_bool.
+
     TYPES: BEGIN OF entry, k TYPE string, v TYPE i, END OF entry.
     TYPES entries_type TYPE STANDARD TABLE OF entry WITH DEFAULT KEY WITH UNIQUE HASHED KEY by_k COMPONENTS k.
     DATA entries TYPE entries_type.
@@ -326,6 +330,8 @@ ENDCLASS.
 z_runtime_map__c61ab32dd6a58d.clas.abap
 CLASS z_runtime_map__c61ab32dd6a58d DEFINITION PUBLIC CREATE PUBLIC.
   PUBLIC SECTION.
+    DATA js_map TYPE abap_bool.
+
     TYPES: BEGIN OF entry, k TYPE i, v TYPE string, END OF entry.
     TYPES entries_type TYPE STANDARD TABLE OF entry WITH DEFAULT KEY WITH UNIQUE HASHED KEY by_k COMPONENTS k.
     DATA entries TYPE entries_type.
@@ -390,6 +396,7 @@ ENDCLASS.
 z_runtime_set__edc1f1305a34c6.clas.abap
 CLASS z_runtime_set__edc1f1305a34c6 DEFINITION PUBLIC CREATE PUBLIC.
   PUBLIC SECTION.
+
     TYPES: BEGIN OF entry, k TYPE i, v TYPE abap_bool, END OF entry.
     TYPES entries_type TYPE STANDARD TABLE OF entry WITH DEFAULT KEY WITH UNIQUE HASHED KEY by_k COMPONENTS k.
     DATA entries TYPE entries_type.
