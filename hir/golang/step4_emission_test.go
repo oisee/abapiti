@@ -6,15 +6,14 @@ import (
 	"github.com/oisee/abapiti/hir"
 )
 
-// Refused live-field conversions still need a valid Go body, even when the
-// fallback never consumes the dynamic value read from structural storage.
-func TestRefusedLiveFieldGetterCompiles(t *testing.T) {
+// Live class-descriptor fields retain their identity and reject other values.
+func TestLiveClassDescriptorFieldConversion(t *testing.T) {
 	row := &hir.Class{Name: "probe.ts.Row", Fields: []hir.Field{{Name: "factory", Type: hir.T(hir.ClassValue)}}}
 	view := &hir.Method{Name: "view", Static: true, Params: []hir.Param{{Name: "value", Type: hir.T(hir.Dynamic)}}, Result: hir.Ref(row.Name),
 		Body: hir.B(ret(rt("dynamic.classView", local("value", hir.T(hir.Dynamic)), hir.Ref(row.Name))))}
 	p := &hir.Program{Classes: []*hir.Class{row, {Name: "probe.ts", Methods: []*hir.Method{view}}}}
 	n := hir.NewNames()
-	main := `factory:=&classDescriptor{Name:str("native")};native:=` + n.Get("new."+row.Name) + `();native.` + n.Get("member.factory") + `=factory;if native.` + n.Get("view.read."+row.Name+".factory") + `()!=factory {panic("native field changed")};v:=` + entry("probe.ts", "view") + `(parseJSON(str("{}")));func(){defer func(){x:=recover();if fault,ok:=x.(trap);!ok || fault.Source!="unsupported live class field conversion" {panic(x)}}();v.` + n.Get("view.read."+row.Name+".factory") + `();panic("missing conversion refusal")}();fmt.Println("ok")`
+	main := `factory:=&classDescriptor{Name:str("native")};native:=` + n.Get("new."+row.Name) + `();native.` + n.Get("member.factory") + `=factory;if native.` + n.Get("view.read."+row.Name+".factory") + `()!=factory {panic("native field changed")};d:=parseJSON(str("{}"));d.put(str("factory"),box(factory));v:=` + entry("probe.ts", "view") + `(d);if v.` + n.Get("view.read."+row.Name+".factory") + `()!=factory {panic("descriptor identity changed")};bad:=` + entry("probe.ts", "view") + `(parseJSON(str("{\"factory\":{}}")));func(){defer func(){if x:=recover();x!=nil {if _,ok:=x.(rangeFault);!ok {panic(x)}} else {panic("missing fault")}}();bad.` + n.Get("view.read."+row.Name+".factory") + `()}();fmt.Println("ok")`
 	if got := execute(t, p, main); got != "ok\n" {
 		t.Fatal(got)
 	}

@@ -90,6 +90,8 @@ func (e *emitter) viewValueWithLocal(t hir.Type, d string, local bool) string {
 	switch t.Kind {
 	case hir.Dynamic:
 		return d
+	case hir.ClassValue:
+		return "dynClass(" + d + ")"
 	case hir.UnionRef:
 		return e.unionValidator(t.Name, "") + "(" + d + ")"
 	case hir.String:
