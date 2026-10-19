@@ -414,7 +414,8 @@ func (b *body) runtime(x *hir.Expr) string {
 		if b.e.directCollectionKey(x.X.Type.Args[0]) {
 			code = "markJSFastMap(" + a + ")"
 		}
-		if b.e.usesMapViews() && b.e.dynamicMaps {
+		name, isClassValue := mapViewClassName(x.Type.Args[1])
+		if b.e.usesMapViews() && (b.e.dynamicMaps || isClassValue && b.e.liveMapValueTypes[name]) {
 			value := x.Type.Args[1]
 			decoder := b.e.viewValue(value, "d")
 			code = "func(m " + b.e.typ(x.Type) + ") " + b.e.typ(x.Type) + " {m.decode=func(d *dynamic) " + b.e.typ(value) + " {return " + decoder + "};return m}(" + code + ")"

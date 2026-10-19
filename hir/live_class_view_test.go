@@ -34,6 +34,24 @@ func TestLiveNestedRowViewBoundary(t *testing.T) {
 	}
 }
 
+func TestLiveClassViewLayoutsWithExpandsAdditionalRoots(t *testing.T) {
+	base := &Class{Name: "TargetBase", Fields: []Field{{Name: "inherited", Type: T(String)}}}
+	nested := &Class{Name: "TargetNested", Structural: true, Fields: []Field{{Name: "value", Type: T(String)}}}
+	row := &Class{Name: "TargetRow", Super: "TargetBase", Structural: true, Fields: []Field{{Name: "child", Type: Ref("TargetNested")}}}
+	sourceBase := &Class{Name: "SourceBase", Fields: []Field{{Name: "inherited", Type: T(String)}}}
+	sourceNested := &Class{Name: "SourceNested", Structural: true, Fields: []Field{{Name: "value", Type: T(String)}}}
+	sourceRow := &Class{Name: "SourceRow", Super: "SourceBase", Structural: true, Fields: []Field{{Name: "child", Type: Ref("SourceNested")}}}
+	program := &Class{Name: "Program", Structural: true, Fields: []Field{{Name: "rows", Type: T(OrderedMap, T(String), Ref("TargetRow"))}}}
+	use := &Class{Name: "Use", Methods: []*Method{{Name: "view", Static: true, Body: B(&Stmt{Kind: ExprStmt, X: &Expr{Kind: RuntimeOp, Op: "dynamic.classView", Type: Ref("Program"), X: V("input", T(Dynamic))}})}}}
+	p := &Program{Classes: []*Class{base, nested, row, sourceBase, sourceNested, sourceRow, program, use}}
+	views := LiveClassViewLayoutsWith(p, map[string]bool{"TargetRow": true, "SourceRow": true})
+	for _, name := range []string{"Program", "TargetRow", "TargetBase", "TargetNested", "SourceRow", "SourceBase", "SourceNested"} {
+		if !views[name] {
+			t.Fatalf("additional structural root was not expanded to %s: %v", name, views)
+		}
+	}
+}
+
 func TestDataClassViewBoundary(t *testing.T) {
 	base := &Class{Name: "Base", Abstract: true, Fields: []Field{{Name: "optional", Type: T(Optional, T(String))}}}
 	child := &Class{Name: "Child", Super: "Base", Fields: []Field{{Name: "value", Type: T(Number)}}}

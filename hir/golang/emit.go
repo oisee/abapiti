@@ -41,6 +41,7 @@ func emitPackage(p *hir.Program, pkg string, profile bool) (map[string]string, *
 	e.characterSets()
 	e.collectBoxedShapes()
 	e.liveClasses = hir.LiveClassViewLayouts(p)
+	e.enableLiveMapValueViews()
 	for _, iface := range p.Interfaces {
 		for _, member := range iface.StructuralMembers {
 			if e.liveClasses[member.Type.Name] {
@@ -183,7 +184,7 @@ func emitPackage(p *hir.Program, pkg string, profile bool) (map[string]string, *
 	}
 	if e.usesMapViews() {
 		runtime = mapViewRuntime(runtime)
-		if _, ok := hir.UsedRuntimeOps(p)["dynamic.mapView"]; ok {
+		if _, ok := hir.UsedRuntimeOps(p)["dynamic.mapView"]; ok || e.liveMapValueViews {
 			runtime += dynamicMapStorageSource
 		}
 	}
@@ -365,6 +366,8 @@ type emitter struct {
 	recordString      bool
 	mapViews          bool
 	dynamicMaps       bool
+	liveMapValueViews bool
+	liveMapValueTypes map[string]bool
 	mapViewsKnown     bool
 	nonfiniteNumbers  bool
 	toNumber          bool

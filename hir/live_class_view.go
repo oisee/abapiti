@@ -4,12 +4,20 @@ package hir
 // storage. Only explicit classView operations activate this ABI. Constructors
 // are never executed for a view. Nominal assertions use their separate boundary.
 func LiveClassViewLayouts(p *Program) map[string]bool {
+	return LiveClassViewLayoutsWith(p, nil)
+}
+
+// LiveClassViewLayoutsWith adds backend-discovered structural data roots to
+// the same recursive expansion used for explicit classView operations. This
+// lets a backend reuse the view ABI for fields whose structural relationship
+// is visible only after lowering or code generation.
+func LiveClassViewLayoutsWith(p *Program, additional map[string]bool) map[string]bool {
 	classes := map[string]*Class{}
 	for _, c := range p.Classes {
 		classes[c.Name] = c
 	}
 	out := map[string]bool{}
-	for name := range classViewTargets(p) {
+	for name := range classViewTargets(p, additional) {
 		if DataClassView(p, name) {
 			for c := classes[name]; c != nil; c = classes[c.Super] {
 				out[c.Name] = true
@@ -22,7 +30,7 @@ func LiveClassViewLayouts(p *Program) map[string]bool {
 // SealLiveClassViewBoundary preserves a refusal after optimizations remove a
 // prototype call. Backend inlining must never invent methods on plain records.
 func SealLiveClassViewBoundary(p *Program) {
-	for name := range classViewTargets(p) {
+	for name := range classViewTargets(p, nil) {
 		if !DataClassView(p, name) {
 			for _, c := range p.Classes {
 				if c.Name == name {
@@ -34,8 +42,11 @@ func SealLiveClassViewBoundary(p *Program) {
 	}
 }
 
-func classViewTargets(p *Program) map[string]bool {
-	out := map[string]bool{}
+func classViewTargets(p *Program, additional map[string]bool) map[string]bool {
+	out := make(map[string]bool, len(additional))
+	for name := range additional {
+		out[name] = true
+	}
 	_, dynamicMaps := UsedRuntimeOps(p)["dynamic.mapView"]
 	for _, u := range p.Unions {
 		if u != nil {

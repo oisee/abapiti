@@ -112,6 +112,8 @@ func storageIdentityRuntime(source string) string {
 
 // Erased Maps use a branded storage protocol, independent of value generics.
 // The proxy retains source identity and delegates each read to current storage.
+// Keep its proxy contract aligned with emitter.liveMapValueView, which uses the
+// same storage for maps reached through live structural class fields.
 func (b *body) dynamicMapView(x *hir.Expr) string {
 	e := b.e
 	t := e.typ(x.Type)
@@ -129,10 +131,11 @@ func (b *body) dynamicMapView(x *hir.Expr) string {
 const dynamicMapStorageSource = `
 func mapValueBox(v any)*dynamic {if x,ok:=v.(interface{mapValueBox()*dynamic});ok{return x.mapValueBox()};return box(v)}
 func(o optional[T])mapValueBox()*dynamic{if !o.Has{return nil};return mapValueBox(o.Value)}
-type stringMapStorage interface {stringMapBrand()bool;stringMapGet(jsString)(*dynamic,bool);stringMapSet(jsString,*dynamic);stringMapHas(jsString)bool;stringMapDelete(jsString)bool;stringMapKeys()*array[jsString];mapSize()int32;mapInsertions()int32}
+type stringMapStorage interface {stringMapBrand()bool;stringMapGet(jsString)(*dynamic,bool);stringMapSet(jsString,*dynamic);stringMapSetView(jsString,*dynamic);stringMapHas(jsString)bool;stringMapDelete(jsString)bool;stringMapKeys()*array[jsString];mapSize()int32;mapInsertions()int32}
 func(m *orderedMap[K,V]) stringMapBrand()bool {var k K;_,ok:=any(k).(jsString);if m==nil || !ok{return false};if m.proxy!=nil {src,ok:=m.proxy.source.Value.(stringMapStorage);return ok && src.stringMapBrand()};return m.jsMap}
 func(m *orderedMap[K,V]) stringMapGet(k jsString)(*dynamic,bool){key,ok:=any(k).(K);if !ok{panic(newRangeFault())};v:=m.get(key);if !v.Has{return nil,false};return mapValueBox(v.Value),true}
 func(m *orderedMap[K,V]) stringMapSet(k jsString,v *dynamic){key,ok:=any(k).(K);if !ok{panic(newRangeFault())};if m.decode!=nil{m.set(key,m.decode(v));return};m.set(key,unboxValue[V](v))}
+func(m *orderedMap[K,V]) stringMapSetView(k jsString,v *dynamic){key,ok:=any(k).(K);if !ok{panic(newRangeFault())};if m.proxy!=nil{m.set(key,unboxValue[V](v));return};if m.decode==nil{panic(newTrap("writes through a structural Map value view require a data-only source value"))};m.set(key,m.decode(v))}
 func(m *orderedMap[K,V]) stringMapHas(k jsString)bool{key,ok:=any(k).(K);if !ok{panic(newRangeFault())};return m.has(key)}
 func(m *orderedMap[K,V]) stringMapDelete(k jsString)bool{key,ok:=any(k).(K);if !ok{panic(newRangeFault())};return m.delete(key)}
 func(m *orderedMap[K,V]) stringMapKeys()*array[jsString]{out:=&array[jsString]{};for _,k:=range m.keys().Items{key,ok:=any(k).(jsString);if !ok{panic(newRangeFault())};out.push(key)};return out}
