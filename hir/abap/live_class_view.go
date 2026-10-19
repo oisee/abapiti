@@ -248,6 +248,10 @@ func (b *body) liveUnbox(n, d string, t hir.Type) {
 		b.line("IF " + v + " <> trunc( " + v + " ) OR " + v + " < '" + lo + "' OR " + v + " > '" + hi + "'.\nRAISE EXCEPTION TYPE " + e.name("view.refusal") + " EXPORTING reason = `live_class_view.go: liveUnbox: integer is fractional or outside exact range`.\nENDIF.")
 		b.line(n + " = " + v + ".")
 	case hir.Bool:
+		// dynBoolean refuses an absent value in Go with a range fault; a view
+		// read of a missing property yields an unbound box, and the typed
+		// boundary must refuse it instead of dereferencing it.
+		b.line("IF " + d + " IS NOT BOUND.\nRAISE EXCEPTION TYPE " + e.name("view.refusal") + " EXPORTING reason = `live_class_view.go: liveUnbox: undefined cannot inhabit required slot`.\nENDIF.")
 		b.line(n + " = " + d + "->as_boolean( ).")
 	case hir.ClassValue:
 		// Erased reference arrays can carry boxed constructor descriptors.
