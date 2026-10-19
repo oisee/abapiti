@@ -112,3 +112,48 @@ func TestPinnedAnnotationPatternsAndMethodSignatures(t *testing.T) {
 		}
 	}
 }
+
+func TestLowerSourcePinnedOverrideInExternalPackage(t *testing.T) {
+	dir := t.TempDir()
+	project := filepath.Join(dir, "project")
+	pkg := filepath.Join(dir, "package")
+	if err := os.MkdirAll(project, 0700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Join(pkg, "src"), 0700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(pkg, "package.json"), []byte(`{"name":"probe-package","version":"1.0.0"}`), 0600); err != nil {
+		t.Fatal(err)
+	}
+	config := filepath.Join(project, "tsconfig.json")
+	if err := os.WriteFile(config, []byte(`{"compilerOptions":{"strict":true},"files":["../package/src/probe.ts"]}`), 0600); err != nil {
+		t.Fatal(err)
+	}
+	file := filepath.Join(pkg, "src", "probe.ts")
+	entry := overrides.Entry{ID: "external-literal", Key: overrides.Key{File: "src/probe.ts", Symbol: "Probe.run", Kind: "KindNumericLiteral"}, SHA256: overrides.Fingerprint("42"), Rationale: "test package-local override identity", Expression: func() *hir.Expr { return hir.L(hir.T(hir.Number), 7) }}
+	registry, err := overrides.New(entry)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, source := range []string{`export class Probe { run(): number { return 42; } }`, `export class Probe { run(): number { return 43; } }`} {
+		if err := os.WriteFile(file, []byte(source), 0600); err != nil {
+			t.Fatal(err)
+		}
+		p, err := Load(config)
+		if err != nil {
+			t.Fatal(err)
+		}
+		prog, _, err := p.LowerWithOverrides([]string{"../package/src/probe.ts"}, registry)
+		if strings.Contains(source, "42") {
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !strings.Contains(hir.Dump(prog), "7") {
+				t.Fatal("external package override not applied", hir.Dump(prog))
+			}
+		} else if err == nil || !strings.Contains(err.Error(), "override external-literal is stale") {
+			t.Fatal("changed external target was accepted", err)
+		}
+	}
+}

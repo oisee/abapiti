@@ -2,7 +2,6 @@ package tsfront
 
 import (
 	"fmt"
-	"path/filepath"
 
 	"github.com/oisee/abapiti/internal/tsgo/ast"
 	"github.com/oisee/abapiti/internal/tsgo/scanner"
@@ -15,11 +14,11 @@ func (l *lowerer) validateOverrides(files []string, registry *overrides.Registry
 	if len(registry.Inventory()) == 0 {
 		return nil
 	}
+	// ForFiles and Lookup must see the same package-local identity.
 	var relativeFiles []string
 	for _, name := range files {
 		if f, ok := l.prog.File(name); ok {
-			rel, _ := filepath.Rel(l.prog.configDir, f.FileName())
-			relativeFiles = append(relativeFiles, filepath.ToSlash(rel))
+			relativeFiles = append(relativeFiles, l.prog.sourceName(f.FileName()))
 		}
 	}
 	var err error
