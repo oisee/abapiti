@@ -384,6 +384,9 @@ func (l *lowerer) narrowed(n *ast.Node, x *hir.Expr, typ hir.Type) *hir.Expr {
 			}
 		}
 	}
+	if view := l.rootObjectDataView(x, typ); view != nil {
+		return view
+	}
 	if l.unprunedFeatures && x.Type.Kind == hir.UnionRef {
 		if typ.Equal(x.Type) {
 			return x
@@ -3254,6 +3257,9 @@ func (l *lowerer) asExpression(n *ast.Node) *hir.Expr {
 				}
 			}
 		}
+	}
+	if view := l.rootObjectDataView(x, mapped); view != nil {
+		return view
 	}
 	if l.unprunedFeatures && l.structuralUnionProjection(x.Type, mapped) {
 		return l.dynamicReference(l.coerce(l.checkedStructuralUnion(x), hir.T(hir.Dynamic)), mapped)

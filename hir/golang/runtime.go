@@ -388,6 +388,20 @@ func castRef[T any](v any) T {
 	}
 	return r
 }
+// dynObject is the checked TS object-root bridge. Graph carriers stay intact;
+// native references retain their nominal identity. It grants no class layout.
+func dynObject(d *dynamic) any {
+ if d==nil {panic(newRangeFault())}
+ switch d.Tag {
+ case tagObject,tagArray,10: return d
+ case 2:
+  if nilRef(d.Value) {panic(newRangeFault())}
+  switch reflect.ValueOf(d.Value).Kind() {
+  case reflect.Ptr: return d.Value
+  }
+ }
+ panic(newRangeFault())
+}
 func dynRef(d *dynamic) any {
 	if d == nil || d.Tag != 2 && d.Tag != tagArray {
 		panic(newRangeFault())

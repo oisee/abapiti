@@ -125,6 +125,7 @@ var SpecialOps = map[string]bool{
 	"chai.box":                true, // tests-only box; parsed-to-native snapshot escapes refuse
 	"dynamic.of":              true, // any value -> Dynamic (tagged box)
 	"dynamic.asRef":           true,
+	"dynamic.asObject":        true, // checked broad object carrier, never a nominal class projection
 	"dynamic.classView":       true, // live structural storage, never a nominal assertion
 	"dynamic.arrayView":       true, // checked live primitive storage
 	"dynamic.materialize":     true, // Dynamic -> a class or interface reference

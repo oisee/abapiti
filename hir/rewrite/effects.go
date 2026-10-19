@@ -94,6 +94,7 @@ var RuntimeEffects = map[string]OpEffect{
 	"json.stringifyReplacer": {Reads: OpReads{Receiver: true, Args: true}, Writes: "None", Allocates: true, MayRaise: "Catchable", Aliases: "None"},
 	"dynamic.isSet":          {Reads: OpReads{Receiver: true}, Writes: "None", MayRaise: "None", Aliases: "None"},
 	"map.markJS":             {Reads: OpReads{Receiver: true}, Writes: "Receiver", MayRaise: "None", Aliases: "Receiver"},
+	"dynamic.asObject":       {Reads: OpReads{Receiver: true}, Writes: "None", Allocates: false, MayRaise: "Catchable", Aliases: "Receiver", Conservative: "Checks a non-null object/reference tag and retains original storage; Go host range refusal and ABAP cast error do not invent source payloads."},
 	"dynamic.classView":      {Reads: OpReads{Receiver: true}, Writes: "None", Allocates: true, MayRaise: "Trap", Aliases: "Receiver", Conservative: "A class view aliases structural storage; unsupported prototype behaviour refuses."},
 	"dynamic.arrayView":      {Reads: OpReads{Receiver: true}, Writes: "None", Allocates: true, MayRaise: "Trap", Aliases: "Receiver", Conservative: "A typed array view aliases original storage and checks each element read."},
 	// Erased array references can allocate live views of the same storage.

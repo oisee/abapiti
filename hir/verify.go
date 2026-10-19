@@ -1057,6 +1057,11 @@ func (v *verifier) specialOp(e *Expr, a Type, check func(*Expr) Type, args func(
 			v.fail(e.Node, "dynamic.materialize needs Dynamic in and a data class reference out")
 		}
 		args(nil)
+	case "dynamic.asObject":
+		if a.Kind != Dynamic || !t.Equal(Ref(RootObject)) || e.Owner != "" || e.Name != "" {
+			v.fail(e.Node, "dynamic.asObject needs Dynamic in and the unqualified object root out")
+		}
+		args(nil)
 	case "dynamic.classView":
 		if a.Kind != Dynamic || t.Kind != ClassRef || t.Name == RootObject {
 			v.fail(e.Node, "dynamic.classView needs Dynamic in and a named class reference out")

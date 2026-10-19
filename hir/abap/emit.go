@@ -165,7 +165,7 @@ func emitNamed(p *hir.Program, refusals *[]error, assertionOwners map[string]boo
 		if x.Kind == hir.RuntimeOp && x.Op == "dynamic.delete" {
 			e.recordDelete = true
 		}
-		if x.Kind == hir.RuntimeOp && (x.Op == "dynamic.arrayView" || x.Op == "dynamic.asRef" && x.Type.Kind == hir.Array || x.Op == "dynamic.classView" || x.Op == "dynamic.delete" || strings.HasPrefix(x.Op, "lsp.") || strings.HasPrefix(x.Op, "object.") && x.X != nil && x.X.Type.Name == hir.RootObject) {
+		if x.Kind == hir.RuntimeOp && (x.Op == "dynamic.keys" || x.Op == "dynamic.arrayView" || x.Op == "dynamic.asRef" && x.Type.Kind == hir.Array || x.Op == "dynamic.asObject" || x.Op == "dynamic.classView" || x.Op == "dynamic.delete" || strings.HasPrefix(x.Op, "lsp.") || strings.HasPrefix(x.Op, "object.") && x.X != nil && x.X.Type.Name == hir.RootObject) {
 			e.arrayViews = true
 		}
 		findStorage(x.X)
@@ -438,7 +438,7 @@ func (e *emitter) scanUsage() {
 			e.chaiUsed = true
 			e.dynamicUsed = true
 		}
-		if x.Kind == hir.RuntimeOp && (x.Op == "dynamic.classView" || x.Op == "dynamic.arrayView" || x.Op == "dynamic.delete" || strings.HasPrefix(x.Op, "lsp.") || (strings.HasPrefix(x.Op, "object.") && x.X != nil && x.X.Type.Name == hir.RootObject)) {
+		if x.Kind == hir.RuntimeOp && (x.Op == "dynamic.asObject" || x.Op == "dynamic.classView" || x.Op == "dynamic.arrayView" || x.Op == "dynamic.delete" || strings.HasPrefix(x.Op, "lsp.") || (strings.HasPrefix(x.Op, "object.") && x.X != nil && x.X.Type.Name == hir.RootObject)) {
 			e.liveRuntime()
 		}
 		if x.Kind == hir.RuntimeOp && x.Op == "json.stringifySubset" {
@@ -2566,6 +2566,14 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 	case "dynamic.call0":
 		b.nativeCall0(x, n, a)
 		return
+	case "dynamic.asObject":
+		// Graph nodes are valid object-root carriers, without a fabricated nominal
+		// instance. Live boxing recognizes the same node when the root is erased.
+		d := b.e.name("runtime.dynamic") + "=>"
+		b.line("IF " + a + " IS NOT BOUND.\nRAISE EXCEPTION TYPE cx_sy_move_cast_error.\nENDIF.")
+		b.line("CASE " + a + "->tag.\nWHEN " + d + "tag_ref.\nIF " + a + "->oval IS NOT BOUND.\nRAISE EXCEPTION TYPE cx_sy_move_cast_error.\nENDIF.\n" + n + " = " + a + "->oval.")
+		b.line("WHEN " + d + "tag_object OR " + d + "tag_array OR " + d + "tag_class.\n" + n + " = " + a + ".\nWHEN OTHERS.\nRAISE EXCEPTION TYPE cx_sy_move_cast_error.\nENDCASE.")
+		return
 	case "dynamic.keys":
 		b.e.ownKeysRuntime()
 		b.line(n + " = " + b.e.name("runtime.ownKeys") + "=>keys( " + a + " ).")
@@ -2618,11 +2626,7 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 			return
 		}
 		if x.X.Type.Name == hir.RootObject {
-			if x.Op != "object.get" {
-				b.erasedPropertyHas(x, n, a, args[0])
-				return
-			}
-			b.e.refuse(fmt.Errorf("node %d (%s): erased structural %s is not emitted on ABAP", x.ID, x.Source, x.Op))
+			b.erasedPropertyLookup(x, n, a, args[0])
 			return
 		}
 		method := map[string]string{"object.get": "get", "object.hasOwn": "own", "object.has": "has"}[x.Op]

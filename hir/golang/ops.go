@@ -37,6 +37,7 @@ var supportedOps = map[string]bool{
 	"map.markJS":              true,
 	"json.stringifyReplacer":  true,
 	"dynamic.classView":       true,
+	"dynamic.asObject":        true,
 	"dynamic.arrayView":       true,
 	"object.classOf":          true, "classvalue.newArgs": true, "classvalue.new": true, "classvalue.name": true, "classvalue.has": true, "dynamic.asClassValue": true,
 	"xml.validate":    true,
@@ -422,6 +423,8 @@ func (b *body) runtime(x *hir.Expr) string {
 		b.e.extraRuntimeKeys = true
 	case "union.check", "union.admit", "union.widen", "union.project", "union.tag", "union.read":
 		code = b.unionOperation(x, a)
+	case "dynamic.asObject":
+		code = "dynObject(" + a + ")"
 	case "dynamic.classView":
 		code = b.e.liveView(x.Type) + "(" + a + ")"
 	case "dynamic.arrayView":

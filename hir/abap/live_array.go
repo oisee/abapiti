@@ -101,8 +101,15 @@ func (e *emitter) liveArrayRuntime(t hir.Type) {
 		b = makeBody()
 		node = b.temp(hir.T(hir.Dynamic))
 		idx = b.temp(hir.T(hir.I32))
+		if op == "has" {
+			b.line("IF p0 = `length`.\nresult = abap_true.\nRETURN.\nENDIF.")
+		}
 		b.line("CREATE OBJECT " + node + ".\nTRY.\n" + idx + " = " + node + "->array_index( p0 ).\nCATCH cx_sy_range_out_of_bounds.\nRAISE EXCEPTION TYPE " + trap + " EXPORTING reason = `live_array.go: native array property operation requires an index`.\nENDTRY.\nresult = " + op + "( " + idx + " ).")
-		code.WriteString("METHOD " + storage + "~" + op + ".\n" + b.constantDeclarations() + b.code.String() + "ENDMETHOD.\n")
+		methodCode := b.code.String()
+		if op == "has" {
+			methodCode = strings.Replace(methodCode, "RAISE EXCEPTION TYPE "+trap+" EXPORTING reason = `live_array.go: native array property operation requires an index`.", "RETURN.", 1)
+		}
+		code.WriteString("METHOD " + storage + "~" + op + ".\n" + b.constantDeclarations() + methodCode + "ENDMETHOD.\n")
 	}
 	b = makeBody()
 	idx = b.temp(hir.T(hir.I32))

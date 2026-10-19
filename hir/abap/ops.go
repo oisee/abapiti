@@ -23,6 +23,7 @@ var supportedOps = map[string]bool{
 	"json.indent":          true,
 	"dynamic.keys":         true,
 	"dynamic.classView":    true,
+	"dynamic.asObject":     true,
 	"dynamic.arrayView":    true,
 	"object.get":           true, "object.hasOwn": true, "object.has": true, "xml.validate": true,
 	"regexp.exec": true, "regexp.boxMatch": true, "regexp.lastIndex": true, "regexp.setLastIndex": true,

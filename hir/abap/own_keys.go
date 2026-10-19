@@ -111,11 +111,12 @@ func (e *emitter) ownKeysRuntime() {
 		return
 	}
 	e.types["runtime.ownKeys"] = true
+	e.isArrayUsed = true
 	e.liveRuntime()
 	d, helper, iface := e.name("runtime.dynamic"), e.name("runtime.ownKeys"), e.name("own.storage")
 	arr := e.typ(hir.T(hir.Array, hir.T(hir.String)))
 	e.files[iface+".intf.abap"] = fmt.Sprintf("INTERFACE %s PUBLIC.\nMETHODS keys RETURNING VALUE(result) TYPE %s.\nENDINTERFACE.\n", iface, arr)
-	e.files[helper+".clas.abap"] = strings.NewReplacer("$H", helper, "$D", d, "$I", iface, "$A", arr, "$S", e.name("view.storage"), "$T", e.name("view.refusal")).Replace(`CLASS $H DEFINITION PUBLIC CREATE PUBLIC.
+	e.files[helper+".clas.abap"] = strings.NewReplacer("$H", helper, "$M", e.name("runtime.arraymark"), "$D", d, "$I", iface, "$A", arr, "$S", e.name("view.storage"), "$T", e.name("view.refusal")).Replace(`CLASS $H DEFINITION PUBLIC CREATE PUBLIC.
 PUBLIC SECTION.
 CLASS-METHODS keys IMPORTING p0 TYPE REF TO $D RETURNING VALUE(result) TYPE $A.
 PROTECTED SECTION.
@@ -140,6 +141,21 @@ result = keys( source ).
 RETURN.
 ENDIF.
 ENDIF.
+IF p0->oval IS INSTANCE OF $M AND storage IS BOUND.
+DATA array_length TYPE REF TO $D.
+DATA array_index TYPE i.
+DATA array_key TYPE string.
+array_length = storage->get( 'length' ).
+CREATE OBJECT result.
+WHILE array_index < array_length->nval.
+array_key = |{ array_index }|.
+IF storage->has( array_key ) = abap_true.
+APPEND array_key TO result->items.
+ENDIF.
+array_index = array_index + 1.
+ENDWHILE.
+RETURN.
+ENDIF.
 DATA native TYPE REF TO $I.
 TRY.
 native ?= p0->oval.
@@ -147,6 +163,22 @@ CATCH cx_sy_move_cast_error.
 RAISE EXCEPTION TYPE $T EXPORTING reason = 'own_keys.go: keys: reference lacks own-key adapter'.
 ENDTRY.
 result = native->keys( ).
+RETURN.
+ENDIF.
+IF p0->tag = $D=>tag_array.
+CREATE OBJECT result.
+DATA graph_index TYPE i.
+DATA graph_key TYPE string.
+DATA graph_slot TYPE i.
+WHILE graph_index < lines( p0->items ).
+graph_slot = graph_index + 1.
+READ TABLE p0->missing WITH TABLE KEY table_line = graph_slot TRANSPORTING NO FIELDS.
+IF sy-subrc <> 0.
+graph_key = |{ graph_index }|.
+APPEND graph_key TO result->items.
+ENDIF.
+graph_index = graph_index + 1.
+ENDWHILE.
 RETURN.
 ENDIF.
 IF p0->tag <> $D=>tag_object.
