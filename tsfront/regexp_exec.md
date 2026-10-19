@@ -1,7 +1,15 @@
 # RegExp.exec, match-array declarations, and runtime patterns
 
 `RegExpExecArray` and `RegExpMatchArray` from the TypeScript library share the
-existing nullable string-array reference ABI. `exec` returns the full match,
+string-array storage ABI. Runtime `regexp.exec` and `string.match` use an absent
+reference for non-match internally. The explicit, non-mutating `regexp.boxMatch`
+boundary consumes exactly `Optional<Array<String>>`: an absent result becomes
+tagged JavaScript null, while a present result boxes the same array storage.
+Both Go and ABAP implement this boundary before a source result escapes to
+a local, conditional/coalesce, return, any or unknown value. Nullable match-array
+checker types therefore use the ordinary Dynamic union mapping, which also
+preserves explicit undefined. Ordinary Optional absence and ordinary nil boxing remain undefined;
+this operation does not convert arbitrary missing arrays to null. `exec` returns the full match,
 numbered captures, and a UTF-16 `.index`, or null. Absent optional captures carry
 absence metadata rather than an empty string; indexed match-array reads preserve
 that absence. The array length still includes absent captures.

@@ -114,6 +114,9 @@ func TestRuntimeCatalogue(t *testing.T) {
 		case OrderedMap:
 			typ.Args = []Type{T(I32), T(String)}
 		}
+		if op == "regexp.boxMatch" {
+			typ = T(Optional, T(Array, T(String)))
+		}
 		if op == "array.matchIndex" || op == "array.matchGroups" {
 			typ = T(Array, T(String))
 		}

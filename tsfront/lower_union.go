@@ -183,6 +183,13 @@ func (l *lowerer) completeUnionInterfaces() {
 					short, long = long, short
 				}
 				for j, p := range short {
+					// A rest argument wraps call arguments; an array parameter
+					// consumes the array itself. Equal storage types do not make
+					// these constituent calling conventions interchangeable.
+					if p.Variadic != long[j].Variadic {
+						same = false
+						break
+					}
 					// A parameter must be accepted by every constituent: keep
 					// the narrower type.
 					switch {

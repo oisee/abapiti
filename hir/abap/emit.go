@@ -2183,6 +2183,15 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 		b.line(a + "->last_index = " + v + ".")
 		return
 	}
+	if x.Op == "regexp.boxMatch" {
+		b.line("IF " + a + " IS BOUND.")
+		b.boxDynamic(n, a, hir.T(hir.Array, hir.T(hir.String)))
+		b.line("ELSE.")
+		b.line("CREATE OBJECT " + n + ".")
+		b.line(n + "->tag = " + b.e.name("runtime.dynamic") + "=>tag_null.")
+		b.line("ENDIF.")
+		return
+	}
 	if x.Op == "regexp.exec" {
 		b.e.matchUsed = true
 		b.e.execUsed = true

@@ -155,6 +155,35 @@ func (l *lowerer) expr(n *ast.Node) *hir.Expr {
 // reference type than x's natural type. Mapping failures are quiet here: the
 // natural type (from the declaration registry) stands.
 func (l *lowerer) narrowedAt(n *ast.Node, x *hir.Expr) *hir.Expr {
+	if x.Type.Kind == hir.InterfaceRef && n.Parent != nil && n.Parent.Kind == ast.KindPropertyAccessExpression {
+		member := n.Parent
+		if member.Expression() == n && member.Parent != nil && member.Parent.Kind == ast.KindCallExpression && member.Parent.Expression() == member {
+			common := l.interfaceMethod(x.Type.Name, member.Name().Text())
+			selected := l.methodOf(l.resolve(member))
+			if common != nil && selected != nil && !selected.Static && sameMethodSignature(common, selected) {
+				// The common virtual slot already accepts this receiver.
+				// Negative predicates need not prove its runtime class.
+				return x
+			}
+		}
+	}
+	if n.Parent != nil && n.Parent.Kind == ast.KindCallExpression {
+		call := n.Parent
+		if sig := l.ck.GetResolvedSignature(call); sig != nil {
+			if predicate := l.ck.GetTypePredicateOfSignature(sig); predicate != nil && predicate.Kind() == checker.TypePredicateKindIdentifier {
+				i := int(predicate.ParameterIndex())
+				args := call.Arguments()
+				if i >= 0 && i < len(args) && args[i] == n {
+					if context := l.ck.GetContextualType(n, 0); context != nil && context.Flags()&(checker.TypeFlagsAny|checker.TypeFlagsUnknown) != 0 {
+						// A prior false predicate can exclude a class that still
+						// occurs at runtime. Pass the original value to the next
+						// predicate, which accepts and checks that value itself.
+						return x
+					}
+				}
+			}
+		}
+	}
 	if l.unprunedFeatures && x.Type.Kind == hir.Array && (isArrayAssignment(n) || l.hint.Kind == hir.Array && l.hint.Args[0].Kind == hir.Optional && x.Type.Equal(l.hint)) {
 		// Array assignment preserves the actual RHS storage, including values
 		// that unchecked TypeScript array annotations fail to mark optional.
@@ -632,9 +661,15 @@ func (l *lowerer) naturalExpr(n *ast.Node) *hir.Expr {
 			elem = hint.Args[0]
 		} else if l.unprunedFeatures && hint.Kind == hir.Dynamic && !l.ck.IsArrayType(l.ck.GetTypeAtLocation(n)) {
 			// A contextual tuple still needs real array storage when boxed.
-			// Preserve canonical arrays: their element ABI must survive boxing
-			// so a typed live view can recover the same native storage.
-			elem = hir.T(hir.Dynamic)
+			// Homogeneous tuples have the same canonical element ABI as an
+			// array. Preserve it so both backends recover the same storage
+			// after a nullable conditional join. Mixed tuples stay tagged.
+			mapped := l.mapCheckerType(n, l.ck.GetTypeAtLocation(n))
+			if mapped.Kind == hir.Array {
+				elem = mapped.Args[0]
+			} else {
+				elem = hir.T(hir.Dynamic)
+			}
 		} else {
 			t := l.ck.GetContextualType(n, checker.ContextFlagsSkipBindingPatterns)
 			if arr := l.singleArrayConstituent(t); arr != nil {
@@ -1875,7 +1910,7 @@ func (l *lowerer) libraryCall(n *ast.Node, name string, recv *hir.Expr) (*hir.Ex
 			if isConditionOnly(n) {
 				return l.rtOp("regexp.match_test", pattern, boolT, recv), true
 			}
-			return l.rtOp("string.match", recv, hir.T(hir.Optional, hir.T(hir.Array, str)), pattern), true
+			return l.rtOp("regexp.boxMatch", l.rtOp("string.match", recv, hir.T(hir.Optional, hir.T(hir.Array, str)), pattern), hir.T(hir.Dynamic)), true
 		case "concat":
 			return l.rtOp("string.concat", recv, str, one()), true
 		case "replace", "replaceAll":
@@ -1976,7 +2011,7 @@ func (l *lowerer) libraryCall(n *ast.Node, name string, recv *hir.Expr) (*hir.Ex
 				return l.rtOp("regexp.test", recv, boolT, input()), true
 			}
 			if len(args) == 1 {
-				return l.rtOp("regexp.exec", recv, hir.T(hir.Optional, hir.T(hir.Array, str)), input()), true
+				return l.rtOp("regexp.boxMatch", l.rtOp("regexp.exec", recv, hir.T(hir.Optional, hir.T(hir.Array, str)), input()), hir.T(hir.Dynamic)), true
 			}
 		case "toString":
 			if len(args) == 0 {
@@ -2588,6 +2623,9 @@ func (l *lowerer) binary(n *ast.Node) *hir.Expr {
 			if base.Kind == hir.Optional {
 				base = base.Args[0]
 			}
+			if op == ast.KindBarBarToken {
+				base = l.emptyArrayFallbackBase(b.Left, b.Right, base)
+			}
 			emptyArray := base.Kind == hir.Array && b.Right.Kind == ast.KindArrayLiteralExpression && len(b.Right.AsArrayLiteralExpression().Elements.Nodes) == 0
 			emptyRecord := base.Kind == hir.OrderedMap && b.Right.Kind == ast.KindObjectLiteralExpression && len(b.Right.AsObjectLiteralExpression().Properties.Nodes) == 0
 			if emptyArray || emptyRecord {
@@ -2729,6 +2767,7 @@ func (l *lowerer) binary(n *ast.Node) *hir.Expr {
 		if base.Kind == hir.Optional {
 			base = base.Args[0]
 		}
+		base = l.emptyArrayFallbackBase(b.Left, b.Right, base)
 		hint := l.hint
 		l.hint = base
 		y := l.expr(b.Right)
@@ -2760,7 +2799,7 @@ func (l *lowerer) binary(n *ast.Node) *hir.Expr {
 			return nil
 		}
 		test := &hir.Expr{Kind: hir.IsUndefined, Node: l.node(n), Type: hir.T(hir.Bool), X: x}
-		if base.Kind == hir.Dynamic {
+		if x.Type.Kind == hir.Dynamic || base.Kind == hir.Dynamic {
 			test = l.rtOp("dynamic.isNullish", left, hir.T(hir.Bool))
 		}
 		return &hir.Expr{Kind: hir.Conditional, Node: l.node(n), Type: result, X: test, Y: l.convertConditionalBranch(b.Right, y, result, false), Z: l.convertConditionalBranch(b.Left, left, result, false)}
@@ -3074,25 +3113,24 @@ func (l *lowerer) equality(n *ast.Node, b *ast.BinaryExpression, negated bool) *
 		}
 		return test
 	}
-	// Match arrays encode null as an absent reference, not as Dynamic's
-	// distinct undefined tag. Preserve JS null checks without boxing it.
+	// A direct String.match null check needs no capture materialization.
+	// Escaping match results already crossed regexp.boxMatch, so all other
+	// comparisons use tagged equality, including null versus undefined.
 	for _, pair := range []struct {
-		node, other *ast.Node
-		value       *hir.Expr
-	}{{b.Left, b.Right, x}, {b.Right, b.Left, y}} {
-		if pair.other.Kind == ast.KindNullKeyword && l.isMatchArrayType(l.ck.GetTypeAtLocation(pair.node)) {
-			test := &hir.Expr{Kind: hir.IsUndefined, Node: l.node(n), Type: hir.T(hir.Bool), X: pair.value}
-			if value := pair.value; value.Kind == hir.RuntimeOp && value.Op == "string.match" {
-				// A null check does not read captures (which may be absent).
-				present := l.rtOp("regexp.match_test", value.Args[0], hir.T(hir.Bool), value.X)
-				test = &hir.Expr{Kind: hir.Unary, Node: l.node(n), Type: hir.T(hir.Bool), Op: "!", X: present}
-			}
+		other *ast.Node
+		value *hir.Expr
+	}{{b.Right, x}, {b.Left, y}} {
+		value := pair.value
+		if pair.other.Kind == ast.KindNullKeyword && value.Kind == hir.RuntimeOp && value.Op == "regexp.boxMatch" && value.X.Kind == hir.RuntimeOp && value.X.Op == "string.match" {
+			match := value.X
+			present := l.rtOp("regexp.match_test", match.Args[0], hir.T(hir.Bool), match.X)
 			if negated {
-				return &hir.Expr{Kind: hir.Unary, Node: l.node(n), Op: "!", Type: hir.T(hir.Bool), X: test}
+				return present
 			}
-			return test
+			return &hir.Expr{Kind: hir.Unary, Node: l.node(n), Type: hir.T(hir.Bool), Op: "!", X: present}
 		}
 	}
+
 	structuralIdentity := l.unprunedFeatures && (x.Type.Kind == hir.UnionRef || y.Type.Kind == hir.UnionRef || !loose && (optionalBase(x.Type).Kind == hir.UnionRef || optionalBase(y.Type).Kind == hir.UnionRef) || l.structuralEqualityTypes(x.Type, y.Type) || x.Type.Kind == hir.Array && y.Type.Kind == hir.Array && !x.Type.Equal(y.Type))
 	if tagged(x.Type) || tagged(y.Type) || structuralIdentity {
 		if loose && !structuralIdentity {
