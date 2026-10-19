@@ -237,8 +237,8 @@ func (v *verifier) typ(n Node, t Type) {
 		if t.Kind == OrderedSet && k.Kind == Optional {
 			k = k.Args[0]
 		}
-		// Boxed Map keys are supported by checked storage views. Backends
-		// still refuse raw allocations and writes without value-based hashing.
+		// Boxed Map keys require value-based hashing in the backend. Go
+		// implements it; other backends must retain an explicit refusal.
 		if t.Kind == OrderedMap && k.Kind == Dynamic {
 			return
 		}

@@ -83,10 +83,6 @@ func (b *body) runtime(x *hir.Expr) string {
 	if x.Op == "set.view" {
 		return b.expr(x.X)
 	}
-	if x.Op == "map.set" && x.X.Type.Args[0].Kind == hir.Dynamic {
-		b.e.unsupported(x.Node, "boxed Map writes require value-based SameValueZero")
-		return ""
-	}
 	if x.Op == "map.view" {
 		return b.temp(x.Type, b.mapView(x))
 	}

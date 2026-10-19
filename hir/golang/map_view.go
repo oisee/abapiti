@@ -26,7 +26,7 @@ func (b *body) mapView(x *hir.Expr) string {
  if src==nil {panic(newRangeFault())}
  return &%s{proxy:&mapProxy[*dynamic,%s]{source:box(src),
  get:func(k *dynamic) optional[%s] {if k==nil || k.Tag!=1 {return optional[%s]{}};return src.get(dynString(k))},
- set:func(k *dynamic,v %s){panic(newTrap("boxed Map writes require value-based SameValueZero"))},
+ set:func(k *dynamic,v %s){panic(newTrap("writes through a boxed string-key Map view are unsupported"))},
  has:func(k *dynamic)bool{return k!=nil && k.Tag==1 && src.has(dynString(k))},
  remove:func(k *dynamic)bool{return k!=nil && k.Tag==1 && src.delete(dynString(k))},
  keys:func()*array[*dynamic]{out:=&array[*dynamic]{};for _,k:=range src.keys().Items {out.push(box(k))};return out},
