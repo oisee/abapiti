@@ -300,6 +300,41 @@ func (l *lowerer) typeofValue(x *hir.Expr) *hir.Expr {
 	return x
 }
 
+// typeofOperand restores the declared tagged storage of a plain local read.
+// The checker's flow-narrowed reference view of an erased union local (a loop
+// variable declared over objects, booleans and nullish values) is not proof
+// for typeof: the runtime tag decides, and a checked view admission (family
+// projection, object bridge) must not run before the tag is read.
+func (l *lowerer) typeofOperand(n *ast.Node, x *hir.Expr) *hir.Expr {
+	if x == nil || !l.unprunedFeatures {
+		return x
+	}
+	for n != nil && n.Kind == ast.KindParenthesizedExpression {
+		n = n.Expression()
+	}
+	if n == nil || n.Kind != ast.KindIdentifier {
+		return x
+	}
+	declared, ok := l.lookup(n.Text())
+	if !ok || !typeofStorage(declared) {
+		return x
+	}
+	// Re-read through identifier so the existing binding and symbol
+	// bookkeeping (shadow renaming, method capture) tracks this raw declared
+	// storage like any other local read.
+	raw := l.identifier(n)
+	if raw == nil || !typeofStorage(raw.Type) {
+		return x
+	}
+	return raw
+}
+
+// typeofStorage reports tagged-box storage: the runtime value can hold any
+// JavaScript kind regardless of the checker's narrowed view.
+func typeofStorage(t hir.Type) bool {
+	return t.Kind == hir.Dynamic || t.Kind == hir.Optional && t.Args[0].Kind == hir.Dynamic
+}
+
 func (l *lowerer) isTypeofFunction(t hir.Type) bool {
 	if l.isHIRThunk(t) || l.callableMethod(t) != nil {
 		return true
@@ -345,7 +380,7 @@ func (l *lowerer) typeofTag(n *ast.Node, x *hir.Expr) *hir.Expr {
 // statically typed lowering in pruned workloads.
 func (l *lowerer) typeofExpr(n *ast.Node) (*hir.Expr, bool) {
 	u := n.AsTypeOfExpression()
-	x := l.typeofValue(l.expr(u.Expression))
+	x := l.typeofOperand(u.Expression, l.typeofValue(l.expr(u.Expression)))
 	if x == nil {
 		return nil, false
 	}
@@ -369,7 +404,7 @@ func (l *lowerer) typeofExpr(n *ast.Node) (*hir.Expr, bool) {
 
 // typeofCompare lowers typeof comparisons against JavaScript tag strings.
 func (l *lowerer) typeofCompare(n *ast.Node, x *ast.Node, want string, negated bool) *hir.Expr {
-	e := l.typeofValue(l.expr(x))
+	e := l.typeofOperand(x, l.typeofValue(l.expr(x)))
 	if e == nil {
 		return nil
 	}

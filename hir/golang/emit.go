@@ -846,6 +846,11 @@ func (b *body) truth(v string, t hir.Type) string {
 	case hir.BigInt:
 		return v + "!=jsBigInt(\"0\")"
 	case hir.Optional:
+		if t.Args[0].Kind == hir.Dynamic {
+			// The tagged box decides: boxed false, null, "", 0 and a nil box
+			// (absent/undefined) are falsy; pointer presence is not truthiness.
+			return "dynTruth(" + v + ")"
+		}
 		if t.Args[0].IsRef() {
 			return "!nilRef(" + v + ")"
 		}

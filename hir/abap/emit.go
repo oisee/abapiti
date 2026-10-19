@@ -1862,7 +1862,9 @@ func (b *body) codeUnit(target, ch string) {
 
 func (b *body) truth(n, a string, t hir.Type) {
 	test := a + " IS NOT INITIAL"
-	if t.Kind == hir.Dynamic {
+	if t.Kind == hir.Dynamic || t.Kind == hir.Optional && t.Args[0].Kind == hir.Dynamic {
+		// The tagged box decides: boxed false, null, "", 0 and an unbound box
+		// (absent/undefined) are falsy; reference presence is not truthiness.
 		b.line("IF " + a + " IS BOUND.")
 		b.line(n + " = " + a + "->truth( ).")
 		b.line("ENDIF.")
