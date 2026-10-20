@@ -585,9 +585,8 @@ DATA escaped TYPE abap_bool.
 DATA whitespace TYPE string.
 DATA dot_class TYPE string.
 DATA normalized TYPE string.
-DATA named TYPE match_result_tab.
-DATA named_hit TYPE match_result.
-DATA named_group TYPE submatch_result.
+DATA j TYPE i.
+DATA group_count TYPE i.
 DATA named_row TYPE group_name_type.
 whitespace = ` + regexABAPString(jsWhitespaceMembers) + `.
 dot_class = ` + regexABAPString(jsDotClass) + `.
@@ -615,15 +614,6 @@ WHILE i < n.
   ENDIF.
   i = i + 1.
 ENDWHILE.
-  FIND ALL OCCURRENCES OF REGEX ` + "`\\(\\?<([A-Za-z_][A-Za-z_0-9]*)>`" + ` IN source RESULTS named.
-  LOOP AT named INTO named_hit.
-    READ TABLE named_hit-submatches INDEX 1 INTO named_group.
-    IF sy-subrc = 0.
-      named_row-index = sy-tabix.
-      named_row-name = substring( val = source off = named_group-offset len = named_group-length ).
-      APPEND named_row TO group_names.
-    ENDIF.
-  ENDLOOP.
 IF source IS INITIAL.
   source = '(?:)'.
 ENDIF.
@@ -686,9 +676,34 @@ WHILE i < n.
     CONCATENATE posix '\A' INTO posix RESPECTING BLANKS.
   ELSEIF in_class = abap_false AND c = '$' AND flags NA 'm'.
     CONCATENATE posix '\z' INTO posix RESPECTING BLANKS.
-  ELSEIF in_class = abap_false AND i + 2 < n AND normalized+i(2) = '?<'.
-    CONCATENATE posix '(?P<' INTO posix RESPECTING BLANKS.
-    i = i + 2.
+  ELSEIF in_class = abap_false AND c = '('.
+    CLEAR named_row.
+    IF i + 3 < n.
+      IF normalized+i(3) = '(?<' AND normalized+i(4) <> '(?<=' AND normalized+i(4) <> '(?<!'.
+        j = i + 3.
+        WHILE j < n.
+          IF normalized+j(1) = '>'.
+            EXIT.
+          ENDIF.
+          j = j + 1.
+        ENDWHILE.
+        named_row-name = substring( val = normalized off = i + 3 len = j - i - 3 ).
+      ENDIF.
+    ENDIF.
+    IF named_row-name IS NOT INITIAL.
+      group_count = group_count + 1.
+      named_row-index = group_count.
+      APPEND named_row TO group_names.
+      CONCATENATE posix '(?P<' INTO posix RESPECTING BLANKS.
+      i = i + 2.
+    ELSE.
+      IF i + 1 >= n.
+        group_count = group_count + 1.
+      ELSEIF normalized+i(2) <> '(?'.
+        group_count = group_count + 1.
+      ENDIF.
+      CONCATENATE posix c INTO posix RESPECTING BLANKS.
+    ENDIF.
   ELSE.
     IF c = '['.
       in_class = abap_true.

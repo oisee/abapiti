@@ -69,4 +69,7 @@ func TestRegExpExecNamedGroupsLayout(t *testing.T) {
 	if named := strings.Index(js, "IF group_names IS NOT INITIAL."); start < 0 || named < start || named > end {
 		t.Error("named groups must be materialized inside METHOD exec")
 	}
+	if strings.Contains(js, "named_row-index = sy-tabix") || !strings.Contains(js, "named_row-index = group_count.") {
+		t.Error("named groups must take their capture-group number")
+	}
 }

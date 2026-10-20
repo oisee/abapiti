@@ -3,6 +3,7 @@ package tsfront
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -164,4 +165,66 @@ func TestRegExpMatchArrayForOfDestructuringRefused(t *testing.T) {
 			t.Errorf("%s: destructuring a match-array element was not refused: %v", pattern, diags)
 		}
 	}
+}
+
+// Named groups take their capture-group number, counting unnamed groups but
+// not escaped parentheses, class members or (?:. Lookarounds are refused for
+// literals, so they reach the ABAP runtime only through its constructor.
+const regexpNamedGroupNumbersSource = `class Probe {
+ static named(re: RegExp, text: string, names: string[]): string {
+  const groups = re.exec(text)!.groups!;
+  return names.map(name => name + "=" + (groups[name] ?? "missing")).join(",");
+ }
+ static run(): string {
+  return [
+   Probe.named(/(a)(?<x>b)/, "ab", ["x"]),
+   Probe.named(/(a)(?<x>b)(c)?(?<yy>d)/, "abd", ["x", "yy"]),
+   Probe.named(/\(?<y>(?<z>c)/, "<y>c", ["y", "z"]),
+   Probe.named(/[(?<w>]+(?<v>d)/, "w>d", ["w", "v"]),
+   Probe.named(/[\]()](?<u>e)/, ")e", ["u"]),
+   Probe.named(/(?:n)(?<p>q)(t)?/, "nq", ["p"]),
+  ].join("|");
+ }
+}`
+
+var regexpNamedGroupLookarounds = [][2]string{
+	{`(?:n)(?<p>q)(?=r)(?!s)(t)?(?<g>u)?`, "nqr"},
+	{`(?<=x)(?<s>y)(?<!z)(?<o>w)?`, "xy"},
+}
+
+func TestRegExpNamedGroupNumbersNodeOracle(t *testing.T) {
+	want := regexpOptionalCapturesNode(t, regexpNamedGroupNumbersSource)
+	p := lowerStatementsProbe(t, map[string]string{"probe.ts": regexpNamedGroupNumbersSource}, []string{"probe.ts"})
+	if got := runGoHIR(t, p, fmt.Sprintf("fmt.Println(%s())", goEntry("probe.ts.Probe", "run"))); got != want {
+		t.Fatalf("Go %q Node %q", got, want)
+	}
+	files, names, err := emitABAPNamed(t, p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	owner := names.Get("probe.ts.Probe")
+	var b strings.Builder
+	b.WriteString("CLASS ltcl_named DEFINITION FOR TESTING DURATION SHORT RISK LEVEL HARMLESS.\nPRIVATE SECTION.\nMETHODS oracle FOR TESTING.\n")
+	for i := range regexpNamedGroupLookarounds {
+		fmt.Fprintf(&b, "METHODS lookaround%d FOR TESTING.\n", i)
+	}
+	b.WriteString("ENDCLASS.\nCLASS ltcl_named IMPLEMENTATION.\nMETHOD oracle.\nDATA expected TYPE string.\nDATA ch TYPE c LENGTH 1.\n")
+	for _, line := range abapStringBuild("expected", "ch", strings.TrimSuffix(want, "\n")) {
+		b.WriteString(line + "\n")
+	}
+	fmt.Fprintf(&b, "DATA(actual) = %s=>%s( ).\ncl_abap_unit_assert=>assert_equals( act = actual exp = expected ).\nENDMETHOD.\n", owner, names.Get("member.run"))
+	// The unchecked constructor path runs the runtime scanner, not the table.
+	for i, c := range regexpNamedGroupLookarounds {
+		fmt.Fprintf(&b, "METHOD lookaround%d.\nDATA expected TYPE string.\nDATA actual TYPE string.\nDATA ch TYPE c LENGTH 1.\nDATA regex TYPE REF TO %s.\n", i, names.Get("runtime.regexp_js"))
+		raw, err := exec.Command("node", "-e", `const g=new RegExp(process.argv[1]).exec(process.argv[2]).groups;process.stdout.write(Object.entries(g).map(([k,v])=>k+"="+(v??"missing")).join(","))`, c[0], c[1]).CombinedOutput()
+		if err != nil {
+			t.Fatal(err, string(raw))
+		}
+		for _, line := range abapStringBuild("expected", "ch", string(raw)) {
+			b.WriteString(line + "\n")
+		}
+		fmt.Fprintf(&b, "CREATE OBJECT regex EXPORTING pattern = `%s` flags = ``.\nDATA(hit) = regex->exec( `%s` ).\nLOOP AT hit->match_groups->entries INTO DATA(row).\nIF sy-tabix > 1.\nactual = actual && `,`.\nENDIF.\nIF row-v IS BOUND.\nactual = actual && row-k && `=` && row-v->sval.\nELSE.\nactual = actual && row-k && `=missing`.\nENDIF.\nENDLOOP.\ncl_abap_unit_assert=>assert_equals( act = actual exp = expected ).\nENDMETHOD.\n", c[0], c[1])
+	}
+	b.WriteString("ENDCLASS.\n")
+	files[owner+".clas.testclasses.abap"] = b.String()
 }
