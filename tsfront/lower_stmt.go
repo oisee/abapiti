@@ -498,6 +498,22 @@ func (l *lowerer) varDecl(d *ast.Node) []*hir.Stmt {
 		}
 	}
 	if x != nil {
+		if l.unprunedFeatures && d.Type() == nil && arrayIndexRead(x) {
+			// An inferred local is storage, not a required-value use. Carry
+			// absence until a consumer asks for the annotated element type.
+			x = l.observedArrayIndex(x)
+			if x.Type.Kind == hir.Optional {
+				typ = x.Type
+			}
+		}
+		if l.unprunedFeatures && typ.Kind == hir.Optional && arrayIndexRead(x) {
+			// The checker narrows an optional binding to the array's annotated
+			// element type at initialization. That does not prove presence.
+			if l.widenedLets == nil {
+				l.widenedLets = map[*ast.Symbol]bool{}
+			}
+			l.widenedLets[sym] = true
+		}
 		x = l.coerce(x, typ)
 	}
 	return append(stmts, l.localDeclaration(d, name, typ, x))

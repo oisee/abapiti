@@ -689,6 +689,9 @@ func (l *lowerer) coerce(x *hir.Expr, dst hir.Type) *hir.Expr {
 	if x == nil {
 		return nil
 	}
+	if dst.Kind == hir.Optional || dst.Kind == hir.Dynamic {
+		x = l.observedArrayIndex(x)
+	}
 	if (x.Type.Kind == hir.InterfaceRef || x.Type.Kind == hir.ClassRef && strings.HasPrefix(x.Type.Name, "closure.")) && dst.Kind == hir.InterfaceRef {
 		if adapted := l.closureAdapter(nil, x, dst); adapted != nil {
 			return adapted
@@ -739,7 +742,14 @@ func (l *lowerer) coerce(x *hir.Expr, dst hir.Type) *hir.Expr {
 		// `F | undefined` is admitted to (widened into) F first; the optional
 		// wrapping is the ordinary present value.
 		if admitted := l.familyAdmission(x, dst.Args[0]); admitted != x {
-			return l.coerce(admitted, dst)
+			// Reference storage can be absent despite a present-only checker
+			// annotation (notably an unchecked array read). Test absence before
+			// admitting the present arm, and evaluate the source only once.
+			saved := l.tempInit(nil, x.Type, x)
+			saved.Node = x.Node
+			return &hir.Expr{Kind: hir.Conditional, Node: x.Node, Type: dst,
+				X: &hir.Expr{Kind: hir.IsUndefined, Node: x.Node, Type: hir.T(hir.Bool), X: saved},
+				Y: &hir.Expr{Kind: hir.Lit, Node: x.Node, Type: dst}, Z: l.coerce(l.familyAdmission(saved, dst.Args[0]), dst)}
 		}
 	}
 	if l.unprunedFeatures && dst.Kind == hir.Optional && len(dst.Args) == 1 && dst.Args[0].Kind == hir.UnionRef && x.Type.Kind == hir.Optional && len(x.Type.Args) == 1 && l.familyViewSubtype(dst.Args[0], x.Type.Args[0], map[string]bool{}) {

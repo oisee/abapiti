@@ -939,6 +939,9 @@ func (b *body) expr(x *hir.Expr) string {
 	case hir.IndexGet:
 		a, i := b.expr(x.X), b.expr(x.Y)
 		code = a + ".get(" + i + ").Value"
+		if !t.IsRef() && t.Kind != hir.Optional {
+			code = "unwrap(" + a + ".get(" + i + "))"
+		}
 		if e.liveStorage() {
 			code = "liveArrayRead(" + a + "," + i + ")"
 		}

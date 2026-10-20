@@ -1266,7 +1266,11 @@ func (b *body) expr(x *hir.Expr) string {
 		b.line("CLEAR " + row + ".")
 		b.line("READ TABLE " + a + "->items INDEX " + i + " INTO " + row + ".")
 		if row != n {
+			// Absence belongs to the read's nil carrier; only present rows
+			// require the element's checked structural/nominal conversion.
+			b.line("CLEAR " + n + ".\nIF " + row + " IS BOUND.")
 			b.arrayElement(n, row, t)
+			b.line("ENDIF.")
 		}
 	case hir.New:
 		if t.Kind == hir.OrderedMap && len(t.Args) == 2 && t.Args[0].Kind == hir.Dynamic {

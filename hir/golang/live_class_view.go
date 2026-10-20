@@ -197,14 +197,13 @@ func (e *emitter) arrayReference(t hir.Type, value string) string {
 		return "box(" + value + ")"
 	}
 	if base.Kind == hir.UnionRef {
-		return e.unionValidator(base.Name, "") + "(box(" + value + "))"
+		// An unchecked array annotation does not prove presence. Validate
+		// present members, but let consumers observe an absent slot as nil.
+		return "func() " + e.typ(t) + " {v:=" + value + ";if nilRef(v) {return nil};return " + e.unionValidator(base.Name, "") + "(box(v))}()"
 	}
 	if base.Kind == hir.InterfaceRef {
 		if view := e.structuralUnion(base); view != "" {
-			if t.Kind == hir.Optional {
-				return "func() " + e.typ(t) + " {v:=" + value + ";if nilRef(v) {return nil};return " + view + "(box(v))}()"
-			}
-			return view + "(box(" + value + "))"
+			return "func() " + e.typ(t) + " {v:=" + value + ";if nilRef(v) {return nil};return " + view + "(box(v))}()"
 		}
 	}
 	if base.Kind == hir.ClassRef && e.liveClasses[base.Name] {

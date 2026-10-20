@@ -128,9 +128,9 @@ func (l *lowerer) elementAccess(n *ast.Node) *hir.Expr {
 			return nil
 		}
 		if l.isMatchArrayType(l.ck.GetTypeAtLocation(e.Expression)) {
-			return l.rtOp("array.get", recv, hir.T(hir.Optional, recv.Type.Args[0]), l.indexValue(k))
+			return l.rtOp("array.get", recv, hir.T(hir.Optional, recv.Type.Args[0]), l.arrayReadIndex(k))
 		}
-		return &hir.Expr{Kind: hir.IndexGet, Node: l.node(n), Type: recv.Type.Args[0], X: recv, Y: l.indexValue(k)}
+		return &hir.Expr{Kind: hir.IndexGet, Node: l.node(n), Type: recv.Type.Args[0], X: recv, Y: l.arrayReadIndex(k)}
 	case hir.Dynamic:
 		// The checker's flow-narrowed receiver type (after a typeof test)
 		// names the record behind the box; the checked view raises otherwise.
@@ -1037,13 +1037,7 @@ func (l *lowerer) optionalChain(n *ast.Node) *hir.Expr {
 	if n.Kind == ast.KindCallExpression && base.Kind != ast.KindIdentifier {
 		base = base.Expression()
 	}
-	recv := l.anyCallReceiver(base, l.expr(base))
-	if base.Kind == ast.KindElementAccessExpression {
-		arr := l.expr(base.Expression())
-		if arr != nil && arr.Type.Kind == hir.Array {
-			recv = l.rtOp("array.get", arr, hir.T(hir.Optional, arr.Type.Args[0]), l.expr(base.AsElementAccessExpression().ArgumentExpression))
-		}
-	}
+	recv := l.anyCallReceiver(base, l.observedArrayIndex(l.expr(base)))
 	if recv == nil {
 		return nil
 	}

@@ -54,10 +54,10 @@ func liveStringElement(d *dynamic) jsString {
  return dynString(d)
 }
 func liveArrayRead[T any](a *array[T],i int32) T {
- v:=a.get(i);if a.live==nil || v.Has {return v.Value};var z T
+ v:=a.get(i);if v.Has {return v.Value};var z T
  if nilRef(z) {return z};r:=reflect.ValueOf(z)
  if r.Kind()==reflect.Struct && r.FieldByName("Has").IsValid() {return z}
- panic(newTrap("live typed array absent element cannot be represented"))
+ panic(newRangeFault())
 }
 func liveArrayElement[T any](d *dynamic) T {
  var z T

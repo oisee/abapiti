@@ -2713,6 +2713,7 @@ func (l *lowerer) binary(n *ast.Node) *hir.Expr {
 		if x == nil || y == nil {
 			return nil
 		}
+		x, y = l.observedArrayIndex(x), l.observedArrayIndex(y)
 		cop := map[ast.Kind]string{
 			ast.KindLessThanToken: "<", ast.KindLessThanEqualsToken: "<=",
 			ast.KindGreaterThanToken: ">", ast.KindGreaterThanEqualsToken: ">="}[op]
@@ -3065,9 +3066,7 @@ func (l *lowerer) equality(n *ast.Node, b *ast.BinaryExpression, negated bool) *
 	if x == nil || y == nil {
 		return nil
 	}
-	if b.OperatorToken.Kind == ast.KindEqualsEqualsEqualsToken || b.OperatorToken.Kind == ast.KindExclamationEqualsEqualsToken {
-		x, y = l.observedArrayIndex(x), l.observedArrayIndex(y)
-	}
+	x, y = l.observedArrayIndex(x), l.observedArrayIndex(y)
 	// Dynamic uses reference storage but can carry a primitive boolean.
 	// Keep its tag for equality instead of applying the object-only proof.
 	tagged := func(t hir.Type) bool {
