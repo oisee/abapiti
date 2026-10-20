@@ -90,8 +90,10 @@ write `registry-traps.json` contribute body traps only.
 Each site is matched against the raw V8 block coverage of the reference run.
 A statement uses the innermost range that contains it, so a count-0 branch
 inside an executed function counts as not reached. A body trap fires on
-entry, so it uses the call count of the function V8 starts at or just after
-the trap node. Abaplint and transpiler sources run from their
+entry, so it uses the call count of the owner recorded in `MethodSource`
+(the HIR `Class`/`Method` source), even when `Source` points inside an
+uncalled nested arrow. The V8 function must start at or just after that
+owner location and contain the trap node. Abaplint and transpiler sources run from their
 `node_modules` builds, which have no source maps. Their body traps are
 matched by function name within the compiled file (evidence `name`).
 Unmatched ones are unknown: A for abaplint/transpiler, G for gogen. Files

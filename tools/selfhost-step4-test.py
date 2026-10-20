@@ -148,7 +148,13 @@ class Step4Test(unittest.TestCase):
                {'functionName': 'm', 'ranges': [{'startOffset': m_start, 'endOffset': method.index('}') + 1, 'count': 2}]},
                {'functionName': 'h', 'ranges': [{'startOffset': method.index('function h'), 'endOffset': len(method) - 1, 'count': 0}]}]
         self.assertEqual(covered(fns, method.index('static'), body=True, text=method)[:2], (2, 'function'))
+        self.assertEqual(covered(fns, method.index('static'), body=True, text=method,
+                                 owner_offset=method.index('static'))[:2], (2, 'function'))
         self.assertEqual(covered(fns, method.index('class'), body=True, text=method)[:2], (1, 'block'))
+        exported = 'export function owner() {}\n'
+        fns = [dict(functionName='', ranges=[dict(startOffset=0, endOffset=len(exported), count=1)]),
+               dict(functionName='owner', ranges=[dict(startOffset=7, endOffset=len(exported) - 1, count=0)])]
+        self.assertEqual(covered(fns, 0, body=True, text=exported, owner_offset=0)[:2], (0, 'function'))
 
     def test_utf16_positions_and_arrow_bodies(self):
         text = 'const s = "\U0001F600é";\nconst f = (a) => a + 1;\n'
@@ -157,6 +163,35 @@ class Step4Test(unittest.TestCase):
         self.assertEqual(TOOL['utf16_line_column'](text, offset), (1, 10))
         self.assertEqual(TOOL['utf16_offset'](text, 2, None), 17)
         self.assertEqual(TOOL['body_probe'](text, offset), offset + len('(a) => '))
+
+    def test_body_trap_uses_hir_owner_entry_not_nested_arrow(self):
+        text = 'function owner() {\n  const nested = () => { refuse(); };\n}\n'
+        trap = text.index('refuse')
+        trap_column = trap - text.index('\n')
+        nested = text.index('() =>')
+        with tempfile.TemporaryDirectory() as directory:
+            osg = Path(directory)
+            path = osg / 'tools/lib.mjs'
+            path.parent.mkdir()
+            path.write_text(text)
+            site = dict(Class='tools/lib.mjs.module', Method='owner',
+                        MethodSource='tools/lib.mjs:1:1',
+                        Source=f'tools/lib.mjs:2:{trap_column}',
+                        Kind='body', Message='lowering trap: unsupported join')
+            for count in (3, 0):
+                functions = [
+                    dict(functionName='', ranges=[dict(startOffset=0, endOffset=len(text), count=1)]),
+                    dict(functionName='owner', ranges=[dict(startOffset=0, endOffset=len(text) - 1, count=count)]),
+                    dict(functionName='nested', ranges=[dict(startOffset=nested, endOffset=text.index('};') + 1, count=0)]),
+                ]
+                rows, a, g = TOOL['classify_traps']([site], osg, osg / 'lint', osg / 'transpiler', {str(path): functions})
+                self.assertEqual((a, g), (0, 0))
+                self.assertEqual((rows[0]['hits'], rows[0]['evidence']), (count, 'function'))
+                self.assertEqual(rows[0]['probe'], text.index('{') + 1)
+                # Statement/guard coverage still uses the inner arrow count.
+                for kind in ('stmt', 'guard'):
+                    rows, _, _ = TOOL['classify_traps']([dict(site, Kind=kind)], osg, osg / 'lint', osg / 'transpiler', {str(path): functions})
+                    self.assertEqual((rows[0]['hits'], rows[0]['evidence']), (0, 'block'))
 
     def test_list_traps_orders_by_replay_and_excludes_guards(self):
         main = TOOL['main']
