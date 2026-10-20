@@ -73,6 +73,13 @@ func classViewTargets(p *Program, additional map[string]bool) map[string]bool {
 				}
 			}
 		}
+		if x.Kind == RuntimeOp && x.Op == "container.readonlyView" {
+			t := x.Type
+			for len(t.Args) > 0 {
+				t = t.Args[len(t.Args)-1]
+			}
+			out[t.Name] = true
+		}
 		if x.Kind == RuntimeOp && x.Op == "set.view" && len(x.Type.Args) == 1 {
 			out[x.Type.Args[0].Name] = true
 		}
@@ -92,7 +99,7 @@ func classViewTargets(p *Program, additional map[string]bool) map[string]bool {
 				}
 			}
 		}
-		if x.Kind == RuntimeOp && x.Op == "dynamic.classView" {
+		if x.Kind == RuntimeOp && (x.Op == "dynamic.classView" || x.Op == "container.readonlyClassView") {
 			out[x.Type.Name] = true
 		}
 		if x.Kind == RuntimeOp && x.Op == "dynamic.arrayView" && x.Type.Args[0].Kind == ClassRef {
@@ -151,7 +158,11 @@ func classViewTargets(p *Program, additional map[string]bool) map[string]bool {
 	var expand func(string)
 	var row func(Type)
 	row = func(t Type) {
-		if t.Kind == Optional || t.Kind == Array {
+		if t.Kind == OrderedMap && t.Readonly {
+			row(t.Args[1])
+		} else if t.Kind == OrderedSet && t.Readonly {
+			row(t.Args[0])
+		} else if t.Kind == Optional || t.Kind == Array {
 			row(t.Args[0])
 		} else if t.Kind == ClassRef {
 			if c := classes[t.Name]; c != nil && c.Structural {

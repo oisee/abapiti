@@ -259,7 +259,7 @@ func (v *verifier) typ(n Node, t Type) {
 		}
 		// Boxed Map keys require value-based hashing in the backend. Go
 		// implements it; other backends must retain an explicit refusal.
-		if t.Kind == OrderedMap && k.Kind == Dynamic {
+		if k.Kind == Dynamic && (t.Kind == OrderedMap || t.Readonly) {
 			return
 		}
 		if k.Kind != Number && k.Kind != String && k.Kind != Bool && k.Kind != I32 && k.Kind != I64 && k.Kind != ClassRef && k.Kind != InterfaceRef && k.Kind != ClassValue && k.Kind != Array {
@@ -995,6 +995,24 @@ func numeric(t Type) bool { return t.Kind == Number || t.Kind == I32 || t.Kind =
 func (v *verifier) specialOp(e *Expr, a Type, check func(*Expr) Type, args func([]Type), eq func(a, b Type), t Type) {
 	ref := func(x Type) bool { return x.Kind == ClassRef || x.Kind == InterfaceRef }
 	switch e.Op {
+	case "collection.has", "collection.get":
+		if a.Kind != OrderedMap && a.Kind != OrderedSet {
+			v.fail(e.Node, "identity query requires a Map or Set")
+		}
+		args([]Type{T(Dynamic)})
+		if e.Op == "collection.get" {
+			if a.Kind != OrderedMap {
+				v.fail(e.Node, "identity get requires Map")
+			} else {
+				eq(t, T(Optional, a.Args[1]))
+			}
+		} else {
+			eq(t, T(Bool))
+		}
+	case "container.readonlyView":
+		if len(e.Args) != 0 || !t.Readonly || a.Kind != t.Kind || (t.Kind != Array && t.Kind != OrderedMap && t.Kind != OrderedSet) || len(a.Args) != len(t.Args) || (t.Kind == OrderedMap && !a.Args[0].Equal(t.Args[0])) {
+			v.fail(e.Node, "readonly container view requires matching storage and invariant keys")
+		}
 	case "set.view":
 		if len(e.Args) != 0 || a.Kind != OrderedSet || t.Kind != OrderedSet || len(a.Args) != 1 || len(t.Args) != 1 || !a.Args[0].IsRef() || t.Args[0].Kind != ClassRef || !DataClassView(v.p, t.Args[0].Name) {
 			v.fail(e.Node, "Set view needs reference keys and a public data layout")
@@ -1089,7 +1107,7 @@ func (v *verifier) specialOp(e *Expr, a Type, check func(*Expr) Type, args func(
 			v.fail(e.Node, "dynamic.mapView needs Dynamic in and an unqualified string-key Map out")
 		}
 		args(nil)
-	case "dynamic.classView":
+	case "dynamic.classView", "container.readonlyClassView":
 		if a.Kind != Dynamic || t.Kind != ClassRef || t.Name == RootObject {
 			v.fail(e.Node, "dynamic.classView needs Dynamic in and a named class reference out")
 		}

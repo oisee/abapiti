@@ -23,6 +23,12 @@ import (
 
 // mapTypeNode maps a declared type annotation to a HIR type.
 func (l *lowerer) mapTypeNode(n *ast.Node) hir.Type {
+	if !l.unprunedFeatures {
+		return l.mapTypeNodeRaw(n)
+	}
+	return l.rememberContainer(l.ck.GetTypeFromTypeNode(n), l.mapTypeNodeRaw(n))
+}
+func (l *lowerer) mapTypeNodeRaw(n *ast.Node) hir.Type {
 	if len(l.containerParams) > 0 {
 		return l.mapCheckerType(n, l.ck.GetTypeFromTypeNode(n))
 	}
@@ -428,7 +434,10 @@ func (l *lowerer) isMatchArrayType(t *checker.Type) bool {
 // mapCheckerType maps the checker type of an expression (or an inferred
 // declaration type) to a HIR type. Narrowed literal types collapse to their
 // base; `T | undefined` becomes Optional<T>.
-func (l *lowerer) mapCheckerType(n *ast.Node, t *checker.Type) (mapped hir.Type) {
+func (l *lowerer) mapCheckerType(n *ast.Node, t *checker.Type) hir.Type {
+	return l.rememberContainer(t, l.mapCheckerTypeRaw(n, t))
+}
+func (l *lowerer) mapCheckerTypeRaw(n *ast.Node, t *checker.Type) (mapped hir.Type) {
 	t = l.specializedType(t)
 	if cached, ok := l.gogenCachedType(t); ok {
 		return cached

@@ -45,6 +45,9 @@ func (l *lowerer) dataShapeSubtypeSeen(dst, src hir.Type, active map[string]bool
 				continue
 			}
 			compatible := f.Type.Equal(g.Type) || l.gogenOptionalDynamicField(f.Type, g.Type)
+			if (f.Type.Readonly || f.Type.Kind == hir.Optional && f.Type.Args[0].Readonly) && l.readonlyShapeRead(f.Type, g.Type, active) {
+				compatible = true
+			}
 			if g.Type.Kind == hir.Optional && len(g.Type.Args) == 1 && f.Type.Equal(g.Type.Args[0]) && l.widenedRequiredProperty(s, g.Name) {
 				compatible = true
 			}
@@ -109,7 +112,7 @@ func (l *lowerer) structuralEqualityTypes(a, b hir.Type) bool {
 	if b.Kind == hir.Optional {
 		b = b.Args[0]
 	}
-	return l.dataShapeSubtype(a, b) || l.dataShapeSubtype(b, a) || l.mapStorageView(a, b) || l.mapStorageView(b, a) || l.setReferenceView(a, b) || l.setReferenceView(b, a)
+	return l.readonlyContainerAssignable(a, b) || l.readonlyContainerAssignable(b, a) || l.dataShapeSubtype(a, b) || l.dataShapeSubtype(b, a) || l.mapStorageView(a, b) || l.mapStorageView(b, a) || l.setReferenceView(a, b) || l.setReferenceView(b, a)
 }
 
 // Required checker properties may carry optional primitive storage because an
@@ -137,6 +140,9 @@ func (l *lowerer) readonlyShapeRead(dst, src hir.Type, active map[string]bool) b
 			src = src.Args[0]
 		}
 		return l.readonlyShapeRead(dst.Args[0], src, active)
+	}
+	if l.readonlyContainerAssignable(dst, src) {
+		return true
 	}
 	if dst.Kind == hir.Array && src.Kind == hir.Array && len(dst.Args) == 1 && len(src.Args) == 1 {
 		return l.readonlyShapeRead(dst.Args[0], src.Args[0], active)

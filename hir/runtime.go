@@ -109,31 +109,34 @@ var RuntimeSpecs = map[string]RuntimeSpec{
 // SpecialOps lists ops whose typing rules depend on more than the receiver
 // kind; the verifier checks them individually.
 var SpecialOps = map[string]bool{
-	"map.view":                true,
-	"set.view":                true,
-	"union.check":             true, // Dynamic -> validated complete family
-	"union.admit":             true,
-	"union.widen":             true,
-	"union.project":           true,
-	"union.tag":               true,
-	"union.read":              true,
-	"object.get":              true, // nominal static property table -> Dynamic
-	"object.hasOwn":           true,
-	"object.has":              true,
-	"object.checkedClassView": true, // nominal class view; invalid runtime types trap
-	"object.classOf":          true, // any object ref -> ClassValue
-	"classvalue.newArgs":      true,
-	"classvalue.new":          true, // ClassValue -> a class or interface reference
-	"chai.throwMatch":         true, // tests-only thunk or boxed parameterless callable
-	"chai.box":                true, // tests-only box; parsed-to-native snapshot escapes refuse
-	"dynamic.of":              true, // any value -> Dynamic (tagged box)
-	"dynamic.asRef":           true,
-	"dynamic.asObject":        true, // checked broad object carrier, never a nominal class projection
-	"dynamic.mapView":         true, // branded live string-key Map, checked values on access
-	"dynamic.classView":       true, // live structural storage, never a nominal assertion
-	"dynamic.arrayView":       true, // checked live primitive storage
-	"dynamic.materialize":     true, // Dynamic -> a class or interface reference
-	"regexp.new":              true, // pattern, [flags] -> RegExp
+	"map.view":       true,
+	"collection.has": true, "collection.get": true,
+	"container.readonlyClassView": true,
+	"container.readonlyView":      true,
+	"set.view":                    true,
+	"union.check":                 true, // Dynamic -> validated complete family
+	"union.admit":                 true,
+	"union.widen":                 true,
+	"union.project":               true,
+	"union.tag":                   true,
+	"union.read":                  true,
+	"object.get":                  true, // nominal static property table -> Dynamic
+	"object.hasOwn":               true,
+	"object.has":                  true,
+	"object.checkedClassView":     true, // nominal class view; invalid runtime types trap
+	"object.classOf":              true, // any object ref -> ClassValue
+	"classvalue.newArgs":          true,
+	"classvalue.new":              true, // ClassValue -> a class or interface reference
+	"chai.throwMatch":             true, // tests-only thunk or boxed parameterless callable
+	"chai.box":                    true, // tests-only box; parsed-to-native snapshot escapes refuse
+	"dynamic.of":                  true, // any value -> Dynamic (tagged box)
+	"dynamic.asRef":               true,
+	"dynamic.asObject":            true, // checked broad object carrier, never a nominal class projection
+	"dynamic.mapView":             true, // branded live string-key Map, checked values on access
+	"dynamic.classView":           true, // live structural storage, never a nominal assertion
+	"dynamic.arrayView":           true, // checked live primitive storage
+	"dynamic.materialize":         true, // Dynamic -> a class or interface reference
+	"regexp.new":                  true, // pattern, [flags] -> RegExp
 
 	"json.stringifySubset": true, // JSON data graph; unproven native order refuses
 	"json.stringifyConfig": true, // source-pinned Config.getDefault data graph -> String

@@ -130,6 +130,9 @@ func fastCollectionRuntime(source string) (string, error) {
 	}
 	var extra strings.Builder
 	fast := fastCollectionSource
+	if strings.Contains(source, "type setReadProxy[") {
+		fast = strings.Replace(fast, "type fastOrderedSet[T comparable] struct {", "type fastOrderedSet[T comparable] struct {readProxy *setReadProxy[T];", 1)
+	}
 	if strings.Contains(source, " iteration *array[T];") {
 		fast = setIterationFastRuntime(fast)
 	}

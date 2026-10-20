@@ -312,6 +312,9 @@ func (l *lowerer) recursiveFamilyType(n *ast.Node, t *checker.Type) (res hir.Typ
 }
 
 func (r *familyRegistration) typ(n *ast.Node, t *checker.Type) hir.Type {
+	return r.l.rememberContainer(t, r.typRaw(n, t))
+}
+func (r *familyRegistration) typRaw(n *ast.Node, t *checker.Type) hir.Type {
 	l := r.l
 	if t == nil {
 		r.failed = true

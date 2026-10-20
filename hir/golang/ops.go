@@ -11,9 +11,11 @@ import (
 
 var supportedOps = map[string]bool{
 	"map.checkedGet": true, "map.checkedSet": true, "map.checkedValues": true,
-	"union.declarations": true,
-	"dynamic.mapView":    true,
-	"map.view":           true, "set.view": true, "union.check": true, "union.admit": true,
+	"union.declarations":          true,
+	"dynamic.mapView":             true,
+	"container.readonlyClassView": true,
+	"container.readonlyView":      true, "collection.has": true, "collection.get": true,
+	"map.view": true, "set.view": true, "union.check": true, "union.admit": true,
 	"union.widen":            true,
 	"union.project":          true,
 	"union.tag":              true,
@@ -87,6 +89,15 @@ func (b *body) runtime(x *hir.Expr) string {
 		copy := *x
 		copy.Op = base
 		x = &copy
+	}
+	if x.Op == "container.readonlyView" {
+		return b.temp(x.Type, b.e.readonlyContainerView(x.Type, "box("+b.expr(x.X)+")"))
+	}
+	if x.Op == "collection.has" {
+		return b.temp(x.Type, b.expr(x.X)+".identityHas("+b.expr(x.Args[0])+")")
+	}
+	if x.Op == "collection.get" {
+		return b.temp(x.Type, fmt.Sprintf("func() %s {v,has:=%s.identityGet(%s);if !has {var z %s;return z};return %s}()", b.e.typ(x.Type), b.expr(x.X), b.expr(x.Args[0]), b.e.typ(x.Type), b.e.viewValue(x.Type, "v")))
 	}
 	if x.Op == "set.view" {
 		return b.expr(x.X)
@@ -180,6 +191,9 @@ func (b *body) runtime(x *hir.Expr) string {
 		code = "func() {m:=" + a + ";k:=m.keys().Items;for i:=len(k)-1;i>=0;i-- {m.delete(k[i])}}()"
 	case "array.length", "set.size":
 		code = "int32(len(" + a + ".Items))"
+		if x.Op == "set.size" && b.e.readonlyViews {
+			code = a + ".readonlySetSize()"
+		}
 		if x.Op == "array.length" && b.e.liveStorage() {
 			code = a + ".length()"
 		}
@@ -440,7 +454,7 @@ func (b *body) runtime(x *hir.Expr) string {
 		code = "dynObject(" + a + ")"
 	case "dynamic.mapView":
 		code = b.dynamicMapView(x)
-	case "dynamic.classView":
+	case "dynamic.classView", "container.readonlyClassView":
 		code = b.e.liveView(x.Type) + "(" + a + ")"
 	case "dynamic.arrayView":
 		code = b.e.viewValue(x.Type, "checkedArraySource("+a+", false)")

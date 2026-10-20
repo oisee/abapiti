@@ -15,6 +15,9 @@ func (l *lowerer) dynamicReference(x *hir.Expr, target hir.Type) *hir.Expr {
 	}
 	if l.unprunedFeatures && target.Kind == hir.ClassRef && target.Name != hir.RootObject {
 		op = "dynamic.classView"
+		if x.Kind == hir.RuntimeOp && x.Op == "dynamic.of" && l.hasReadonlyCovariance(target, x.X.Type, map[string]bool{}) {
+			op = "container.readonlyClassView"
+		}
 	}
 	if l.unprunedFeatures && target.Kind == hir.Array && (target.Args[0].Kind == hir.String || target.Args[0].Kind == hir.ClassRef) {
 		op = "dynamic.arrayView"
