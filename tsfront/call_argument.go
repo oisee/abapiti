@@ -11,7 +11,7 @@ import (
 // their nominal HIR layouts need the same checked live view as an assertion.
 func (l *lowerer) callArgument(call, at *ast.Node, index int, value *hir.Expr, target hir.Type) *hir.Expr {
 	value = l.coerce(value, target)
-	if !l.unprunedFeatures || value == nil || value.Type.Equal(target) || l.mutableContainerCovariance(target, value.Type, map[string]bool{}) || target.Kind != hir.ClassRef || !l.shapeLike[target.Name] || value.Type.Kind != hir.ClassRef || !l.shapeLike[value.Type.Name] || !hir.DataClassView(l.out, target.Name) {
+	if !l.unprunedFeatures || value == nil || value.Type.Equal(target) || target.Kind != hir.ClassRef || !l.shapeLike[target.Name] || value.Type.Kind != hir.ClassRef || !l.shapeLike[value.Type.Name] || !hir.DataClassView(l.out, target.Name) {
 		return value
 	}
 	sig := l.ck.GetResolvedSignature(call)

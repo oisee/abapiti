@@ -835,6 +835,9 @@ func (l *lowerer) identifier(n *ast.Node) *hir.Expr {
 			}
 		}
 		l.localSymbols[x] = symbol
+		if l.freshArraySymbols[symbol] {
+			l.markFreshContainer(x)
+		}
 		if l.localSymbolMethods == nil {
 			l.localSymbolMethods = map[*hir.Expr]*hir.Method{}
 		}

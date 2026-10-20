@@ -452,6 +452,8 @@ func (p *Program) lowerWithOptions(files []string, registry *overrides.Registry,
 // state of the pass being run.
 type lowerer struct {
 	containerCheckerTypes map[string][]*checker.Type
+	freshContainers       map[*hir.Expr]bool
+	freshArraySymbols     map[*ast.Symbol]bool
 	externs               map[string]ExternModule
 	externFunctions       map[*ast.Node]*hir.ExternSignature
 	// The source-pinned deployment is frozen; new generic semantics apply to

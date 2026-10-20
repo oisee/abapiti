@@ -109,6 +109,7 @@ func (l *lowerer) hofCall(n *ast.Node, name string, recv *hir.Expr, args []*ast.
 		l.pendStmt(&hir.Stmt{Kind: hir.ForEach, Node: l.node(n), Name: params[0], Type: elem, X: recv,
 			Body: loopBody(&hir.Stmt{Kind: hir.ExprStmt, Node: l.node(n),
 				X: l.rtOp("array.push", out, hir.T(hir.I32), body)})})
+		l.markFreshContainer(out)
 		return out, true
 	case "filter":
 		out := l.tempVar(n, hir.T(hir.Array, elem))
@@ -117,6 +118,7 @@ func (l *lowerer) hofCall(n *ast.Node, name string, recv *hir.Expr, args []*ast.
 			Body: loopBody(&hir.Stmt{Kind: hir.If, Node: l.node(n), X: cond,
 				Body: hir.B(&hir.Stmt{Kind: hir.ExprStmt, Node: l.node(n),
 					X: l.rtOp("array.push", out, hir.T(hir.I32), hir.V(params[0], elem))})})})
+		l.markFreshContainer(out)
 		return out, true
 	case "some":
 		out := l.tempInit(n, hir.T(hir.Bool), hir.L(hir.T(hir.Bool), false))

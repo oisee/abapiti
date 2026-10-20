@@ -30,6 +30,43 @@ func (l *lowerer) rememberContainer(t *checker.Type, mapped hir.Type) hir.Type {
 	l.containerCheckerTypes[key] = append(l.containerCheckerTypes[key], t)
 	return mapped
 }
+
+func (l *lowerer) markFreshContainer(x *hir.Expr) {
+	if x == nil || x.Type.Kind != hir.Array && x.Type.Kind != hir.OrderedMap && x.Type.Kind != hir.OrderedSet {
+		return
+	}
+	if l.freshContainers == nil {
+		l.freshContainers = map[*hir.Expr]bool{}
+	}
+	l.freshContainers[x] = true
+}
+
+func (l *lowerer) isFreshContainer(x *hir.Expr) bool {
+	if x == nil {
+		return false
+	}
+	if l.freshContainers[x] {
+		return true
+	}
+	if x.Kind == hir.Seq {
+		return l.isFreshContainer(x.Y)
+	}
+	return x.Kind == hir.Local && l.localSymbols[x] != nil && l.freshArraySymbols[l.localSymbols[x]]
+}
+
+func (l *lowerer) freshContainerConversion(x *hir.Expr, dst hir.Type) *hir.Expr {
+	if !l.unprunedFeatures || !l.isFreshContainer(x) || dst.Kind != x.Type.Kind {
+		return nil
+	}
+	for _, target := range l.containerCheckerTypes[dst.String()] {
+		for _, source := range l.containerCheckerTypes[x.Type.String()] {
+			if l.ck.IsTypeAssignableTo(source, target) {
+				return l.dynamicReference(l.coerce(x, hir.T(hir.Dynamic)), dst)
+			}
+		}
+	}
+	return nil
+}
 func (l *lowerer) readonlyContainerAssignable(dst, src hir.Type) bool {
 	if !l.unprunedFeatures || !dst.Readonly || dst.Kind != src.Kind || dst.Equal(src) {
 		return false
@@ -91,6 +128,26 @@ func (l *lowerer) hasReadonlyCovariance(dst, src hir.Type, seen map[string]bool)
 	return false
 }
 
+func (l *lowerer) recordedReadonlyContainerAssignable(dst, src hir.Type) bool {
+	if dst.Kind != src.Kind || dst.Equal(src) {
+		return false
+	}
+	if dst.Kind != hir.Array && dst.Kind != hir.OrderedMap && dst.Kind != hir.OrderedSet {
+		return false
+	}
+	for _, target := range l.containerCheckerTypes[dst.String()] {
+		if target.Symbol() == nil || (target.Symbol().Name != "ReadonlyMap" && target.Symbol().Name != "ReadonlySet" && target.Symbol().Name != "ReadonlyArray") {
+			continue
+		}
+		for _, source := range l.containerCheckerTypes[src.String()] {
+			if l.ck.IsTypeAssignableTo(source, target) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 // The new checked covariance is read-only. Stop older array/Set subtype
 // fallbacks from giving a writable target a narrower backing element domain.
 // Identical structural layouts retain their existing invariant adapters.
@@ -128,7 +185,13 @@ func (l *lowerer) mutableContainerCovariance(dst, src hir.Type, seen map[string]
 		if dst.Args[len(dst.Args)-1].Equal(src.Args[len(src.Args)-1]) {
 			return false
 		}
-		return !dst.Readonly && !dst.Equal(src) && !hir.StructuralStorageEquivalent(l.out, dst.Args[len(dst.Args)-1], src.Args[len(src.Args)-1], l.shapeLike)
+		if l.recordedReadonlyContainerAssignable(dst, src) {
+			return false
+		}
+		if !dst.Readonly && !dst.Equal(src) && !hir.StructuralStorageEquivalent(l.out, dst.Args[len(dst.Args)-1], src.Args[len(src.Args)-1], l.shapeLike) {
+			return true
+		}
+		return false
 	case hir.ClassRef:
 		key := dst.String() + "/" + src.String()
 		if seen[key] {

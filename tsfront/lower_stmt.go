@@ -516,6 +516,12 @@ func (l *lowerer) varDecl(d *ast.Node) []*hir.Stmt {
 		}
 		x = l.coerce(x, typ)
 	}
+	if x != nil && l.isFreshContainer(x) && sym != nil {
+		if l.freshArraySymbols == nil {
+			l.freshArraySymbols = map[*ast.Symbol]bool{}
+		}
+		l.freshArraySymbols[sym] = true
+	}
 	return append(stmts, l.localDeclaration(d, name, typ, x))
 }
 

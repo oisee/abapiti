@@ -692,8 +692,11 @@ func (l *lowerer) coerce(x *hir.Expr, dst hir.Type) *hir.Expr {
 	if dst.Kind == hir.Optional || dst.Kind == hir.Dynamic {
 		x = l.observedArrayIndex(x)
 	}
-	if l.unprunedFeatures && l.mutableContainerCovariance(dst, x.Type, map[string]bool{}) {
+	if l.unprunedFeatures && !l.isFreshContainer(x) && l.mutableContainerCovariance(dst, x.Type, map[string]bool{}) {
 		return x
+	}
+	if view := l.freshContainerConversion(x, dst); view != nil {
+		return view
 	}
 	if (x.Type.Kind == hir.InterfaceRef || x.Type.Kind == hir.ClassRef && strings.HasPrefix(x.Type.Name, "closure.")) && dst.Kind == hir.InterfaceRef {
 		if adapted := l.closureAdapter(nil, x, dst); adapted != nil {
