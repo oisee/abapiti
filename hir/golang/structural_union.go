@@ -62,6 +62,16 @@ func (e *emitter) structuralUnionProjection(t hir.Type, member string) string {
 	}
 	line("if d==nil {panic(newRangeFault())}")
 	line("if d.Tag!=tagObject {if d.Tag!=2 {panic(newRangeFault())};if _,ok:=d.Value.(interface{structuralRecord()});!ok {panic(newRangeFault())}}")
+	// A statically typed structural-union member already proves membership. Keep
+	// the runtime field checks for erased objects, whose callable members and
+	// other non-data fields cannot be safely inferred from a dynamic record.
+	if member == "" {
+		for _, m := range members {
+			line("if d.Tag==2 {if v,ok:=d.Value.(%s);ok {return v}}", e.typ(m.Type))
+		}
+	} else {
+		line("if d.Tag==2 {if _,ok:=d.Value.(%s);ok {return d}}", e.typ(result))
+	}
 	line("keys:=dynamicKeys(d);_ = keys")
 	for _, m := range members {
 		line("{valid:=true")
