@@ -105,7 +105,7 @@ func (e *emitter) usesStorageIdentity() bool { return e.usesMapViews() || len(e.
 // native fast indexes for programs without these views.
 func storageIdentityRuntime(source string) string {
 	source = strings.Replace(source, "struct {Value K; NaN bool}", "struct {Value K; NaN bool; Identity any}", 1)
-	source = strings.Replace(source, "func collectionKey[K comparable](k K) collectionIndexKey[K] {", "func collectionKey[K comparable](k K) collectionIndexKey[K] {if !nilRef(k) {switch any(k).(type) {case jsString,bool,int32,int64,float64:default:if s,ok:=any(k).(interface{dynamicSource()*dynamic});ok && s.dynamicSource()!=nil {return collectionIndexKey[K]{Identity:s.dynamicSource().Value}};return collectionIndexKey[K]{Identity:any(k)}}};", 1)
+	source = strings.Replace(source, "func collectionKey[K comparable](k K) collectionIndexKey[K] {", "func collectionKey[K comparable](k K) collectionIndexKey[K] {if !nilRef(k) {switch x:=any(k).(type) {case jsString,bool,int32,int64,float64:default:if s,ok:=x.(interface{dynamicSource()*dynamic});ok && s.dynamicSource()!=nil {return collectionIndexKey[K]{Identity:s.dynamicSource().Value}};if d,ok:=x.(*dynamic);ok && (d.Tag==2||d.Tag==tagObject||d.Tag==tagArray||d.Tag==10) {return collectionIndexKey[K]{Identity:d.Value}};return collectionIndexKey[K]{Identity:x}}};", 1)
 	source = strings.Replace(source, "func setKey(v any) any {", "func setKey(v any) any {if s,ok:=v.(interface{dynamicSource()*dynamic});ok && s.dynamicSource()!=nil {return setKey(s.dynamicSource().Value)};", 1)
 	return source
 }

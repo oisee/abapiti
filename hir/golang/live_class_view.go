@@ -301,7 +301,14 @@ func (e *emitter) viewValueWithLocal(t hir.Type, d string, local bool) string {
 		e.hirMath = true
 		return "func() int64 {v:=dynNumber(" + d + ");if v!=math.Trunc(v) || v < -9007199254740991 || v > 9007199254740991 {panic(newRangeFault())};return int64(v)}()"
 	case hir.ClassRef:
-		if t.Name != hir.RootObject && e.liveClasses[t.Name] {
+		if t.Name == hir.RootObject {
+			// The object root is the one ref target that must accept a plain
+			// record carrier (tagObject), like dynObject does: opaque identity
+			// tokens ({}) stay themselves across views, so === and Set/Map
+			// keys keep JS reference identity. Nominal targets keep castRef.
+			return "dynObject(" + d + ")"
+		}
+		if e.liveClasses[t.Name] {
 			return e.liveView(t) + "(" + d + ")"
 		}
 		return "castRef[" + e.typ(t) + "](dynRef(" + d + "))"

@@ -460,6 +460,11 @@ func (b *body) runtime(x *hir.Expr) string {
 		code = b.e.viewValue(x.Type, "checkedArraySource("+a+", false)")
 	case "dynamic.asRef":
 		code = "castRef[" + b.e.typ(x.Type) + "](dynRef(" + a + "))"
+		if x.Owner == "" && x.Type.Kind == hir.ClassRef && x.Type.Name == hir.RootObject {
+			// Same object-root bridge as the view reads: dynObject keeps a
+			// plain record carrier intact where castRef/dynRef would refuse.
+			code = "dynObject(" + a + ")"
+		}
 		if x.Owner != "" {
 			code = b.e.structuralUnionProjection(hir.Type{Kind: hir.InterfaceRef, Name: x.Owner}, x.Type.Name) + "(" + a + ")"
 		}
