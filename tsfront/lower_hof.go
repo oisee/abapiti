@@ -833,7 +833,7 @@ func (l *lowerer) fixedArgs(at *ast.Node, args []*ast.Node, params []hir.Param, 
 			}
 			a = l.presentValue(args[i], a, p.Type)
 			a = l.readonlyArrayArgument(a, p.Type, symbols[p.Name])
-			out = append(out, snapshot(l.guardedShapeArgument(args[i], l.coerce(a, p.Type), p.Type)))
+			out = append(out, snapshot(l.guardedShapeArgument(args[i], l.callArgument(at, args[i], i, a, p.Type), p.Type)))
 			continue
 		}
 		if p.Type.Kind == hir.Optional {
