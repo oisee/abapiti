@@ -403,7 +403,7 @@ func (b *body) liveView(x *hir.Expr, n, a string, fresh ...bool) {
 	trap := e.name("view.refusal")
 	b.line("CLEAR " + n + ".")
 	// Native success remains identity-preserving even for behaviour-bearing classes.
-	b.line("IF " + a + " IS BOUND.")
+	b.line("IF " + a + " IS BOUND AND " + a + "->tag <> " + d + "=>tag_null.")
 	if len(fresh) == 0 || !fresh[0] {
 		b.line("IF " + a + "->tag = " + d + "=>tag_ref.\nTRY.\n" + n + " ?= " + a + "->oval.\nCATCH cx_sy_move_cast_error.\nENDTRY.\nENDIF.")
 	}

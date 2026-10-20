@@ -62,7 +62,11 @@ func (l *lowerer) conditionalExpression(n *ast.Node) *hir.Expr {
 	if y.Type.Kind != "" && y.Type.Kind != hir.Void && y.Type.Equal(z.Type) {
 		return &hir.Expr{Kind: hir.Conditional, Node: l.node(n), Type: y.Type, X: x, Y: y, Z: z}
 	}
-	candidates := []hir.Type{context}
+	candidates := []hir.Type{}
+	if target, ok := nullableReferenceJoin(y, z, context); ok {
+		candidates = append(candidates, target)
+	}
+	candidates = append(candidates, context)
 	if !l.conditionalConvertible(c.WhenTrue, y, context) || !l.conditionalConvertible(c.WhenFalse, z, context) {
 		if inferred.Kind == "" {
 			inferred = l.conditionalCheckerType(n, checkerType)
@@ -141,6 +145,9 @@ func emptyConditionalArray(n *ast.Node, x *hir.Expr) bool {
 // Fresh [] and undefined can adopt the join without a copy or evaluation.
 func (l *lowerer) conditionalConvertible(n *ast.Node, x *hir.Expr, dst hir.Type) bool {
 	src := x.Type
+	if nullishJoinLiteral(x) && nullableReferenceStorage(dst) {
+		return true
+	}
 	if src.Kind == "" || src.Kind == hir.Void || dst.Kind == "" || dst.Kind == hir.Void {
 		return false
 	}
@@ -292,6 +299,12 @@ func (l *lowerer) convertConditionalBranch(n *ast.Node, x *hir.Expr, dst hir.Typ
 }
 
 func (l *lowerer) conditionalConversion(n *ast.Node, x *hir.Expr, dst hir.Type) *hir.Expr {
+	if nullishJoinLiteral(x) && nullableReferenceStorage(dst) {
+		if dst.Kind == hir.Optional {
+			return &hir.Expr{Kind: hir.Lit, Node: x.Node, Type: dst}
+		}
+		return &hir.Expr{Kind: hir.Narrow, Node: x.Node, Type: dst, X: &hir.Expr{Kind: hir.Lit, Node: x.Node, Type: hir.T(hir.Optional, dst)}}
+	}
 	if x.Type.Equal(dst) {
 		return x
 	}
@@ -387,4 +400,47 @@ func (l *lowerer) freshConditionalMapValue(n *ast.Node, t hir.Type) *hir.Expr {
 		n = n.Expression()
 	}
 	return l.sealJSMap(n, &hir.Expr{Kind: hir.New, Node: l.node(n), Type: t})
+}
+
+// These references already represent absence with nil in both backends. Do
+// not apply this to tagged values or unions, where null and undefined retain
+// distinct carriers.
+func nullableReferenceStorage(t hir.Type) bool {
+	if t.Kind == hir.Optional {
+		t = t.Args[0]
+	}
+	switch t.Kind {
+	case hir.ClassRef, hir.InterfaceRef, hir.Array, hir.OrderedMap, hir.OrderedSet, hir.RegExp, hir.Promise:
+		return true
+	}
+	return false
+}
+
+func nullishJoinLiteral(x *hir.Expr) bool {
+	return x.Kind == hir.RuntimeOp && x.Op == "dynamic.null" || x.Kind == hir.Lit && x.Value == nil && x.Type.Kind == hir.Optional
+}
+
+// Select the existing reference storage before considering a tagged join.
+// Both literal arms are effect-free; conversions of the other arm remain lazy.
+func nullableReferenceJoin(a, b *hir.Expr, context hir.Type) (hir.Type, bool) {
+	// Tagged destinations must retain the distinction between null and
+	// undefined. Only a reference destination permits their nil ABI.
+	if !nullableReferenceStorage(context) {
+		return hir.Type{}, false
+	}
+	if nullishJoinLiteral(a) && nullableReferenceStorage(b.Type) {
+		target := b.Type
+		if target.Kind != hir.Optional {
+			target = hir.T(hir.Optional, target)
+		}
+		return target, true
+	}
+	if nullishJoinLiteral(b) && nullableReferenceStorage(a.Type) {
+		target := a.Type
+		if target.Kind != hir.Optional {
+			target = hir.T(hir.Optional, target)
+		}
+		return target, true
+	}
+	return hir.Type{}, false
 }

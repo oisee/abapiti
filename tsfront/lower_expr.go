@@ -2663,6 +2663,9 @@ func (l *lowerer) binary(n *ast.Node) *hir.Expr {
 				// another payload).
 				typ = hint
 			}
+			if target, ok := nullableReferenceJoin(x, y, hint); ok {
+				typ = target
+			}
 			condition := &hir.Expr{Kind: hir.ToBoolean, Type: hir.T(hir.Bool), X: x}
 			var left, right *hir.Expr
 			if typ.Kind == hir.Dynamic || typ.Kind == hir.Optional && typ.Args[0].Kind == hir.Dynamic {
@@ -2799,6 +2802,9 @@ func (l *lowerer) binary(n *ast.Node) *hir.Expr {
 		result := y.Type
 		if !base.Equal(y.Type) {
 			result = l.mapCheckerType(n, l.ck.GetTypeAtLocation(n))
+		}
+		if target, ok := nullableReferenceJoin(left, y, hint); ok {
+			result = target
 		}
 		if l.unprunedFeatures && (!l.conditionalConvertible(b.Left, left, result) || !l.conditionalConvertible(b.Right, y, result)) {
 			// A fresh collection in the fallback can make the checker infer

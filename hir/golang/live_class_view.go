@@ -237,7 +237,7 @@ func (e *emitter) liveViewMode(t hir.Type, fresh bool) string {
 	var b strings.Builder
 	line := func(f string, a ...any) { fmt.Fprintf(&b, f+"\n", a...) }
 	line("func %s(d *dynamic) %s {", name, e.typ(t))
-	line("if d==nil {return nil}")
+	line("if d==nil || d.Tag==tagNull {return nil}")
 	if !fresh {
 		line("if d.Tag==2 {if v,ok:=d.Value.(%s);ok {return v}}", e.typ(t))
 	}
