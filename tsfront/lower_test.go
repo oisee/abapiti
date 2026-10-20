@@ -73,11 +73,12 @@ func TestLowerLexerClosure(t *testing.T) {
 	want := map[string]int{
 		"note-override":        1, // fingerprinted debugDescription trap in AbstractToken
 		"note-number-binary64": 40,
-		"note-number-ranges":   59,
+		"note-number-ranges":   62,
 		"note-number-boundary": 1,
 		"note-optional-param":  1,
 		"note-regex-mapped":    1,
 		"note-union-base":      1,
+		"note-builtin-error":   1, // synthesized reference-property TypeError guard
 	}
 	if !reflect.DeepEqual(byCategory, want) {
 		t.Errorf("diagnostic categories %v, want %v", byCategory, want)
@@ -95,14 +96,15 @@ func TestLowerLexerClosure(t *testing.T) {
 	}
 	// 47 concrete token classes + AbstractToken + Lexer + LexerBuffer +
 	// LexerStream + Position + VirtualPosition + TestFile + TokenName +
-	// LexerDump + 2 module classes + the synthesized IABAPLexerResult.
+	// LexerDump + 2 module classes + the synthesized IABAPLexerResult,
+	// Error, SyntaxError and TypeError for checked reference-property reads.
 	classes := len(prog.Classes)
-	if classes != 59 {
+	if classes != 62 {
 		var names []string
 		for _, c := range prog.Classes {
 			names = append(names, c.Name)
 		}
-		t.Errorf("expected 59 lowered classes, got %d: %v", classes, names)
+		t.Errorf("expected 62 lowered classes, got %d: %v", classes, names)
 	}
 	t.Logf("%d classes, %d interfaces, %d diagnostics", classes, len(prog.Interfaces), len(diags))
 	if out := fixtureOutputDir(t); out != "" {
