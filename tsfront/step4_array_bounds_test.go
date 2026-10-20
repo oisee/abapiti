@@ -167,3 +167,29 @@ func TestStep4ArrayBoundsStructuralViews(t *testing.T) {
 	}
 	storageABAPProbe(t, p, "probe.ts.Probe", strings.TrimSpace(want), "")
 }
+
+// Required reference elements preserve absence until a property is used. That
+// use must throw through the JS catch guard rather than a Go interface panic.
+func TestStep4ArrayBoundsRequiredReferenceCatch(t *testing.T) {
+	for _, tc := range []struct{ name, element, value string }{
+		{"union", `type Item={kind:"left",name:string}|{kind:"right",name:string};`, `{kind:"left",name:"present"}`},
+		{"class", `class Item {name="present";}`, `new Item()`},
+		{"class-interface", `class Item {name="present";} class Child extends Item {}`, `new Item(),new Child()`},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			source := tc.element + `class Probe {static run():string {
+    const body:Item[]=[` + tc.value + `];
+    try {return body[body.length].name;} catch {return "caught";}
+   }}`
+			want := conversionOracle(t, source)
+			if want != "caught\n" {
+				t.Fatalf("Node %q", want)
+			}
+			p := structuralUnionProgram(t, source)
+			if got := runStructuralUnionGo(t, p, fmt.Sprintf("fmt.Println(%s())", goEntry("probe.ts.Probe", "run"))); got != want {
+				t.Fatalf("Go %q Node %q", got, want)
+			}
+			storageABAPProbe(t, p, "probe.ts.Probe", strings.TrimSpace(want), "")
+		})
+	}
+}
