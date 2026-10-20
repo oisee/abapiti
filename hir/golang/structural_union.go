@@ -18,6 +18,7 @@ func (e *emitter) structuralUnionProjection(t hir.Type, member string) string {
 	if len(members) == 0 {
 		return ""
 	}
+	allMembers := members
 	result := t
 	if member != "" {
 		var selected []hir.StructuralMember
@@ -62,6 +63,27 @@ func (e *emitter) structuralUnionProjection(t hir.Type, member string) string {
 	}
 	line("if d==nil {panic(newRangeFault())}")
 	line("if d.Tag!=tagObject {if d.Tag!=2 {panic(newRangeFault())};if _,ok:=d.Value.(interface{structuralRecord()});!ok {panic(newRangeFault())}}")
+	// Dispatch native carriers by exact concrete type before the shape scan.
+	// Live wrappers still validate their source graph through the existing scan.
+	line("if d.Tag==2 {if source,ok:=d.Value.(interface{dynamicSource()*dynamic});!ok || source.dynamicSource()==nil {switch v:=d.Value.(type) {")
+	for _, m := range allMembers {
+		line("case *%s:", e.obj(m.Type.Name))
+		if member != "" && m.Type.Name != member {
+			line("panic(newRangeFault())")
+			continue
+		}
+		for _, f := range m.Fields {
+			if len(f.Domains) != 0 {
+				line("{v:=d.get(str(%q));_ = v;if !(%s) {panic(newRangeFault())}}", f.Name, structuralFieldCondition(f))
+			}
+		}
+		if member != "" {
+			line("_ = v;return d")
+		} else {
+			line("return v")
+		}
+	}
+	line("}}}")
 	for _, m := range members {
 		// Exact native values may carry callable or otherwise erased fields that
 		// cannot be decoded from dynamic storage. Their concrete Go type proves
