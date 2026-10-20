@@ -62,21 +62,23 @@ func (e *emitter) structuralUnionProjection(t hir.Type, member string) string {
 	}
 	line("if d==nil {panic(newRangeFault())}")
 	line("if d.Tag!=tagObject {if d.Tag!=2 {panic(newRangeFault())};if _,ok:=d.Value.(interface{structuralRecord()});!ok {panic(newRangeFault())}}")
-	// A statically typed structural-union member already proves membership. Keep
-	// the runtime field checks for erased objects, whose callable members and
-	// other non-data fields cannot be safely inferred from a dynamic record.
-	if member == "" {
-		for _, m := range members {
-			line("if d.Tag==2 {if v,ok:=d.Value.(%s);ok {return v}}", e.typ(m.Type))
-		}
-	} else {
-		line("if d.Tag==2 {if _,ok:=d.Value.(%s);ok {return d}}", e.typ(result))
-	}
 	line("keys:=dynamicKeys(d);_ = keys")
 	for _, m := range members {
-		line("{valid:=true")
+		// Exact native values may carry callable or otherwise erased fields that
+		// cannot be decoded from dynamic storage. Their concrete Go type proves
+		// those field declarations, while every retained source-domain constraint
+		// still has to be checked against the live value on each projection.
+		line("{typed:=false;if d.Tag==2 {if _,ok:=d.Value.(%s);ok {typed=true}};_ = typed;valid:=true", e.typ(m.Type))
 		for _, f := range m.Fields {
 			condition := structuralFieldCondition(f)
+			if len(f.Domains) == 0 {
+				if f.Optional {
+					line("if !typed {if d.get(str(%q))!=nil {valid=false}}", f.Name)
+				} else {
+					line("if !typed {valid=false}")
+				}
+				continue
+			}
 			if !f.Optional {
 				line("{found:=false;for _,key:=range keys.Items {if key==str(%q) {found=true;break}};if !found {valid=false}}", f.Name)
 			}
