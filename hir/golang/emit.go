@@ -396,6 +396,8 @@ type emitter struct {
 	liveMapValueViews bool
 	liveMapValueTypes map[string]bool
 	mapViewsKnown     bool
+	objCarriers       bool
+	objCarriersKnown  bool
 	nonfiniteNumbers  bool
 	toNumber          bool
 	usesTypedCatch    bool

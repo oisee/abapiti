@@ -99,7 +99,26 @@ func fastMapViewRuntime(source string) string {
 	return source
 }
 
-func (e *emitter) usesStorageIdentity() bool { return e.usesMapViews() || len(e.liveClasses) > 0 }
+func (e *emitter) usesStorageIdentity() bool {
+	return e.usesMapViews() || len(e.liveClasses) > 0 || e.usesObjectCarriers()
+}
+
+// A parsed value reaches code both as its dynamic box and as a bridged
+// reference: a live typed array view (dynamic.arrayView, or asRef to an erased
+// array), or an object-root carrier from dynObject. They are one JS reference,
+// so such programs need the canonical storage keys as well.
+func (e *emitter) usesObjectCarriers() bool {
+	if !e.objCarriersKnown {
+		ops := hir.UsedRuntimeOps(e.p)
+		for _, op := range []string{"dynamic.arrayView", "dynamic.asRef", "dynamic.asObject"} {
+			if _, ok := ops[op]; ok {
+				e.objCarriers = true
+			}
+		}
+		e.objCarriersKnown = true
+	}
+	return e.objCarriers
+}
 
 // A live data/array view and its original object are the same JS key. Keep
 // native fast indexes for programs without these views.
