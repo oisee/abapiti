@@ -61,6 +61,11 @@ func (e *emitter) unionValidator(family, alternative string) string {
 				condition = "isArray(v)"
 			case hir.ClassRef, hir.InterfaceRef, hir.UnionRef:
 				condition = "v!=nil && (v.Tag==2 || v.Tag==tagObject)"
+				if ft.Kind == hir.ClassRef && ft.Name == hir.RootObject {
+					// Every JS object is an object: parsed arrays and class
+					// values too, the carriers dynObject bridges on reads.
+					condition = "v!=nil && (v.Tag==2 || v.Tag==tagObject || v.Tag==tagArray || v.Tag==10)"
+				}
 			case hir.OrderedMap, hir.OrderedSet:
 				condition = "v!=nil && v.Tag==2"
 			}
