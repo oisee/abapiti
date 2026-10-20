@@ -19,7 +19,7 @@ func TestGogenA2BindingDefaults(t *testing.T) {
 	gogenOracle(t, `interface Opts {x?:number|null;y?:number;cache?:string;depth?:number;}
  function f(a:number,{x=1,y=2}:Opts={}):string {return a+":"+x+":"+y;}
  function g({cache=undefined,depth=0}:Opts):string {return ""+cache+":"+depth;}
- class Probe {static run():string {let out=f(3)+"/"+f(4,{x:null,y:0})+"/"+g({});try {f(0,null as any);}catch(e){out+="/null";}return out;}}`, "3:1:2/4:null:0/undefined:0/null", "RequireObjectCoercible")
+ class Probe {static run():string {let out=f(3)+"/"+f(4,{x:null,y:0})+"/"+g({});try {f(0,null as any);}catch(e){out+="/null";}return out;}}`, "3:1:2/4:null:0/undefined:0/null")
 }
 
 func TestGogenA2NamedCallbacks(t *testing.T) {
@@ -42,7 +42,7 @@ func TestGogenA2TryThrowFinally(t *testing.T) {
 func TestGogenA2BindingOrder(t *testing.T) {
 	gogenOracle(t, `class Source {static trace="";get x():number|undefined {Source.trace+="x";return undefined;}get y():number|undefined {Source.trace+="y";return undefined;}static def(n:number):number {Source.trace+=""+n;return n;}}
  function f({x=Source.def(1),y=Source.def(2)}:Source):string {return x+":"+y+":"+Source.trace;}
- class Probe {static run():string {return f(new Source());}}`, "1:2:x1y2", "RequireObjectCoercible")
+ class Probe {static run():string {return f(new Source());}}`, "1:2:x1y2")
 }
 
 func TestGogenA2LogicalLazy(t *testing.T) {

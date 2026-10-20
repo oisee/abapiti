@@ -16,8 +16,8 @@ func TestGogenObjectParameterNullish(t *testing.T) {
 				if !strings.Contains(got, "builtin.TypeError") {
 					t.Fatalf("expected JS TypeError payload, got %q", got)
 				}
-				if _, err := emitABAP(t, p); err == nil || !strings.Contains(err.Error(), "probe.ts:1:") {
-					t.Fatalf("expected located ABAP refusal, got %v", err)
+				if _, err := emitABAP(t, p); err != nil {
+					t.Fatal(err)
 				}
 			})
 		}
@@ -40,7 +40,7 @@ func TestGogenBoxedSet(t *testing.T) {
 
 func TestGogenNullableObjectParameterPresent(t *testing.T) {
 	source := `function f({a}: {a:number}|null|undefined):number {return a;} class Probe {static run():number {return f({a:3});}}`
-	gogenOracle(t, source, "3", "RequireObjectCoercible")
+	gogenOracle(t, source, "3")
 }
 
 func TestGogenPrimitivePushSpreadCheckedProducer(t *testing.T) {
@@ -62,10 +62,10 @@ func TestGogenPrimitivePushSpreadCheckedProducer(t *testing.T) {
 
 func TestGogenObjectParameterTypeErrorCatch(t *testing.T) {
 	source := `function f({}: {a?:number}|undefined):number {return 7;} class Probe {static run():string {try {return "bad:"+f(undefined);} catch(e) {return "caught:"+(e instanceof TypeError)+":"+(e instanceof Error);}}}`
-	gogenOracle(t, source, "caught:true:true", "RequireObjectCoercible")
+	gogenOracle(t, source, "caught:true:true")
 }
 
 func TestGogenAnyObjectParameterNullish(t *testing.T) {
 	source := `function f({a}:any):number {return 7;} class Probe {static run():string {let caught=0;try {f(undefined);} catch(e) {if(e instanceof TypeError){caught++;}}try {f(null);} catch(e) {if(e instanceof TypeError){caught++;}}return ""+caught;}}`
-	gogenOracle(t, source, "2", "RequireObjectCoercible")
+	gogenOracle(t, source, "2")
 }

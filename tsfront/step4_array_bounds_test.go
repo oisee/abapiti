@@ -193,3 +193,19 @@ func TestStep4ArrayBoundsRequiredReferenceCatch(t *testing.T) {
 		})
 	}
 }
+
+func TestStep4ArrayBoundsReferenceTypeError(t *testing.T) {
+	const source = `class Item {name="present";} class Probe {static run():string {
+ const body:Item[]=[new Item()];
+ try {return body[body.length].name;} catch(e) {return "caught:"+(e instanceof TypeError)+":"+(e instanceof Error);}
+ }}`
+	want := conversionOracle(t, source)
+	if want != "caught:true:true\n" {
+		t.Fatal(want)
+	}
+	p := structuralUnionProgram(t, source)
+	if got := runStructuralUnionGo(t, p, fmt.Sprintf("fmt.Println(%s())", goEntry("probe.ts.Probe", "run"))); got != want {
+		t.Fatalf("Go %q Node %q", got, want)
+	}
+	storageABAPProbe(t, p, "probe.ts.Probe", strings.TrimSpace(want), "")
+}

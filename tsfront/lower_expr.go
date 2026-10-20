@@ -139,6 +139,7 @@ func (l *lowerer) expr(n *ast.Node) *hir.Expr {
 	}
 	if x != nil {
 		x = l.narrowedAt(n, x)
+		x = l.checkedPropertyReceiver(n, x)
 	}
 	pre := l.pend
 	l.pend = saved

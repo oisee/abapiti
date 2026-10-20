@@ -1287,10 +1287,6 @@ func (b *body) expr(x *hir.Expr) string {
 			e.refuse(fmt.Errorf("node %d (%s): ABAP boxed Set requires value-based SameValueZero", x.ID, x.Source))
 			return n
 		}
-		if t.Kind == hir.ClassRef && t.Name == "builtin.TypeError" {
-			e.refuse(fmt.Errorf("node %d (%s): ABAP RequireObjectCoercible cannot raise an equivalent JS TypeError", x.ID, x.Source))
-			return n
-		}
 		if t.Kind == hir.Array {
 			b.line("CREATE OBJECT " + n + ".")
 			if len(x.Args) == 1 {

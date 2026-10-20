@@ -32,7 +32,7 @@ function compile({session}: {session?: Partial<Session> | null}): string {
 class Probe { static run(): string {
   return compile({session: {name: "old"}}) + "|" + compile({}) + "|" + compile({session: null});
 } }
-`, "RequireObjectCoercible")
+`, "")
 }
 
 // An unreachable failed synthetic signature must not remove an unrelated
