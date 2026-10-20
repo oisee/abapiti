@@ -1,6 +1,10 @@
 package golang
 
-import "github.com/oisee/abapiti/hir"
+import (
+	"slices"
+
+	"github.com/oisee/abapiti/hir"
+)
 
 // Boxed field storage needs a dynamic property adapter. Method-valued properties
 // and creation of new properties remain unsupported, not fabricated.
@@ -15,6 +19,8 @@ func (e *emitter) collectBoxedShapes() {
 	}
 	dynamicRows := false
 	guardRows := false
+	classViews := false
+	var boxed []hir.Type
 	var expr func(*hir.Expr)
 	var stmt func(*hir.Stmt)
 	expr = func(x *hir.Expr) {
@@ -46,6 +52,10 @@ func (e *emitter) collectBoxedShapes() {
 				e.boxedShapes[x.X.Type.Name] = true
 				e.boxedFields[x.X.Type.Name] = true
 			}
+			if x.Op == "dynamic.of" && x.X != nil {
+				boxed = append(boxed, x.X.Type)
+			}
+			classViews = classViews || x.Op == "dynamic.classView" || x.Op == "container.readonlyClassView"
 			e.usesArrayPresence = e.usesArrayPresence || (x.Op == "array.has" || x.Op == "array.spread0")
 			e.usesArrayDeletion = e.usesArrayDeletion || x.Op == "array.delete"
 		}
@@ -89,6 +99,65 @@ func (e *emitter) collectBoxedShapes() {
 			e.boxedShapes[c.Name] = true
 		}
 	}
+	if classViews {
+		e.collectPrototypeViewSources(boxed)
+	}
+}
+
+// A structural view can be attached to any boxed class instance: an erased
+// assertion (`obj as unknown as {def?: unknown}`) keeps the prototype-bearing
+// object. Its reads need the class's property adapter, also on subclasses,
+// whose own fields the inherited adapter would miss. The static type selects
+// the candidates: a class and its descendants, or every class with all methods
+// of an interface. Other run-time classes keep refusing at view construction.
+func (e *emitter) collectPrototypeViewSources(boxed []hir.Type) {
+	seen := map[string]bool{}
+	for _, t := range boxed {
+		for t.Kind == hir.Optional {
+			t = t.Args[0]
+		}
+		if (t.Kind != hir.ClassRef || t.Name == hir.RootObject) && t.Kind != hir.InterfaceRef || seen[string(t.Kind)+":"+t.Name] {
+			continue
+		}
+		seen[string(t.Kind)+":"+t.Name] = true
+		var iface *hir.Interface
+		if t.Kind == hir.InterfaceRef {
+			for _, i := range e.p.Interfaces {
+				if i.Name == t.Name && len(i.StructuralMembers) == 0 && len(i.Methods) != 0 {
+					iface = i
+				}
+			}
+			if iface == nil {
+				continue
+			}
+		}
+		for _, c := range e.p.Classes {
+			if c.Structural {
+				continue
+			}
+			for base := c; base != nil; base = e.classBy(base.Super) {
+				if t.Kind == hir.ClassRef && base.Name == t.Name || iface != nil && e.implementsMethods(base, iface) {
+					e.boxedFields[c.Name] = true
+					break
+				}
+			}
+		}
+	}
+}
+
+func (e *emitter) implementsMethods(c *hir.Class, iface *hir.Interface) bool {
+	for _, m := range iface.Methods {
+		found := false
+		for base := c; base != nil && !found; base = e.classBy(base.Super) {
+			for _, own := range base.Methods {
+				found = found || !own.Static && own.Name == m.Name
+			}
+		}
+		if !found {
+			return false
+		}
+	}
+	return true
 }
 
 func (e *emitter) shapeFields(c *hir.Class) {
@@ -130,6 +199,26 @@ func (e *emitter) shapeFields(c *hir.Class) {
 	}
 	if _, shadowed := fields["constructor"]; !c.Structural && !shadowed {
 		e.line("case str(\"constructor\"): return box(self.constructorDescriptor())")
+	}
+	if !c.Structural {
+		// A prototype function is not an absent property, and a layout that
+		// lost fields or keeps accessors cannot prove one absent either.
+		var methods []string
+		opaque := false
+		for base := c; base != nil; base = e.classBy(base.Super) {
+			opaque = opaque || base.FieldsDropped || base.PrototypeAccessors
+			for _, m := range base.Methods {
+				if _, shadowed := fields[m.Name]; !m.Static && !shadowed && !slices.Contains(methods, m.Name) && m.Name != "constructor" {
+					methods = append(methods, m.Name)
+				}
+			}
+		}
+		for _, name := range methods {
+			e.line("case str(%q): panic(newTrap(\"erased prototype function reads are unsupported\"))", name)
+		}
+		if opaque {
+			e.line("default: panic(newTrap(\"property read on a class layout that cannot prove absence\"))")
+		}
 	}
 	if len(e.liveClasses) > 0 && c.Structural {
 		e.line("};if self.viewExtras!=nil {return self.viewExtras.get(key).Value};return nil }")

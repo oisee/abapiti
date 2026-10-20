@@ -254,7 +254,10 @@ func (e *emitter) liveViewMode(t hir.Type, fresh bool) string {
 		if primitiveReads {
 			allowed += " && d.Tag!=1 && d.Tag!=3 && d.Tag!=4 && d.Tag!=5 && d.Tag!=6"
 		}
-		line("if %s {if d.Tag!=2 {panic(newRangeFault())};if _,ok:=d.Value.(interface{structuralRecord()});!ok {panic(newTrap(\"structural class view refuses prototype-bearing source\"))}}", allowed)
+		// A prototype-bearing source is viewed through its class property
+		// adapter: declared fields read through, an undeclared optional field
+		// reads as absent, and writes outside declared storage refuse.
+		line("if %s {if d.Tag!=2 {panic(newRangeFault())};if _,ok:=d.Value.(interface{structuralRecord()});!ok {if _,ok:=d.Value.(interface{dynamicGet(jsString) *dynamic});!ok {panic(newTrap(\"structural class view refuses prototype-bearing source\"))}}}", allowed)
 		c := e.classBy(t.Name)
 		line("out:=&%s{}", e.obj(c.Name))
 		for base := c; base != nil; base = e.classBy(base.Super) {
