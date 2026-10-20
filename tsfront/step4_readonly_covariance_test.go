@@ -124,6 +124,40 @@ func TestStep4ReadonlyCovariancePrimitive(t *testing.T) {
 	readonlyGoOracle(t, source, true)
 }
 
+func TestStep4ReadonlyCovariancePrimitiveLiveField(t *testing.T) {
+	for _, tc := range []struct {
+		name       string
+		keyType    string
+		literal    string
+		literalKey string
+	}{
+		{name: "string", keyType: "string", literal: `"a"`, literalKey: `"a"`},
+		{name: "number", keyType: "number", literal: "7", literalKey: "7"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			prefix := fmt.Sprintf(`interface Source{readonly tags:ReadonlySet<%s>}
+interface Target{readonly tags:ReadonlySet<%s>}
+class Factory {static make():Source {const value:%s=%s;return {tags:new Set<%s>([value])}}}`,
+				tc.literalKey, tc.keyType, tc.literalKey, tc.literal, tc.literalKey)
+			source := prefix + fmt.Sprintf(`function read(holder:Target,value:%s):string {const view=holder.tags;return view.size+":"+view.has(value)}
+class Probe {static run():string {return read(Factory.make(),%s)}}`,
+				tc.keyType, tc.literal)
+			readonlyStrictCheck(t, map[string]string{"probe.ts": source})
+			readonlyGoOracle(t, source, false)
+
+			trapSource := prefix + fmt.Sprintf(`function write(x:Set<%s>,value:%s):void{x.add(value);x.delete(value)}
+function trap(holder:Target,value:%s):string {const view=holder.tags;let out="";try{write(view as unknown as Set<%s>,value);out+="add"}catch{out+="caught"}try{(view as unknown as Set<%s>).delete(value);out+="delete"}catch{out+="caught"}return out}
+class TrapProbe {static run():string {const value:%s=%s;return trap(Factory.make(),value)}}`,
+				tc.keyType, tc.keyType, tc.keyType, tc.keyType, tc.keyType,
+				tc.literal, tc.literal)
+			p := structuralUnionProgram(t, trapSource)
+			if got := runStructuralUnionGo(t, p, fmt.Sprintf("fmt.Println(%s())", goEntry("probe.ts.TrapProbe", "run"))); got != "caughtcaught\n" {
+				t.Fatalf("Go writes %q, wanted caughtcaught", got)
+			}
+		})
+	}
+}
+
 func TestStep4ReadonlyCovarianceMutableRefused(t *testing.T) {
 	for _, target := range []string{"Map<string,Method|Unsupported>", "Set<Method|Unsupported>", "(Method|Unsupported)[]", "Map<string,Method>", "Set<Method>", "Method[]"} {
 		t.Run(target, func(t *testing.T) {
