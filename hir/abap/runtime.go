@@ -308,6 +308,7 @@ func (e *emitter) support() {
 		e.files[file] = strings.Replace(e.files[file], "PUBLIC SECTION.", "PUBLIC SECTION.\nDATA match_index TYPE i.\nDATA match_has_index TYPE abap_bool.", 1)
 		if e.jsRegexpUsed {
 			e.files[file] = strings.Replace(e.files[file], "PUBLIC SECTION.", "PUBLIC SECTION.\nDATA match_missing TYPE HASHED TABLE OF i WITH UNIQUE KEY table_line.", 1)
+			e.files[file] = strings.Replace(e.files[file], "PUBLIC SECTION.", "PUBLIC SECTION.\nDATA match_groups TYPE REF TO "+e.name("runtime.dynamic")+".", 1)
 			e.files[file] = strings.Replace(e.files[file], "METHOD get.\n", "METHOD get.\nREAD TABLE match_missing WITH TABLE KEY table_line = p0 TRANSPORTING NO FIELDS.\nIF sy-subrc = 0.\nRETURN.\nENDIF.\n", 1)
 		}
 	}
@@ -563,6 +564,9 @@ DATA posix TYPE string.
 DATA excluded TYPE string.
 DATA ignore_case TYPE abap_bool.
 DATA global TYPE abap_bool.
+TYPES: BEGIN OF group_name_type, index TYPE i, name TYPE string, END OF group_name_type.
+TYPES group_names_type TYPE STANDARD TABLE OF group_name_type WITH DEFAULT KEY.
+DATA group_names TYPE group_names_type.
 METHODS constructor IMPORTING pattern TYPE string flags TYPE string excluded_pattern TYPE string OPTIONAL.
 METHODS test IMPORTING p0 TYPE string RETURNING VALUE(result) TYPE abap_bool.
 METHODS match_test IMPORTING p0 TYPE string RETURNING VALUE(result) TYPE abap_bool.
@@ -581,6 +585,10 @@ DATA escaped TYPE abap_bool.
 DATA whitespace TYPE string.
 DATA dot_class TYPE string.
 DATA normalized TYPE string.
+DATA named TYPE match_result_tab.
+DATA named_hit TYPE match_result.
+DATA named_group TYPE submatch_result.
+DATA named_row TYPE group_name_type.
 whitespace = ` + regexABAPString(jsWhitespaceMembers) + `.
 dot_class = ` + regexABAPString(jsDotClass) + `.
 me->flags = flags.
@@ -607,6 +615,15 @@ WHILE i < n.
   ENDIF.
   i = i + 1.
 ENDWHILE.
+  FIND ALL OCCURRENCES OF REGEX ` + "`\\(\\?<([A-Za-z_][A-Za-z_0-9]*)>`" + ` IN source RESULTS named.
+  LOOP AT named INTO named_hit.
+    READ TABLE named_hit-submatches INDEX 1 INTO named_group.
+    IF sy-subrc = 0.
+      named_row-index = sy-tabix.
+      named_row-name = substring( val = source off = named_group-offset len = named_group-length ).
+      APPEND named_row TO group_names.
+    ENDIF.
+  ENDLOOP.
 IF source IS INITIAL.
   source = '(?:)'.
 ENDIF.
@@ -669,6 +686,9 @@ WHILE i < n.
     CONCATENATE posix '\A' INTO posix RESPECTING BLANKS.
   ELSEIF in_class = abap_false AND c = '$' AND flags NA 'm'.
     CONCATENATE posix '\z' INTO posix RESPECTING BLANKS.
+  ELSEIF in_class = abap_false AND i + 2 < n AND normalized+i(2) = '?<'.
+    CONCATENATE posix '(?P<' INTO posix RESPECTING BLANKS.
+    i = i + 2.
   ELSE.
     IF c = '['.
       in_class = abap_true.

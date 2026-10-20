@@ -22,7 +22,7 @@ func TestRegExpExecRuntime(t *testing.T) {
 	for _, s := range files {
 		text += s
 	}
-	for _, want := range []string{"METHOD exec.", "DATA last_index TYPE i.", "READ TABLE groups INDEX 1", "last_index = hit-offset + hit-length", "last_index = 0", "match_missing", "result->match_index = hit-offset"} {
+	for _, want := range []string{"METHOD exec.", "DATA last_index TYPE i.", "READ TABLE groups INDEX 1", "last_index = hit-offset + hit-length", "last_index = 0", "match_missing", "match_groups", "result->match_index = hit-offset"} {
 		if !strings.Contains(text, want) {
 			t.Errorf("missing %s", want)
 		}

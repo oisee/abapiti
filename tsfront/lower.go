@@ -566,10 +566,11 @@ type lowerer struct {
 	thisOverride *hir.Expr
 	// widenedLets marks bindings whose physical storage is wider than the
 	// checker view: common assignment bases or inferred optional array elements.
-	widenedLets        map[*ast.Symbol]bool
-	matchGroupBindings map[*ast.Symbol]bool
-	collectionShapes   map[string]bool
-	collectionElements map[string]bool
+	widenedLets         map[*ast.Symbol]bool
+	matchGroupBindings  map[*ast.Symbol]bool
+	matchCallbackParams map[*ast.Symbol]bool
+	collectionShapes    map[string]bool
+	collectionElements  map[string]bool
 	// guards: locals proven present by an enclosing definedness guard
 	// (`x !== undefined && ...`, `if (x) {...}`), narrowed at every read.
 	guards map[*ast.Symbol]hir.Type

@@ -932,6 +932,33 @@ func (l *lowerer) forOfStatement(n *ast.Node) *hir.Stmt {
 	if elem.Kind == hir.Void {
 		return nil
 	}
+	if l.isMatchArrayType(l.ck.GetTypeAtLocation(f.Expression)) {
+		recv := l.tempInit(f.Expression, x.Type, x)
+		i := hir.T(hir.I32)
+		length := l.tempInit(f.Expression, i, l.rtOp("array.length", recv, i))
+		index := l.tempInit(f.Expression, i, hir.L(i, 0))
+		step := &hir.Stmt{Kind: hir.Assign, Node: l.node(n), X: index,
+			Y: &hir.Expr{Kind: hir.Binary, Node: l.node(n), Op: "+", Type: i, X: index, Y: hir.L(i, 1)}}
+		l.push()
+		var inner []*hir.Stmt
+		if decls[0].Name().Kind == ast.KindIdentifier {
+			name := decls[0].Name().Text()
+			l.declare(name, hir.T(hir.Optional, elem))
+			inner = append(inner, &hir.Stmt{Kind: hir.VarDecl, Node: l.node(n), Name: name,
+				Type: hir.T(hir.Optional, elem), X: l.rtOp("array.get", recv, hir.T(hir.Optional, elem), index)})
+			inner = append(inner, l.scopeBlock(f.Statement), step)
+		} else {
+			saved := l.pend
+			l.pend = nil
+			l.destructurePattern(decls[0].Name(), recv, true)
+			pre := l.pend
+			l.pend = saved
+			inner = append(pre, l.scopeBlock(f.Statement), step)
+		}
+		l.pop()
+		return &hir.Stmt{Kind: hir.While, Node: l.node(n),
+			X: &hir.Expr{Kind: hir.Binary, Node: l.node(n), Op: "<", Type: hir.T(hir.Bool), X: index, Y: length}, Body: hir.B(inner...)}
+	}
 	l.push()
 	if decls[0].Name().Kind != ast.KindIdentifier {
 		// A destructuring binding: loop over a fresh name, then declare the
@@ -940,7 +967,7 @@ func (l *lowerer) forOfStatement(n *ast.Node) *hir.Stmt {
 		name := "f" + itoa(l.serial)
 		saved := l.pend
 		l.pend = nil
-		l.destructurePattern(decls[0].Name(), hir.V(name, elem))
+		l.destructurePattern(decls[0].Name(), hir.V(name, elem), false)
 		pre := l.pend
 		l.pend = saved
 		body := l.scopeBlock(f.Statement)

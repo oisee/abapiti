@@ -29,7 +29,7 @@ var supportedOps = map[string]bool{
 	"dynamic.arrayView": true,
 	"object.get":        true, "object.hasOwn": true, "object.has": true, "xml.validate": true,
 	"regexp.exec": true, "regexp.boxMatch": true, "regexp.lastIndex": true, "regexp.setLastIndex": true,
-	"string.repeat": true, "string.match": true, "array.matchIndex": true,
+	"string.repeat": true, "string.match": true, "array.matchIndex": true, "array.matchGroups": true,
 	"string.replaceRegex":     true,
 	"string.toLowerCase":      true,
 	"object.checkedClassView": true,
@@ -59,7 +59,7 @@ var unsupportedOps = map[string]bool{
 	"number.hex16":     true,
 	"arrayLike.length": true,
 	"number.isInteger": true, "number.isSafeInteger": true, "number.isFinite": true, "number.strictIsNaN": true, "number.abs": true, "host.getenv": true, "string.codePoints": true, "dynamic.values": true,
-	"string.padEnd": true, "string.relativeAt": true, "regexp.clone": true, "regexp.flags": true, "regexp.matchAllNext": true, "array.matchGroups": true,
+	"string.padEnd": true, "string.relativeAt": true, "regexp.clone": true, "regexp.flags": true, "regexp.matchAllNext": true,
 	"string.parseFloat": true,
 	"array.spread0":     true,
 	// Recursive structural families use the Go oracle until the ABAP ABI exists.

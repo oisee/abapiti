@@ -46,7 +46,7 @@ uncertified patterns/flag sequences produce
 `unreviewed JavaScript regexp /pattern/flags`; this is not arbitrary RE2 fallback.
 Static patterns outside Go's reviewed language fail emission. Unknown/duplicate static flags
 fail lowering; `m` is restricted to reviewed translations. Backreferences,
-arbitrary lookaround, Unicode mode, named captures, `.groups`, and `.input` are
+arbitrary lookaround, Unicode mode, and `.input` are
 not added by this change. A RegExp object passed as the constructor pattern is
 refused; regex *literals* as constructor patterns preserve their original flags
 unless overridden.
@@ -81,6 +81,10 @@ its legacy string split runtime is unchanged. Live Node differentials in
 and assert the typed refusal for unmatched/repeated capture domains.
 
 String.replace accepts RegExp objects and string pattern/replacement variables.
+A variable string pattern replaces the first literal occurrence, including the
+empty needle. String replacements implement GetSubstitution over the original
+UTF-16 input, including literal dollars, whole matches, prefix/suffix text,
+numbered captures and admitted named captures.
 A variable string pattern replaces the first literal occurrence, including the
 empty needle. String replacements implement GetSubstitution over the original
 UTF-16 input, including literal dollars, whole matches, prefix/suffix text,

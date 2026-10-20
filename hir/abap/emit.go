@@ -2192,6 +2192,13 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 		b.line(n + " = " + a + "->match_index.")
 		return
 	}
+	if x.Op == "array.matchGroups" {
+		b.e.matchUsed = true
+		b.line("IF " + a + " IS BOUND.")
+		b.line(n + " = " + a + "->match_groups.")
+		b.line("ENDIF.")
+		return
+	}
 	if x.Op == "regexp.lastIndex" {
 		b.line(n + " = " + a + "->last_index.")
 		return

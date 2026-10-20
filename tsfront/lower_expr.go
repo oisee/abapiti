@@ -3177,6 +3177,20 @@ func (l *lowerer) equality(n *ast.Node, b *ast.BinaryExpression, negated bool) *
 	if l.unprunedFeatures && y.Type.IsRef() && x.Type.Kind == hir.Optional && x.Type.Args[0].IsRef() && l.acceptsType(x.Type.Args[0], y.Type) {
 		y = l.optionalView(l.coerce(y, x.Type.Args[0]), x.Type)
 	}
+	if x.Type.Kind == hir.Optional && x.Type.Args[0].Equal(y.Type) {
+		present := &hir.Expr{Kind: hir.Narrow, Node: l.node(n), Type: x.Type.Args[0], X: x}
+		absent := hir.L(hir.T(hir.Bool), negated)
+		return &hir.Expr{Kind: hir.Conditional, Node: l.node(n), Type: hir.T(hir.Bool),
+			X: &hir.Expr{Kind: hir.IsUndefined, Node: l.node(n), Type: hir.T(hir.Bool), X: x}, Y: absent,
+			Z: &hir.Expr{Kind: hir.Binary, Node: l.node(n), Op: "==", Type: hir.T(hir.Bool), X: present, Y: y}}
+	}
+	if y.Type.Kind == hir.Optional && y.Type.Args[0].Equal(x.Type) {
+		present := &hir.Expr{Kind: hir.Narrow, Node: l.node(n), Type: y.Type.Args[0], X: y}
+		absent := hir.L(hir.T(hir.Bool), negated)
+		return &hir.Expr{Kind: hir.Conditional, Node: l.node(n), Type: hir.T(hir.Bool),
+			X: &hir.Expr{Kind: hir.IsUndefined, Node: l.node(n), Type: hir.T(hir.Bool), X: y}, Y: absent,
+			Z: &hir.Expr{Kind: hir.Binary, Node: l.node(n), Op: "==", Type: hir.T(hir.Bool), X: x, Y: present}}
+	}
 	if !x.Type.Equal(y.Type) && x.Type.IsRef() && y.Type.IsRef() {
 		if l.acceptsType(x.Type, y.Type) {
 			y = &hir.Expr{Kind: hir.Cast, Type: x.Type, X: y}
