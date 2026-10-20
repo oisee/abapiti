@@ -326,6 +326,10 @@ func (c *Checker) IsTypeAssignableTo(source *Type, target *Type) bool {
 	return c.isTypeAssignableTo(source, target)
 }
 
+func (c *Checker) AreTypesComparable(type1 *Type, type2 *Type) bool {
+	return c.areTypesComparable(type1, type2)
+}
+
 func (c *Checker) GetUnionTypeEx(types []*Type, unionReduction UnionReduction) *Type {
 	return c.getUnionTypeEx(types, unionReduction, nil, nil)
 }

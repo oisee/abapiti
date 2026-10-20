@@ -3275,6 +3275,9 @@ func (l *lowerer) asExpression(n *ast.Node) *hir.Expr {
 	if view := l.rootObjectDataView(x, mapped); view != nil {
 		return view
 	}
+	if view := l.classShapeView(n, x, mapped); view != nil {
+		return view
+	}
 	if l.unprunedFeatures && l.structuralUnionProjection(x.Type, mapped) {
 		return l.dynamicReference(l.coerce(l.checkedStructuralUnion(x), hir.T(hir.Dynamic)), mapped)
 	}
