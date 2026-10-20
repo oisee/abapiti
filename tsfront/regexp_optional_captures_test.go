@@ -119,3 +119,49 @@ func TestRegExpMatchArrayForOfContinueNodeOracle(t *testing.T) {
 		t.Fatalf("Go %q Node %q", got, want)
 	}
 }
+
+// Each element of a match array is a group string or undefined: JS
+// destructures the characters of the string (and throws on undefined), not
+// the match array itself. That is refused rather than lowered to wrong values.
+func TestRegExpMatchArrayForOfDestructuringRefused(t *testing.T) {
+	for _, pattern := range []string{"[a, b]", "{length}"} {
+		source := `class Probe {
+ static run(): string {
+  const m = /(ab)(cd)/.exec("abcd")!;
+  let out = "";
+  for (const ` + pattern + ` of m) out += String(` + strings.Trim(strings.Split(pattern, ",")[0], "[{}") + `);
+  return out;
+ }
+}`
+		if pattern == "[a, b]" {
+			// Node: characters of each group, not the groups of the match.
+			if got := conversionOracle(t, source); got != "aac\n" {
+				t.Fatalf("Node %q", got)
+			}
+		}
+		dir := t.TempDir()
+		files := map[string]string{"probe.ts": source, "tsconfig.json": `{"compilerOptions":{"strict":true,"target":"ES2022"},"include":["*.ts"]}`}
+		for file, content := range files {
+			if err := os.WriteFile(filepath.Join(dir, file), []byte(content), 0600); err != nil {
+				t.Fatal(err)
+			}
+		}
+		project, err := Load(filepath.Join(dir, "tsconfig.json"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, diags, err := project.Lower([]string{"probe.ts"})
+		if err != nil {
+			t.Fatal(err)
+		}
+		refused := false
+		for _, diagnostic := range diags {
+			if diagnostic.Category == "unsupported-binding" && strings.Contains(diagnostic.Message, "match array") {
+				refused = true
+			}
+		}
+		if !refused {
+			t.Errorf("%s: destructuring a match-array element was not refused: %v", pattern, diags)
+		}
+	}
+}

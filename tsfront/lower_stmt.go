@@ -942,6 +942,12 @@ func (l *lowerer) forOfStatement(n *ast.Node) *hir.Stmt {
 		return nil
 	}
 	if l.isMatchArrayType(l.ck.GetTypeAtLocation(f.Expression)) {
+		if decls[0].Name().Kind != ast.KindIdentifier {
+			// An element is a group string or undefined: JS would destructure
+			// the string's code points or throw, never the match array.
+			l.diagf(decls[0].Name(), "unsupported-binding", "for-of over a regexp match array needs an identifier binding")
+			return nil
+		}
 		recv := l.tempInit(f.Expression, x.Type, x)
 		i := hir.T(hir.I32)
 		length := l.tempInit(f.Expression, i, l.rtOp("array.length", recv, i))
@@ -954,21 +960,11 @@ func (l *lowerer) forOfStatement(n *ast.Node) *hir.Stmt {
 		step := &hir.Stmt{Kind: hir.If, Node: l.node(n), X: less(), Body: &hir.Stmt{Kind: hir.Assign, Node: l.node(n), X: index,
 			Y: &hir.Expr{Kind: hir.Binary, Node: l.node(n), Op: "+", Type: i, X: index, Y: hir.L(i, 1)}}}
 		l.push()
-		var inner []*hir.Stmt
-		if decls[0].Name().Kind == ast.KindIdentifier {
-			name := decls[0].Name().Text()
-			l.declare(name, hir.T(hir.Optional, elem))
-			inner = append(inner, &hir.Stmt{Kind: hir.VarDecl, Node: l.node(n), Name: name,
-				Type: hir.T(hir.Optional, elem), X: l.rtOp("array.get", recv, hir.T(hir.Optional, elem), index)})
-			inner = append(inner, l.scopeBlock(f.Statement))
-		} else {
-			saved := l.pend
-			l.pend = nil
-			l.destructurePattern(decls[0].Name(), recv, true)
-			pre := l.pend
-			l.pend = saved
-			inner = append(pre, l.scopeBlock(f.Statement))
-		}
+		name := decls[0].Name().Text()
+		l.declare(name, hir.T(hir.Optional, elem))
+		inner := []*hir.Stmt{{Kind: hir.VarDecl, Node: l.node(n), Name: name,
+			Type: hir.T(hir.Optional, elem), X: l.rtOp("array.get", recv, hir.T(hir.Optional, elem), index)},
+			l.scopeBlock(f.Statement)}
 		l.pop()
 		return l.steppedWhile(n, less(), inner, step)
 	}
