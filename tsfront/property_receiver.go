@@ -26,7 +26,10 @@ func (l *lowerer) checkedPropertyReceiver(n *ast.Node, x *hir.Expr) *hir.Expr {
 	default:
 		return x
 	}
-	value := l.tempInit(n, x.Type, x)
+	value := x
+	if x.Kind != hir.Local {
+		value = l.tempInit(n, x.Type, x)
+	}
 	errType := hir.Ref(l.builtinTypeError())
 	check := &hir.Expr{Kind: hir.IsUndefined, Node: l.node(n), Type: hir.T(hir.Bool), X: value}
 	failure := &hir.Stmt{Kind: hir.Throw, Node: l.node(n), X: &hir.Expr{
