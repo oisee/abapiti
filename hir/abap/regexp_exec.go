@@ -8,6 +8,7 @@ import (
 // Added only for materialized exec results, keeping unrelated output stable.
 func (e *emitter) regexpExecRuntime(name string) {
 	arr := e.typ(hir.T(hir.Array, hir.T(hir.String)))
+	dynamic := e.name("runtime.dynamic")
 	file := name + ".clas.abap"
 	e.files[file] = strings.Replace(e.files[file], "DATA global TYPE abap_bool.", "DATA global TYPE abap_bool.\nDATA sticky TYPE abap_bool.\nDATA last_index TYPE i.\nDATA exec_pattern TYPE string.", 1)
 	e.files[file] = strings.Replace(e.files[file], "ELSEIF c = 'g'.", "ELSEIF c = 'y'.\n    sticky = abap_true.\n  ELSEIF c = 'g'.", 1)
@@ -23,6 +24,8 @@ DATA search TYPE string.
 DATA hit TYPE match_result.
 DATA groups TYPE submatch_result_tab.
 DATA group TYPE submatch_result.
+DATA named_row TYPE group_name_type.
+DATA named_value TYPE REF TO ` + dynamic + `.
 IF global = abap_true OR sticky = abap_true.
   start = nmax( val1 = 0 val2 = last_index ).
 ENDIF.
@@ -103,21 +106,14 @@ LOOP AT groups INTO group.
   ENDIF.
   APPEND part TO result->items.
 ENDLOOP.
-ENDMETHOD.
-ENDCLASS.
-`
-	text := e.files[file]
-	text = strings.Replace(text, "ENDMETHOD.\nENDCLASS.\n", `ENDMETHOD.
-DATA named_row TYPE group_name_type.
-DATA named_value TYPE REF TO `+e.name("runtime.dynamic")+`.
 IF group_names IS NOT INITIAL.
   CREATE OBJECT result->match_groups.
-  result->match_groups->tag = `+e.name("runtime.dynamic")+`=>tag_object.
+  result->match_groups->tag = ` + dynamic + `=>tag_object.
   LOOP AT group_names INTO named_row.
     READ TABLE groups INDEX named_row-index INTO group.
     IF sy-subrc = 0 AND group-offset >= 0.
       CREATE OBJECT named_value.
-      named_value->tag = `+e.name("runtime.dynamic")+`=>tag_string.
+      named_value->tag = ` + dynamic + `=>tag_string.
       named_value->sval = p0+group-offset(group-length).
     ENDIF.
     APPEND VALUE #( k = named_row-name v = named_value ) TO result->match_groups->entries.
@@ -126,7 +122,8 @@ IF group_names IS NOT INITIAL.
 ENDIF.
 ENDMETHOD.
 ENDCLASS.
-`, 1)
+`
+	text := e.files[file]
 	start := strings.Index(text, "METHOD test.\n")
 	end := strings.Index(text, "METHOD match_test.\n")
 	text = text[:start] + "METHOD test.\nDATA hit TYPE " + arr + ".\nhit = me->exec( p0 ).\nIF hit IS BOUND.\nresult = abap_true.\nENDIF.\nENDMETHOD.\n" + text[end:]
