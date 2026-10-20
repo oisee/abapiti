@@ -134,9 +134,15 @@ func emitNamed(p *hir.Program, refusals *[]error, assertionOwners map[string]boo
 	if errors := hir.Verify(p); len(errors) > 0 {
 		return nil, nil, errors[0]
 	}
+	for op, node := range hir.UsedRuntimeOps(p) {
+		if op == "container.readonlyView" || op == "container.readonlyClassView" {
+			return nil, nil, hir.Error{Node: node, Message: "ABAP cannot share storage for covariant readonly container views (" + op + ")"}
+		}
+	}
 	if errors := hir.CheckRuntimeOps(p, "ABAP", SupportsRuntimeOp); (refusals == nil || len(p.Unions) > 0) && len(errors) > 0 {
 		return nil, nil, errors[0]
 	}
+
 	hir.SealLiveClassViewBoundary(p)
 	if err := inline(p); err != nil {
 		return nil, nil, err

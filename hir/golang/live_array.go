@@ -101,6 +101,13 @@ func liveArrayView[T any](d *dynamic,decode func(*dynamic)T) *array[T] {
  if reflect.TypeOf(zero)!=nil {if v,ok:=d.Value.(*array[T]);ok {return v}}
  return &array[T]{live:a,source:d,decode:decode}
 }
+func liveReadonlyArrayView[T any](d *dynamic,decode func(*dynamic)T) *array[T] {
+ // Parsed-array assertions retain their existing admission boundary. Typed
+ // native covariance attaches its decoder lazily without scanning storage.
+ if d!=nil && d.Tag==tagArray {return liveArrayView(d,decode)}
+ if d==nil {return nil};src,ok:=d.Value.(liveArrayStorage);if !ok {panic(newTrap("readonly array view requires array storage"))}
+ return &array[T]{live:src,source:d,decode:decode}
+}
 func (a *array[T]) dynamicSource() *dynamic {if a==nil {return nil};return a.source}
 func (a *array[T]) length() int32 {if a.live!=nil {return a.live.liveLength()};return int32(len(a.Items))}
 func (a *array[T]) values() []T {if a.live==nil {return a.Items};out:=make([]T,a.length());for i:=range out {v:=a.get(int32(i));if !v.Has {panic(newTrap("live typed array dense read refuses holes"))};out[i]=v.Value};return out}

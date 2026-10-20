@@ -311,13 +311,20 @@ func (e *emitter) viewValueWithLocal(t hir.Type, d string, local bool) string {
 		if t.Args[0].Kind == hir.String {
 			decode = "liveStringElement(d)"
 		}
-		return "liveArrayView[" + e.typ(arrayStorage(t).Args[0]) + "](" + d + ",func(d *dynamic) " + e.typ(arrayStorage(t).Args[0]) + " {return " + decode + "})"
+		helper := "liveArrayView"
+		if t.Readonly {
+			helper = "liveReadonlyArrayView"
+		}
+		return helper + "[" + e.typ(arrayStorage(t).Args[0]) + "](" + d + ",func(d *dynamic) " + e.typ(arrayStorage(t).Args[0]) + " {return " + decode + "})"
 	case hir.InterfaceRef:
 		if view := e.structuralUnion(t); view != "" {
 			return view + "(" + d + ")"
 		}
 		return "castRef[" + e.typ(t) + "](dynRef(" + d + "))"
 	case hir.OrderedMap, hir.OrderedSet:
+		if t.Readonly && e.readonlyViews {
+			return e.readonlyContainerView(t, d)
+		}
 		if t.Kind == hir.OrderedMap && e.liveMapValueViews && len(t.Args) == 2 && t.Args[0].Kind == hir.String {
 			if name, ok := mapViewClassName(t.Args[1]); ok && e.liveClasses[name] {
 				return e.liveMapValueView(t, d)

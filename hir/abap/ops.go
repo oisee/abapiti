@@ -54,6 +54,7 @@ var supportedOps = map[string]bool{
 
 // Operations without a reviewed ABAP implementation retain explicit refusals.
 var unsupportedOps = map[string]bool{
+	"collection.get": true, "collection.has": true, "container.readonlyClassView": true, "container.readonlyView": true,
 	"union.check": true, "map.view": true, "set.view": true, "host.stderrWrite": true,
 	"number.hex16":     true,
 	"arrayLike.length": true,

@@ -2152,7 +2152,14 @@ func (l *lowerer) libraryCall(n *ast.Node, name string, recv *hir.Expr) (*hir.Ex
 		}
 		switch name {
 		case "has":
-			return l.rtOp("set.has", recv, boolT, value()), true
+			q := one()
+			if out := l.collectionIdentityQuery(recv, q, false); out != nil {
+				return out, true
+			}
+			if l.unprunedFeatures {
+				q = l.coerce(q, recv.Type.Args[0])
+			}
+			return l.rtOp("set.has", recv, boolT, q), true
 		case "add":
 			return l.rtOp("set.add", recv, recv.Type, value()), true
 		case "size":
@@ -2171,7 +2178,11 @@ func (l *lowerer) libraryCall(n *ast.Node, name string, recv *hir.Expr) (*hir.Ex
 		}
 		switch name {
 		case "get":
-			return l.mapRead(recv, key()), true
+			q := key()
+			if out := l.collectionIdentityQuery(recv, q, true); out != nil {
+				return out, true
+			}
+			return l.mapRead(recv, q), true
 		case "set":
 			var a, b *hir.Expr
 			// A fresh literal value is built as the map's value type.
@@ -2193,7 +2204,11 @@ func (l *lowerer) libraryCall(n *ast.Node, name string, recv *hir.Expr) (*hir.Ex
 			}
 			return l.rtOp("map.set", recv, recv.Type, a, b), true
 		case "has":
-			return l.rtOp("map.has", recv, boolT, key()), true
+			q := key()
+			if out := l.collectionIdentityQuery(recv, q, false); out != nil {
+				return out, true
+			}
+			return l.rtOp("map.has", recv, boolT, q), true
 		case "delete":
 			return l.rtOp("map.delete", recv, boolT, key()), true
 		case "size":

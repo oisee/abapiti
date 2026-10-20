@@ -451,8 +451,9 @@ func (p *Program) lowerWithOptions(files []string, registry *overrides.Registry,
 // lowerer carries the state of one lowering run; file and ck are the per-file
 // state of the pass being run.
 type lowerer struct {
-	externs         map[string]ExternModule
-	externFunctions map[*ast.Node]*hir.ExternSignature
+	containerCheckerTypes map[string][]*checker.Type
+	externs               map[string]ExternModule
+	externFunctions       map[*ast.Node]*hir.ExternSignature
 	// The source-pinned deployment is frozen; new generic semantics apply to
 	// unpruned lowering, never perturb its serials or emitted artifacts.
 	gogenCallables   map[*ast.Node]bool

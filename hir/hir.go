@@ -41,6 +41,8 @@ type Type struct {
 	// Records share its storage layout and equality, but need a different checked
 	// conversion operation. This flag grants no runtime Map brand.
 	JSMap bool `json:",omitempty"`
+	// Readonly permits a covariant read view; it never changes storage equality.
+	Readonly bool `json:",omitempty"`
 }
 
 func T(k Kind, args ...Type) Type { return Type{Kind: k, Args: args} }

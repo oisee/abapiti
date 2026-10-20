@@ -689,6 +689,9 @@ func (l *lowerer) coerce(x *hir.Expr, dst hir.Type) *hir.Expr {
 	if x == nil {
 		return nil
 	}
+	if l.unprunedFeatures && l.mutableContainerCovariance(dst, x.Type, map[string]bool{}) {
+		return x
+	}
 	if (x.Type.Kind == hir.InterfaceRef || x.Type.Kind == hir.ClassRef && strings.HasPrefix(x.Type.Name, "closure.")) && dst.Kind == hir.InterfaceRef {
 		if adapted := l.closureAdapter(nil, x, dst); adapted != nil {
 			return adapted
@@ -748,6 +751,9 @@ func (l *lowerer) coerce(x *hir.Expr, dst hir.Type) *hir.Expr {
 		return &hir.Expr{Kind: hir.Conditional, Node: x.Node, Type: dst,
 			X: &hir.Expr{Kind: hir.IsUndefined, Node: x.Node, Type: hir.T(hir.Bool), X: saved},
 			Y: &hir.Expr{Kind: hir.Lit, Node: x.Node, Type: dst}, Z: l.coerce(l.familyAdmission(present, dst.Args[0]), dst)}
+	}
+	if view := l.readonlyContainerConversion(x, dst); view != nil {
+		return view
 	}
 	if l.setReferenceView(dst, x.Type) {
 		return l.rtOp("set.view", x, dst)

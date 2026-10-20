@@ -50,6 +50,28 @@ func emitPackage(p *hir.Program, pkg string, profile bool) (map[string]string, *
 		}
 	}
 	_, e.referenceSets = hir.UsedRuntimeOps(p)["set.view"]
+	for _, c := range p.Classes {
+		if !e.liveClasses[c.Name] {
+			continue
+		}
+		for _, f := range c.Fields {
+			if f.Type.Readonly || f.Type.Kind == hir.Optional && f.Type.Args[0].Readonly {
+				e.readonlyViews = true
+			}
+		}
+	}
+	for op := range hir.UsedRuntimeOps(p) {
+		if op == "container.readonlyView" || op == "collection.has" || op == "collection.get" {
+			e.readonlyViews = true
+		}
+	}
+	if e.readonlyViews {
+		e.mapViews = true
+		e.mapViewsKnown = true
+		e.collectionProbe = true
+		e.usesLiveArrays = true
+	}
+
 	if len(p.Unions) > 0 {
 		e.extraRuntimeKeys = true
 	}
@@ -184,8 +206,12 @@ func emitPackage(p *hir.Program, pkg string, profile bool) (map[string]string, *
 	}
 	if e.usesMapViews() {
 		runtime = mapViewRuntime(runtime)
-		if _, ok := hir.UsedRuntimeOps(p)["dynamic.mapView"]; ok || e.liveMapValueViews {
+		if _, ok := hir.UsedRuntimeOps(p)["dynamic.mapView"]; ok || e.liveMapValueViews || e.readonlyViews {
 			runtime += dynamicMapStorageSource
+			if e.readonlyViews {
+				runtime = readonlySetRuntime(runtime)
+				runtime += readonlyCollectionSource
+			}
 		}
 	}
 	if e.recordString {
@@ -318,6 +344,7 @@ func relativeSource(source string) string {
 type emitter struct {
 	boxedMaps         bool
 	referenceSets     bool
+	readonlyViews     bool
 	externAdapters    []string
 	externImports     map[string]string
 	hirStrconv        bool
