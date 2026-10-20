@@ -12,6 +12,9 @@ func (l *lowerer) checkedPropertyReceiver(n *ast.Node, x *hir.Expr) *hir.Expr {
 	if !l.unprunedFeatures || n == nil || n.Parent == nil || n.Parent.Kind != ast.KindPropertyAccessExpression || x.Kind == hir.This {
 		return x
 	}
+	if !arrayIndexRead(x) {
+		return x
+	}
 	p := n.Parent.AsPropertyAccessExpression()
 	if p.Expression != n || p.QuestionDotToken != nil || n.Parent.Flags&ast.NodeFlagsOptionalChain != 0 {
 		return x
