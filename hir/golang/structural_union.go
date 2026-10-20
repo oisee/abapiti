@@ -62,13 +62,12 @@ func (e *emitter) structuralUnionProjection(t hir.Type, member string) string {
 	}
 	line("if d==nil {panic(newRangeFault())}")
 	line("if d.Tag!=tagObject {if d.Tag!=2 {panic(newRangeFault())};if _,ok:=d.Value.(interface{structuralRecord()});!ok {panic(newRangeFault())}}")
-	line("keys:=dynamicKeys(d);_ = keys")
 	for _, m := range members {
 		// Exact native values may carry callable or otherwise erased fields that
 		// cannot be decoded from dynamic storage. Their concrete Go type proves
 		// those field declarations, while every retained source-domain constraint
 		// still has to be checked against the live value on each projection.
-		line("{typed:=false;if d.Tag==2 {if _,ok:=d.Value.(%s);ok {typed=true}};_ = typed;valid:=true", e.typ(m.Type))
+		line("{typed:=false;if d.Tag==2 {if _,ok:=d.Value.(%s);ok {typed=true}};var keys *array[jsString];if !typed {keys=dynamicKeys(d)};_ = keys;valid:=true", e.typ(m.Type))
 		for _, f := range m.Fields {
 			condition := structuralFieldCondition(f)
 			if len(f.Domains) == 0 {
@@ -80,7 +79,7 @@ func (e *emitter) structuralUnionProjection(t hir.Type, member string) string {
 				continue
 			}
 			if !f.Optional {
-				line("{found:=false;for _,key:=range keys.Items {if key==str(%q) {found=true;break}};if !found {valid=false}}", f.Name)
+				line("if !typed {found:=false;for _,key:=range keys.Items {if key==str(%q) {found=true;break}};if !found {valid=false}}", f.Name)
 			}
 			line("{v:=d.get(str(%q));_ = v;if !(%s) {valid=false}}", f.Name, condition)
 		}
