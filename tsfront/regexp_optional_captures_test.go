@@ -92,3 +92,30 @@ func regexpOptionalCapturesNode(t *testing.T, source string) string {
 	t.Helper()
 	return conversionOracle(t, source)
 }
+
+// A continue in a for-of over a match array must still advance the index,
+// including when it leaves a try/finally. The watchdog turns a hang into a
+// failure.
+func TestRegExpMatchArrayForOfContinueNodeOracle(t *testing.T) {
+	source := `class Probe {
+ static run(): string {
+  const m = /(a)(b)?(c)/.exec("ac")!;
+  let out = "";
+  for (const g of m) { if (g === undefined) continue; out += g; }
+  let fin = "";
+  for (const g of m) { try { if (g === undefined) continue; fin += g; } finally { fin += "|"; } }
+  let stop = "";
+  for (const g of m) { try { if (g === undefined) continue; stop += g; } finally { if (g === undefined) break; } }
+  return out + ":" + fin + ":" + stop;
+ }
+}`
+	want := conversionOracle(t, source)
+	p := lowerStatementsProbe(t, map[string]string{"probe.ts": source}, []string{"probe.ts"})
+	got := runGoHIR(t, p, fmt.Sprintf("fmt.Println(watchdog(%s))", goEntry("probe.ts.Probe", "run")), func(files map[string]string) {
+		files["zz_watchdog.go"] = "package main\nimport (\"os\";\"time\")\nfunc watchdog[T any](f func() T) T {done:=make(chan T,1);go func(){done<-f()}();select{case s:=<-done:return s;case <-time.After(20*time.Second):os.Stdout.WriteString(\"timeout\\n\");os.Exit(3)};var zero T;return zero}\n"
+	})
+	storageOracleABAP(t, p, want)
+	if got != want {
+		t.Fatalf("Go %q Node %q", got, want)
+	}
+}

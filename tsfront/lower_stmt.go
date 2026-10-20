@@ -831,8 +831,19 @@ func (l *lowerer) forStatement(n *ast.Node) *hir.Stmt {
 	if f.Statement != nil {
 		body = append(body, l.scopeBlock(f.Statement))
 	}
+	var update *hir.Stmt
 	if f.Incrementor != nil {
-		update := l.expressionStatement(f.Incrementor)
+		update = l.expressionStatement(f.Incrementor)
+	}
+	l.pop()
+	out = append(out, l.steppedWhile(n, cond, body, update))
+	return hir.B(out...)
+}
+
+// steppedWhile is a while loop whose body ends with update; a continue
+// targeting this loop executes the update before jumping back to cond.
+func (l *lowerer) steppedWhile(n *ast.Node, cond *hir.Expr, body []*hir.Stmt, update *hir.Stmt) *hir.Stmt {
+	if update != nil {
 		if continueCrossesFinally(hir.B(body...), false) {
 			// Put the update at the next iteration's entry. An intervening
 			// finalizer runs first and may replace continue with break/return.
@@ -849,9 +860,7 @@ func (l *lowerer) forStatement(n *ast.Node) *hir.Stmt {
 			body = append(body, update)
 		}
 	}
-	l.pop()
-	out = append(out, &hir.Stmt{Kind: hir.While, Node: l.node(n), X: cond, Body: hir.B(body...)})
-	return hir.B(out...)
+	return &hir.Stmt{Kind: hir.While, Node: l.node(n), X: cond, Body: hir.B(body...)}
 }
 
 func (l *lowerer) forOfStatement(n *ast.Node) *hir.Stmt {
@@ -937,8 +946,13 @@ func (l *lowerer) forOfStatement(n *ast.Node) *hir.Stmt {
 		i := hir.T(hir.I32)
 		length := l.tempInit(f.Expression, i, l.rtOp("array.length", recv, i))
 		index := l.tempInit(f.Expression, i, hir.L(i, 0))
-		step := &hir.Stmt{Kind: hir.Assign, Node: l.node(n), X: index,
-			Y: &hir.Expr{Kind: hir.Binary, Node: l.node(n), Op: "+", Type: i, X: index, Y: hir.L(i, 1)}}
+		less := func() *hir.Expr {
+			return &hir.Expr{Kind: hir.Binary, Node: l.node(n), Op: "<", Type: hir.T(hir.Bool), X: index, Y: length}
+		}
+		// The always-true guard restates the loop condition so the integer
+		// range proof also holds when the step runs at the next iteration's entry.
+		step := &hir.Stmt{Kind: hir.If, Node: l.node(n), X: less(), Body: &hir.Stmt{Kind: hir.Assign, Node: l.node(n), X: index,
+			Y: &hir.Expr{Kind: hir.Binary, Node: l.node(n), Op: "+", Type: i, X: index, Y: hir.L(i, 1)}}}
 		l.push()
 		var inner []*hir.Stmt
 		if decls[0].Name().Kind == ast.KindIdentifier {
@@ -946,18 +960,17 @@ func (l *lowerer) forOfStatement(n *ast.Node) *hir.Stmt {
 			l.declare(name, hir.T(hir.Optional, elem))
 			inner = append(inner, &hir.Stmt{Kind: hir.VarDecl, Node: l.node(n), Name: name,
 				Type: hir.T(hir.Optional, elem), X: l.rtOp("array.get", recv, hir.T(hir.Optional, elem), index)})
-			inner = append(inner, l.scopeBlock(f.Statement), step)
+			inner = append(inner, l.scopeBlock(f.Statement))
 		} else {
 			saved := l.pend
 			l.pend = nil
 			l.destructurePattern(decls[0].Name(), recv, true)
 			pre := l.pend
 			l.pend = saved
-			inner = append(pre, l.scopeBlock(f.Statement), step)
+			inner = append(pre, l.scopeBlock(f.Statement))
 		}
 		l.pop()
-		return &hir.Stmt{Kind: hir.While, Node: l.node(n),
-			X: &hir.Expr{Kind: hir.Binary, Node: l.node(n), Op: "<", Type: hir.T(hir.Bool), X: index, Y: length}, Body: hir.B(inner...)}
+		return l.steppedWhile(n, less(), inner, step)
 	}
 	l.push()
 	if decls[0].Name().Kind != ast.KindIdentifier {
