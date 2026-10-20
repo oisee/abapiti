@@ -157,7 +157,7 @@ func structuralFieldCondition(f hir.StructuralField) string {
 		case hir.Array:
 			c = "isArray(v)"
 		case hir.ClassRef:
-			c = "v!=nil && (v.Tag==2 || v.Tag==tagObject)"
+			c = refFieldCondition(f.Type)
 		case hir.ClassValue:
 			c = "v!=nil && v.Tag==10"
 		}

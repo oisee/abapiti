@@ -60,12 +60,7 @@ func (e *emitter) unionValidator(family, alternative string) string {
 			case hir.Array:
 				condition = "isArray(v)"
 			case hir.ClassRef, hir.InterfaceRef, hir.UnionRef:
-				condition = "v!=nil && (v.Tag==2 || v.Tag==tagObject)"
-				if ft.Kind == hir.ClassRef && ft.Name == hir.RootObject {
-					// Every JS object is an object: parsed arrays and class
-					// values too, the carriers dynObject bridges on reads.
-					condition = "v!=nil && (v.Tag==2 || v.Tag==tagObject || v.Tag==tagArray || v.Tag==10)"
-				}
+				condition = refFieldCondition(ft)
 			case hir.OrderedMap, hir.OrderedSet:
 				condition = "v!=nil && v.Tag==2"
 			}
@@ -88,6 +83,18 @@ func (e *emitter) unionValidator(family, alternative string) string {
 	line("panic(newRangeFault())}")
 	e.extra.WriteString(b.String())
 	return name
+}
+
+// Every JS object is an object: parsed arrays and class values too, the
+// carriers dynObject bridges on reads. Other reference fields stay strict.
+func refFieldCondition(t hir.Type) string {
+	if t.Kind == hir.Optional {
+		t = t.Args[0]
+	}
+	if t.Kind == hir.ClassRef && t.Name == hir.RootObject {
+		return "v!=nil && (v.Tag==2 || v.Tag==tagObject || v.Tag==tagArray || v.Tag==10)"
+	}
+	return "v!=nil && (v.Tag==2 || v.Tag==tagObject)"
 }
 
 // Guarded payload getters must not recursively call themselves when checking

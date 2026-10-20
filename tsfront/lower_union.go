@@ -311,6 +311,8 @@ func (l *lowerer) structuralDomains(t *checker.Type) []hir.StructuralDomain {
 		domain.Kind = hir.Number
 	case f&checker.TypeFlagsBoolean != 0:
 		domain.Kind = hir.Bool
+	case f&checker.TypeFlagsNonPrimitive != 0:
+		domain.Kind = hir.ClassRef
 	case f&checker.TypeFlagsObject != 0:
 		if t.IsTupleType() || l.ck.IsArrayType(t) {
 			domain.Kind = hir.Array
