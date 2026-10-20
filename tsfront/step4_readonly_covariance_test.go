@@ -145,14 +145,19 @@ class Probe {static run():string {return read(Factory.make(),%s)}}`,
 			readonlyStrictCheck(t, map[string]string{"probe.ts": source})
 			readonlyGoOracle(t, source, false)
 
-			trapSource := prefix + fmt.Sprintf(`function write(x:Set<%s>,value:%s):void{x.add(value);x.delete(value)}
-function trap(holder:Target,value:%s):string {const view=holder.tags;let out="";try{write(view as unknown as Set<%s>,value);out+="add"}catch{out+="caught"}try{(view as unknown as Set<%s>).delete(value);out+="delete"}catch{out+="caught"}return out}
-class TrapProbe {static run():string {const value:%s=%s;return trap(Factory.make(),value)}}`,
-				tc.keyType, tc.keyType, tc.keyType, tc.keyType, tc.keyType,
-				tc.literal, tc.literal)
+			trapSource := prefix + fmt.Sprintf(`function view(holder:Target):ReadonlySet<%s>{return holder.tags}
+function target():Target{return Factory.make()}
+function value():%s{return %s}
+class TrapProbe {static run():ReadonlySet<%s>{return view(target())}static value():%s{return value()}}`,
+				tc.keyType, tc.keyType, tc.literal, tc.keyType, tc.keyType)
 			p := structuralUnionProgram(t, trapSource)
-			if got := runStructuralUnionGo(t, p, fmt.Sprintf("fmt.Println(%s())", goEntry("probe.ts.TrapProbe", "run"))); got != "caughtcaught\n" {
-				t.Fatalf("Go writes %q, wanted caughtcaught", got)
+			view := goEntry("probe.ts.TrapProbe", "run")
+			value := goEntry("probe.ts.TrapProbe", "value")
+			for _, operation := range []string{"add", "delete"} {
+				main := fmt.Sprintf(`defer func(){if _,ok:=recover().(trap);!ok {panic("readonly Set view write escaped")};fmt.Println("caught %s")}();%s().%s(%s());panic("readonly Set view write accepted")`, operation, view, operation, value)
+				if got := runStructuralUnionGo(t, p, main); got != "caught "+operation+"\n" {
+					t.Fatalf("Go %s %q", operation, got)
+				}
 			}
 		})
 	}
