@@ -7,7 +7,8 @@ import (
 )
 
 var supportedOps = map[string]bool{
-	"map.insertions":   true,
+	"map.insertions": true,
+	"weak.lookupKey": true, "weak.writeKey": true,
 	"host.getenv":      true,
 	"host.stderrWrite": true,
 
