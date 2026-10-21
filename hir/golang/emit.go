@@ -1265,9 +1265,7 @@ func (b *body) expr(x *hir.Expr) string {
 		} else {
 			b.line("var %s %s; _=%s; {", n, e.typ(t), n)
 		}
-		for _, s := range x.Stmt.List {
-			b.stmt(s)
-		}
+		b.stmts(x.Stmt.List)
 		v := b.expr(x.Y)
 		if t.Kind == hir.Void {
 			b.line("}")
@@ -1301,6 +1299,72 @@ func clone(m map[string]string) map[string]string {
 	}
 	return n
 }
+
+// stmts emits a statement list, folding the lowered array-literal shape
+// into one composite literal (see arrayLiteralItems).
+func (b *body) stmts(list []*hir.Stmt) {
+	for i := 0; i < len(list); i++ {
+		if n := b.arrayLiteralItems(list, i); n > 0 {
+			i += n
+			continue
+		}
+		b.stmt(list[i])
+	}
+}
+
+// arrayLiteralItems folds seq { var a = new array[T]; a.push(e1); ...; a.push(en) }
+// into var a = &array[T]{Items:[]T{e1,...,en}}: the slice is born with
+// len=cap=n, so a dense literal no longer grows from zero capacity and no
+// longer pays a push call per element. Elements keep their per-expression
+// evaluation statements, in the same order; the push calls they replace have
+// no observable effect of their own. Literals with a spread (array.concat
+// follows the pushes) and any interleaved statement keep the push path.
+// Returns the number of push statements consumed, 0 when list[i] is not
+// foldable.
+func (b *body) arrayLiteralItems(list []*hir.Stmt, i int) int {
+	s := list[i]
+	if s == nil || s.Kind != hir.VarDecl || s.X == nil || s.X.Kind != hir.New || len(s.X.Args) != 0 ||
+		s.X.OwnKeys != nil || s.Type.Kind != hir.Array || s.X.Type.Kind != hir.Array ||
+		!arrayStorage(s.Type).Equal(arrayStorage(s.X.Type)) {
+		return 0
+	}
+	run := 0
+	for i+1+run < len(list) {
+		p := list[i+1+run]
+		if p == nil || p.Kind != hir.ExprStmt || p.X == nil || p.X.Kind != hir.RuntimeOp || p.X.Op != "array.push" ||
+			p.X.X == nil || p.X.X.Kind != hir.Local || p.X.X.Name != s.Name || len(p.X.Args) != 1 {
+			break
+		}
+		run++
+	}
+	if run == 0 {
+		return 0
+	}
+	if next := i + 1 + run; next < len(list) {
+		if n := list[next]; n.Kind == hir.VarDecl && n.X != nil && n.X.Kind == hir.RuntimeOp &&
+			n.X.Op == "array.concat" && n.X.X != nil && n.X.X.Kind == hir.Local && n.X.X.Name == s.Name {
+			return 0
+		}
+	}
+	ps, _, ok := hir.RuntimeSignature("array.push", list[i+1].X.X.Type)
+	if !ok || len(ps) != 1 {
+		return 0
+	}
+	items := make([]string, 0, run)
+	for _, p := range list[i+1 : i+1+run] {
+		items = append(items, b.value(p.X.Args[0], ps[0]))
+	}
+	b.e.mark(s.X.Node, hir.SiteKind(hir.New))
+	if b.e.profile {
+		b.line("siteHit(%d,nil)", b.e.profileIndex(s.X.Node, hir.SiteKind(hir.New)))
+	}
+	elem := b.e.typ(arrayStorage(s.Type).Args[0])
+	n := b.fresh()
+	b.line("var %s %s = &array[%s]{Items:[]%s{%s}}; _ = %s", n, b.e.typ(s.Type), elem, elem, strings.Join(items, ","), n)
+	b.locals[s.Name] = n
+	return run
+}
+
 func (b *body) stmt(s *hir.Stmt) {
 	if s == nil {
 		return
@@ -1314,9 +1378,7 @@ func (b *body) stmt(s *hir.Stmt) {
 		old := b.locals
 		b.locals = clone(old)
 		b.line("{")
-		for _, s := range s.List {
-			b.stmt(s)
-		}
+		b.stmts(s.List)
 		b.line("}")
 		b.locals = old
 	case hir.VarDecl:
