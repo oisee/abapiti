@@ -98,7 +98,7 @@ func sparseRuntime(source string) string {
   if equal(x,v) {return true}
  };return false
 }`, 1)
-	source = strings.Replace(source, "out += primitiveString(v)", "if a.has(int32(i)) {out += primitiveString(v)}", 1)
+	source = strings.Replace(source, "b.WriteString(string(primitiveString(v)))", "if a.has(int32(i)) {b.WriteString(string(primitiveString(v)))}", 1)
 	// Both view conversions must preserve membership (including boxed undefined).
 	source = strings.Replace(source, "out:=&array[T]{Items:make([]T,len(a.Items))}", "out:=&array[T]{Items:make([]T,len(a.Items)),holes:copyHoles(a.holes,0,len(a.Items))}", 1)
 	source = strings.Replace(source, "func referenceArray[T any](a *array[T]) *array[any] {\n\tout := &array[any]{}", "func referenceArray[T any](a *array[T]) *array[any] {\n\tif a==nil {return nil};out := &array[any]{holes:copyHoles(a.holes,0,len(a.Items))}", 1)

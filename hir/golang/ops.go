@@ -583,7 +583,7 @@ func dynIsCollection(d *dynamic, kind string) bool {
 // SerializeJSONObject), only when a program uses them.
 var configJSONReplacerPatches = [][2]string{
 	{"type configJSONWriter struct { active map[any]bool }", "type configJSONWriter struct { active map[any]bool; replacer func(jsString,*dynamic)*dynamic; keys []jsString; hasKeys bool }"},
-	{`out:=str("{");comma:=false;for _,e:=range append(indexed,rest...) {s,ok:=w.value(e.Value);`, `all:=append(indexed,rest...);if w.hasKeys {byKey:=map[jsString]any{};present:=map[jsString]bool{};for _,e:=range all {byKey[e.Key]=e.Value;present[e.Key]=true};all=nil;for _,k:=range w.keys {if present[k] {all=append(all,entry[jsString,any]{k,byKey[k]})}}};out:=str("{");comma:=false;for _,e:=range all {s,ok:=w.prop(e.Key,e.Value);`},
+	{`b:=make([]byte,0,2*len(entries)+2);b=append(b,'{',0);comma:=false;for _,e:=range append(indexed,rest...) {s,ok:=w.value(e.Value);`, `all:=append(indexed,rest...);if w.hasKeys {byKey:=map[jsString]any{};present:=map[jsString]bool{};for _,e:=range all {byKey[e.Key]=e.Value;present[e.Key]=true};all=nil;for _,k:=range w.keys {if present[k] {all=append(all,entry[jsString,any]{k,byKey[k]})}}};b:=make([]byte,0,2*len(entries)+2);b=append(b,'{',0);comma:=false;for _,e:=range all {s,ok:=w.prop(e.Key,e.Value);`},
 	{`s,ok:=w.value(a.get(int32(i)));if !ok {s=str("null")}`, `s,ok:=w.prop(str(strconv.Itoa(i)),a.get(int32(i)));if !ok {s=str("null")}`},
 }
 
