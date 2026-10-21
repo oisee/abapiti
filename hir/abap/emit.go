@@ -708,6 +708,9 @@ func (e *emitter) class(c *hir.Class) {
 	b.WriteString(s)
 	e.liveClassDeclaration(&b, c)
 	e.unionLayoutDeclaration(&b, c)
+	if e.recordDelete {
+		e.nativeDeleteDeclaration(&b, c)
+	}
 	if e.recordDelete && c.Super == "" {
 		fmt.Fprintf(&b, "DATA %s TYPE HASHED TABLE OF string WITH UNIQUE KEY table_line.\n", e.name("record.deleted"))
 	}
@@ -775,6 +778,9 @@ func (e *emitter) class(c *hir.Class) {
 		}
 	}
 	b.WriteString("PROTECTED SECTION.\nPRIVATE SECTION.\nENDCLASS.\nCLASS " + e.name(c.Name) + " IMPLEMENTATION.\n")
+	if e.recordDelete {
+		e.nativeDeleteImplementation(&b, c)
+	}
 	if c.Ctor != nil && !e.wideShape(c) {
 		b.WriteString(e.body(c, c.Ctor, "constructor"))
 	}
