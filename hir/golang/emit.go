@@ -788,6 +788,7 @@ func (e *emitter) emitBody(c *hir.Class, m *hir.Method) {
 	})
 	for i, p := range m.Params {
 		b.locals[p.Name] = fmt.Sprintf("p%d", i)
+		b.declare(b.locals[p.Name], p.Type)
 		e.line("_ = p%d", i)
 	}
 	b.stmt(m.Body)
@@ -805,6 +806,11 @@ type body struct {
 	loops       []loopState
 	capacity    map[*hir.Expr][]*hir.Expr
 	initialized map[string]string
+	// declared maps each variable to its Go type. Inside a statement,
+	// assigned holds the locals its expressions may write (hir.AssignedLocals);
+	// any other local keeps its value between its evaluation and its use.
+	declared map[string]string
+	assigned map[string]bool
 }
 
 func (b *body) line(f string, a ...any) { b.e.line(f, a...) }
@@ -815,8 +821,80 @@ func (b *body) temp(t hir.Type, code string) string {
 		return ""
 	}
 	n := b.fresh()
+	b.declare(n, t)
 	b.line("var %s %s = %s; _ = %s", n, b.e.typ(t), code, n)
 	return n
+}
+func (b *body) declare(n string, t hir.Type) {
+	if b.declared == nil {
+		b.declared = map[string]string{}
+	}
+	b.declared[n] = b.e.typ(t)
+}
+
+// operand is expr for a consumer that reads the result once, by value, in
+// the current statement. A local of the same Go type is its own storage:
+// copying it into a temp first is observable only if the local changed in
+// between, which hir.AssignedLocals rules out.
+func (b *body) operand(x *hir.Expr) string {
+	if n, ok := b.forwarded(x); ok {
+		return n
+	}
+	return b.expr(x)
+}
+
+// operandValue is value for an operand consumer.
+func (b *body) operandValue(x *hir.Expr, t hir.Type) string {
+	if v, ok := b.forwarded(x); ok {
+		if t.Kind == hir.Optional && x.Type.Kind != hir.Optional && !t.Args[0].IsRef() {
+			return "present(" + v + ")"
+		}
+		if t.Kind == hir.Array && !arrayStorage(t).Equal(arrayStorage(x.Type)) {
+			b.e.unsupported(x.Node, "covariant array view")
+		}
+		return v
+	}
+	return b.value(x, t)
+}
+
+// forwarded is the storage of a local that x reads, seen through literal
+// conditionals that keep the Go type (an optional reference view).
+func (b *body) forwarded(x *hir.Expr) (string, bool) {
+	if b.assigned == nil || x == nil {
+		return "", false
+	}
+	typ := b.e.typ(x.Type)
+	for x.Kind == hir.Conditional {
+		v, ok := literalCondition(x.X)
+		if !ok {
+			return "", false
+		}
+		if v {
+			x = x.Y
+		} else {
+			x = x.Z
+		}
+		if x == nil || b.e.typ(x.Type) != typ {
+			return "", false
+		}
+	}
+	if x.Kind != hir.Local || b.assigned[x.Name] {
+		return "", false
+	}
+	n, ok := b.locals[x.Name]
+	if !ok || b.declared[n] != typ {
+		return "", false
+	}
+	return n, true
+}
+
+// literalCondition is the value of a boolean literal condition.
+func literalCondition(x *hir.Expr) (bool, bool) {
+	if x == nil || x.Kind != hir.Lit || x.Type.Kind != hir.Bool {
+		return false, false
+	}
+	v, ok := x.Value.(bool)
+	return v, ok
 }
 func (b *body) value(x *hir.Expr, t hir.Type) string {
 	v := b.expr(x)
@@ -910,7 +988,12 @@ func (b *body) lvalue(x *hir.Expr) string {
 	case hir.Local:
 		return b.locals[x.Name]
 	case hir.FieldGet:
-		v := b.expr(x.X)
+		var v string
+		if x.X.Type.IsRef() {
+			v = b.operand(x.X)
+		} else {
+			v = b.expr(x.X)
+		}
 		c := e.fieldOwner(e.classBy(x.X.Type.Name), x.Name)
 		return v + "." + e.getter(c.Name) + "()." + e.member(x.Name)
 	case hir.StaticGet:
@@ -1041,7 +1124,11 @@ func (b *body) expr(x *hir.Expr) string {
 			owner = b.c.Super
 			recv = "self"
 		} else if x.X != nil {
-			recv = b.expr(x.X)
+			if x.X.Type.IsRef() {
+				recv = b.operand(x.X)
+			} else {
+				recv = b.expr(x.X)
+			}
 			owner = x.X.Type.Name
 		}
 		m, c := e.method(e.classBy(owner), x.Name)
@@ -1058,7 +1145,7 @@ func (b *body) expr(x *hir.Expr) string {
 		}
 		a := []string{}
 		for i, v := range x.Args {
-			a = append(a, b.value(v, m.Params[i].Type))
+			a = append(a, b.operandValue(v, m.Params[i].Type))
 		}
 		if fields := b.capacity[x]; len(fields) != 0 {
 			for i, p := range m.Params {
@@ -1084,7 +1171,7 @@ func (b *body) expr(x *hir.Expr) string {
 			b.line("siteHit(%d,%s)", e.profileIndex(x.Node, "virtual_call"), recv)
 		}
 	case hir.Binary:
-		a := b.expr(x.X)
+		a := b.operand(x.X)
 		if x.Op == "&&" || x.Op == "||" {
 			n := b.temp(t, a)
 			condition := n
@@ -1096,7 +1183,7 @@ func (b *body) expr(x *hir.Expr) string {
 			b.line("%s=%s }", n, v)
 			return n
 		}
-		v := b.expr(x.Y)
+		v := b.operand(x.Y)
 		code = "(" + a + " " + x.Op + " " + v + ")"
 		if x.Op == "==" || x.Op == "!=" {
 			if x.X.Type.IsRef() || x.X.Type.Kind == hir.Optional && x.X.Type.Args[0].IsRef() {
@@ -1135,7 +1222,7 @@ func (b *body) expr(x *hir.Expr) string {
 			}
 		}
 	case hir.Unary:
-		a := b.expr(x.X)
+		a := b.operand(x.X)
 		code = x.Op + a
 		if t.Kind == hir.I32 || t.Kind == hir.I64 {
 			if t.Kind == hir.I32 {
@@ -1149,7 +1236,14 @@ func (b *body) expr(x *hir.Expr) string {
 			}
 		}
 	case hir.Conditional:
-		a := b.expr(x.X)
+		if v, ok := literalCondition(x.X); ok {
+			taken := x.Y
+			if !v {
+				taken = x.Z
+			}
+			return b.temp(t, b.value(taken, t))
+		}
+		a := b.operand(x.X)
 		n := b.fresh()
 		b.line("var %s %s; _ = %s; if %s {", n, e.typ(t), n, a)
 		v := b.value(x.Y, t)
@@ -1166,7 +1260,7 @@ func (b *body) expr(x *hir.Expr) string {
 			d := b.expr(x.X.X)
 			return b.temp(t, "func() bool {d:="+d+";if d==nil || d.Tag!=2 {return false};if s,ok:=d.Value.(interface{dynamicSource() *dynamic});ok && s.dynamicSource()!=nil {return false};_,ok:=d.Value.("+e.ref(x.Owner)+");return !nilRef(d.Value) && ok}()")
 		}
-		a := b.expr(x.X)
+		a := b.operand(x.X)
 		if x.Y != nil {
 			cv := b.expr(x.Y)
 			return b.temp(t, "descriptorInstance("+a+","+cv+")")
@@ -1179,13 +1273,13 @@ func (b *body) expr(x *hir.Expr) string {
 			code = "func() bool {v:=any(" + a + ");if s,ok:=v.(interface{dynamicSource() *dynamic});ok && s.dynamicSource()!=nil {return false};_,ok:=v.(" + e.ref(x.Owner) + ");return !nilRef(v) && ok}()"
 		}
 	case hir.IsUndefined:
-		a := b.expr(x.X)
+		a := b.operand(x.X)
 		code = "nilRef(" + a + ")"
 		if x.X.Type.Kind == hir.Optional && !x.X.Type.Args[0].IsRef() {
 			code = "!" + a + ".Has"
 		}
 	case hir.ToBoolean:
-		a := b.expr(x.X)
+		a := b.operand(x.X)
 		code = b.truth(a, x.X.Type)
 	case hir.Narrow, hir.Cast:
 		a := b.expr(x.X)
@@ -1304,6 +1398,9 @@ func (b *body) stmt(s *hir.Stmt) {
 		return
 	}
 	e := b.e
+	assigned := b.assigned
+	b.assigned = hir.AssignedLocals(s.X, s.Y)
+	defer func() { b.assigned = assigned }()
 	switch s.Kind {
 	case hir.Block:
 		capacity := b.capacity
@@ -1321,8 +1418,9 @@ func (b *body) stmt(s *hir.Stmt) {
 		n := b.fresh()
 		v := ""
 		if s.X != nil {
-			v = " = " + b.value(s.X, s.Type)
+			v = " = " + b.operandValue(s.X, s.Type)
 		}
+		b.declare(n, s.Type)
 		b.line("var %s %s%s; _=%s", n, e.typ(s.Type), v, n)
 		b.locals[s.Name] = n
 	case hir.Assign:
@@ -1355,13 +1453,28 @@ func (b *body) stmt(s *hir.Stmt) {
 			b.line("%s.put(%s,%s)", a, i, v)
 		} else {
 			a := b.lvalue(s.X)
-			v := b.value(s.Y, s.X.Type)
+			v := b.operandValue(s.Y, s.X.Type)
 			b.line("%s=%s", a, v)
 		}
 	case hir.ExprStmt:
 		b.expr(discardedResult(s.X))
 	case hir.If:
-		a := b.expr(s.X)
+		if v, ok := literalCondition(s.X); ok {
+			taken := s.Body
+			if !v {
+				taken = s.Else
+			}
+			if taken != nil {
+				old := b.locals
+				b.locals = clone(old)
+				b.line("{")
+				b.stmt(taken)
+				b.line("}")
+				b.locals = old
+			}
+			return
+		}
+		a := b.operand(s.X)
 		b.line("if %s {", a)
 		old := b.locals
 		b.locals = clone(old)
@@ -1379,7 +1492,7 @@ func (b *body) stmt(s *hir.Stmt) {
 		defer finish()
 		e.mark(s.Node, "loop")
 		b.line("for {")
-		a := b.expr(s.X)
+		a := b.operand(s.X)
 		b.line("if !%s {break}", a)
 		if e.profile {
 			b.line("%s++", trips)
