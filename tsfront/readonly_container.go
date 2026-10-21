@@ -239,13 +239,33 @@ func (l *lowerer) readonlyContainerConversion(x *hir.Expr, dst hir.Type) *hir.Ex
 // A readonly array of nominal subclass (or implementing class) references is
 // read as its superclass array without conversion: object references up-cast
 // on read in Go and ABAP, so the pre-view lowering keeps the same storage.
+// A class-union interface element (ExpressionNode|TokenNode) qualifies when
+// every member class is such a nominal subtype of the target element.
 func (l *lowerer) nominalElementUpcast(dst, src hir.Type) bool {
 	if dst.Kind != hir.Array || src.Kind != hir.Array || len(dst.Args) != 1 || len(src.Args) != 1 {
 		return false
 	}
 	a, b := dst.Args[0], src.Args[0]
-	if b.Kind != hir.ClassRef || a.Kind != hir.ClassRef && a.Kind != hir.InterfaceRef || a.Equal(b) || l.shapeLike[a.Name] || l.shapeLike[b.Name] {
+	if a.Kind != hir.ClassRef && a.Kind != hir.InterfaceRef || a.Equal(b) || l.shapeLike[a.Name] {
 		return false
 	}
-	return l.refAccepts(a, b)
+	if b.Kind == hir.InterfaceRef {
+		for _, u := range l.unions {
+			if u.iface.Name != b.Name {
+				continue
+			}
+			for _, part := range u.parts {
+				if !l.nominalReferenceUpcast(a, part) {
+					return false
+				}
+			}
+			return len(u.parts) > 0
+		}
+		return false
+	}
+	return l.nominalReferenceUpcast(a, b)
+}
+
+func (l *lowerer) nominalReferenceUpcast(dst, src hir.Type) bool {
+	return src.Kind == hir.ClassRef && !l.shapeLike[src.Name] && l.refAccepts(dst, src)
 }

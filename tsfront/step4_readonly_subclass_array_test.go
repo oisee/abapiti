@@ -37,3 +37,30 @@ func TestStep4ReadonlySubclassArrayGoABAP(t *testing.T) {
 	}
 	storageABAPProbe(t, p, "probe.ts.Probe", want, "")
 }
+
+// abaplint lsp/help.ts: this.outputNodes(statement.getChildren()) passes
+// readonly (ExpressionNode|TokenNode)[] where readonly INode[] is expected.
+const readonlyUnionInterfaceArraySource = `interface INode {setChildren(children:INode[]):void;getChildren():readonly INode[];get():string}
+abstract class AbstractNode<T extends INode> implements INode {protected children:T[]=[];setChildren(children:T[]):void{this.children=children.slice()}getChildren():readonly T[]{return this.children}getFirstChild():T|undefined{return this.children[0]}abstract get():string}
+class TokenNode implements INode {private readonly text:string;constructor(text:string){this.text=text}setChildren(_children:INode[]):void{throw new Error("token")}getChildren():readonly INode[]{return []}get():string{return "T:"+this.text}}
+class ExpressionNode extends AbstractNode<ExpressionNode|TokenNode> {private readonly name:string;constructor(name:string){super();this.name=name}
+ setChildren(children:(ExpressionNode|TokenNode)[]):ExpressionNode{super.setChildren(children);return this}get():string{return "E:"+this.name}}
+class StatementNode extends AbstractNode<ExpressionNode|TokenNode> {setChildren(children:(ExpressionNode|TokenNode)[]):StatementNode{super.setChildren(children);return this}get():string{return "S"}}
+class Help {static outputNodes(nodes:readonly INode[]):string{let out="";for(const n of nodes)out+=n.get()+"("+Help.outputNodes(n.getChildren())+")";return out+"#"+nodes.length}}
+class Probe {static run():string {const kids:(ExpressionNode|TokenNode)[]=[new ExpressionNode("x").setChildren([new TokenNode("b")]),new TokenNode("a")];const s=new StatementNode().setChildren(kids);
+ const view:readonly (ExpressionNode|TokenNode)[]=kids;const first=s.getFirstChild();const before=Help.outputNodes(view);kids.push(new TokenNode("c"));
+ return before+"|"+Help.outputNodes(view)+"|"+Help.outputNodes(s.getChildren())+"|"+(first===undefined?"none":first.get());}}
+`
+
+func TestStep4ReadonlyUnionInterfaceArrayGoABAP(t *testing.T) {
+	readonlyStrictCheck(t, map[string]string{"probe.ts": readonlyUnionInterfaceArraySource})
+	want := strings.TrimSuffix(nodePlatformOracle(t, readonlyUnionInterfaceArraySource), "\n")
+	p := structuralUnionProgram(t, readonlyUnionInterfaceArraySource)
+	if _, ok := hir.UsedRuntimeOps(p)["container.readonlyView"]; ok {
+		t.Fatal("class-union interface reference arrays need no readonly container view")
+	}
+	if got := runStructuralUnionGo(t, p, fmt.Sprintf("fmt.Println(%s())", goEntry("probe.ts.Probe", "run"))); got != want+"\n" {
+		t.Fatalf("Go %q Node %q", got, want)
+	}
+	storageABAPProbe(t, p, "probe.ts.Probe", want, "")
+}
