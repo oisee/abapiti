@@ -156,3 +156,42 @@ func abapOracleFixture(t *testing.T, source, want string) string {
 	}
 	return all
 }
+
+// Copy propagation drops `const x = y` and reads y instead only while
+// neither changes: here sources are reassigned after the copy, inlined
+// callees assign their parameters, and inner blocks shadow names.
+const copyPropagationProbe = `class Acc { n = 0; add(k: number): number { k = k + 1; this.n = this.n + k; return k; } get(): number { return this.n; } }
+function bump(k: number): number { k = k * 2; return k; }
+class Probe {
+  static run(): string {
+    const r: string[] = [];
+    let a = "x";
+    const b = a;
+    a = a + "y";
+    r.push(a + b);
+    const five = 5;
+    r.push(bump(five) + "," + five);
+    let m = 2.5 * 2;
+    if (r.length > 100) { m = 0; }
+    const acc = new Acc();
+    const same = acc;
+    r.push(same.add(m) + "," + acc.get() + "," + m);
+    let y = 0;
+    let s = "";
+    for (const _ of [1, 2, 3]) { y = y + 1; const x = y; s = s + x; }
+    r.push(s + "/" + y);
+    const outer = 1;
+    const copy = outer;
+    { const outer = 2; r.push("" + copy + outer); }
+    let t = 1;
+    const u = t;
+    while (t < 3) { t = t + 1; }
+    r.push(u + "," + t);
+    return r.join("|");
+  }
+}`
+
+func TestCopyPropagationNodeOracle(t *testing.T) {
+	all := abapOracleFixture(t, copyPropagationProbe, "xyx|10,5|6,6,5|123/3|12|1,3")
+	_ = all
+}
