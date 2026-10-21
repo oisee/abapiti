@@ -197,7 +197,7 @@ func emitNamed(p *hir.Program, refusals *[]error, assertionOwners map[string]boo
 		if x.Type.Kind == hir.Dynamic && x.X != nil && x.X.Type.Kind == hir.OrderedMap && x.X.Type.Args[0].Kind == hir.String {
 			mapViews = true
 		}
-		if x.Kind == hir.RuntimeOp && x.Op == "dynamic.mapView" {
+		if x.Kind == hir.RuntimeOp && (x.Op == "dynamic.mapView" || x.Op == "map.view") {
 			e.types["runtime.mapView"] = true
 			e.arrayViews = true
 			mapViews = true
@@ -365,7 +365,7 @@ func arrayStorage(t hir.Type) hir.Type {
 	return t
 }
 func (e *emitter) typ(t hir.Type) string {
-	t = arrayStorage(unionStorage(t))
+	t = e.containerStorage(arrayStorage(unionStorage(t)))
 	switch t.Kind {
 	case hir.Bool:
 		return "abap_bool"
@@ -2170,8 +2170,11 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 		copy.Op = base
 		x = &copy
 	}
-	if x.Op == "map.set" && x.X.Type.Args[0].Kind == hir.Dynamic {
+	if x.Op == "map.set" && x.X.Type.Args[0].Kind == hir.Dynamic && !b.e.typedMapViews() {
 		b.e.refuse(fmt.Errorf("node %d (%s): ABAP boxed Map writes require value-based SameValueZero", x.ID, x.Source))
+		return
+	}
+	if b.typedContainerView(x, n) {
 		return
 	}
 	if b.weakKey(x, n) {
@@ -3066,11 +3069,11 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 		}
 		return
 	}
-	if x.Op == "map.delete" && b.e.types["runtime.mapView"] && x.X.Type.Args[0].Kind == hir.String {
+	if x.Op == "map.delete" && (b.e.typedMapViews() || b.e.types["runtime.mapView"] && x.X.Type.Args[0].Kind == hir.String) {
 		b.line(n + " = " + a + "->delete( " + args[0] + " ).")
 		return
 	}
-	if x.Op == "map.clear" && b.e.types["runtime.mapView"] && x.X.Type.Args[0].Kind == hir.String {
+	if x.Op == "map.clear" && (b.e.typedMapViews() || b.e.types["runtime.mapView"] && x.X.Type.Args[0].Kind == hir.String) {
 		b.line(a + "->clear( ).")
 		return
 	}
@@ -3422,6 +3425,23 @@ func (b *body) boxDynamic(n, a string, t hir.Type) {
 			b.e.refuse(fmt.Errorf("dynamic boxing of %s is not supported", t))
 			return
 		}
+	}
+	if field == "oval" && t.Kind == hir.OrderedMap && b.e.typedMapViews() {
+		b.line("IF " + a + "->view_box IS BOUND.")
+		b.line(n + " = " + a + "->view_box.")
+		if t.Args[0].Kind == hir.String && b.e.types["runtime.mapView"] {
+			b.line("ELSEIF " + a + "->map_box IS BOUND.")
+			b.line(n + " = " + a + "->map_box.")
+		}
+		b.line("ELSE.")
+		b.line("CREATE OBJECT " + n + ".")
+		b.line(n + "->tag = " + b.e.name("runtime.dynamic") + "=>tag_ref.")
+		b.line(n + "->oval = " + a + ".")
+		b.line("ENDIF.")
+		if t.IsRef() {
+			b.line("ENDIF.")
+		}
+		return
 	}
 	if field == "oval" && b.e.types["runtime.liveView"] {
 		b.liveBox(n, a, t)
