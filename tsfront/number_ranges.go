@@ -1181,6 +1181,16 @@ func rangeConversion(e *hir.Expr, t hir.Type, r numberInterval) *hir.Expr {
 	}
 	return &hir.Expr{Node: e.Node, Kind: hir.NumericConvert, Type: t, X: e, Range: proof}
 }
+
+// A bottom interval has no facts: the analysis never reached the expression
+// (for example inside an async body). Keep the lowered type instead of
+// widening an integer expression to binary64 and narrowing it back unproven.
+func rewriteType(r numberInterval, original hir.Type) hir.Type {
+	if r.state == 0 {
+		return hir.T(original.Kind)
+	}
+	return hir.T(r.kind())
+}
 func numericJoinType(a, b hir.Type) hir.Type {
 	if a.Kind == hir.Number || b.Kind == hir.Number {
 		return hir.T(hir.Number)
@@ -1279,7 +1289,7 @@ func (p *numberPass) rewriteExpr(e *hir.Expr, env map[string]hir.Type, info *num
 			break
 		}
 		if numberType(original) {
-			e.Type = numericJoinType(hir.T(r.kind()), numericJoinType(e.X.Type, e.Y.Type))
+			e.Type = numericJoinType(rewriteType(r, original), numericJoinType(e.X.Type, e.Y.Type))
 			e.X = rangeConversion(e.X, e.Type, info.exprs[e.X])
 			e.Y = rangeConversion(e.Y, e.Type, info.exprs[e.Y])
 		} else if numberType(e.X.Type) && numberType(e.Y.Type) {
@@ -1289,7 +1299,7 @@ func (p *numberPass) rewriteExpr(e *hir.Expr, env map[string]hir.Type, info *num
 		}
 	case hir.Unary:
 		if e.X != nil && numberType(original) {
-			e.Type = hir.T(r.kind())
+			e.Type = rewriteType(r, original)
 			e.X = rangeConversion(e.X, e.Type, info.exprs[e.X])
 		}
 	case hir.Conditional:
@@ -1298,7 +1308,7 @@ func (p *numberPass) rewriteExpr(e *hir.Expr, env map[string]hir.Type, info *num
 			e.Z = rangeConversion(e.Z, original, info.exprs[e.Z])
 		}
 		if numberType(original) {
-			e.Type = hir.T(r.kind())
+			e.Type = rewriteType(r, original)
 			e.Y = rangeConversion(e.Y, e.Type, r)
 			e.Z = rangeConversion(e.Z, e.Type, r)
 		}
