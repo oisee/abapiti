@@ -188,6 +188,9 @@ ENDMETHOD.
 	declared := map[string]bool{}
 	var write func(hir.Type, bool) string
 	write = func(t hir.Type, subset bool) string {
+		if t.Kind == hir.UnionRef && t.Name != "" {
+			return write(hir.Type{Kind: hir.UnionRef}, subset)
+		}
 		key := t.String()
 		if subset {
 			key = "subset." + key
@@ -472,6 +475,9 @@ ENDMETHOD.
 				}
 			}
 			line("result = %s.\nleave( p0 ).", call(hir.T(hir.Dynamic), "graph"))
+		case hir.UnionRef:
+			// A union reference is its payload object: write it as a reference.
+			line("DATA boxed TYPE REF TO %s.\nDATA native TYPE REF TO object.\nnative = p0.\nCREATE OBJECT boxed.\nboxed->tag = %s=>tag_ref.\nboxed->oval = native.\nresult = %s.", dyn, dyn, call(hir.T(hir.Dynamic), "boxed"))
 		case hir.Dynamic:
 			line("DATA text TYPE string.\nDATA key TYPE string.\nDATA comma TYPE string.\nDATA child TYPE REF TO %s.\nDATA row TYPE %s=>entry.", dyn, dyn)
 			line("TYPES: BEGIN OF indexed_entry, idx TYPE p LENGTH 8 DECIMALS 0, row TYPE %s=>entry, END OF indexed_entry.", dyn)

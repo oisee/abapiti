@@ -9,14 +9,15 @@ import (
 // ValueExpr adds constraints already present on Expr. The resolved variants
 // must reuse Expr's payload layouts even though their intersections differ.
 func TestStructuralKeysValueExprNodeOracle(t *testing.T) {
-	gogenTSOracle(t, `type Type = {readonly k:'num'} | {readonly k:'list';readonly item:Type};
+	source := `type Type = {readonly k:'num'} | {readonly k:'list';readonly item:Type};
 type Meta = {readonly arith?:boolean};
 type Expr = Meta & ({readonly e:'num';readonly value:number;readonly type:Type} | {readonly e:'wrap';readonly x:Expr;readonly type:Type} | {readonly e:'flag';readonly value:boolean;readonly type?:Type} | {readonly e:'none'} | {readonly e:'call';readonly args:readonly {readonly value:Expr}[];readonly type:Type});
 type TypedExpr = Expr & {readonly type:Type};
 type ValueExpr = TypedExpr & {readonly arith?:boolean};
 function wrap(x:ValueExpr):Expr {const args=[{value:x}];return {e:'call',args,type:{k:'num'}};}
 class Probe {static run():string {const x:ValueExpr={e:'num',value:7,type:{k:'num'}};const y=wrap(x);return y.e==='call' && y.args[0].value.e==='num' ? ''+y.args[0].value.value : 'bad';}}
-`, "union.project")
+`
+	gogenABAPFamilyOracle(t, source)
 }
 
 // Instantiated Omit/Mutable interfaces retain their own fields, including when

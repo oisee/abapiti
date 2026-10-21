@@ -284,10 +284,10 @@ func TestGogenTSFunctionParameterNodeOracle(t *testing.T) {
 }
 
 func TestGogenRecursiveRendererNodeOracle(t *testing.T) {
-	gogenTSOracle(t, `type Expr = {e: "num", value: number, meta: {}} | {e: "wrap", child: Expr};
+	gogenABAPFamilyOracle(t, `type Expr = {e: "num", value: number, meta: {}} | {e: "wrap", child: Expr};
 interface Renderers { readonly tag: string; render(x: Expr): string; }
 class Probe {
  static invoke(render: (x: Expr) => string, e: Expr): string { return render(e); }
  static run(): string { const h: Renderers = {tag: "r", render: (x) => x.e === "num" ? "n" + x.value : "wrap"}; const {render} = h; let local: (x: Expr) => string = (x) => x.e === "num" ? "l" + x.value : "wrap"; return render({e:"num",value:2,meta:{}}) + Probe.invoke(render, {e:"num",value:3,meta:{}}) + local({e:"num",value:4,meta:{}}); }
-}`, "union.")
+}`)
 }

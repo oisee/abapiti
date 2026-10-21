@@ -114,7 +114,7 @@ func measureABAPTestGap(lowering *RegistryLowering, keepGoing bool) ABAPTestGap 
 					gap.NonfiniteLiteralSites++
 				}
 			}
-			if x.Kind == hir.RuntimeOp && !abap.SupportsRuntimeExpr(x) {
+			if x.Kind == hir.RuntimeOp && !abap.SupportsRuntimeOp(x.Op) {
 				add(x.Op, fmt.Sprintf("%s.%s:%d:%d (%s)", c.Name, m.Name, x.ID, ordinal, x.Source))
 			}
 		})
@@ -188,7 +188,7 @@ func trapABAPTestRefusals(lowering *RegistryLowering, keepGoing bool) ([]Unattri
 		var refusals []bodyRefusal
 		visit := func(s *hir.Stmt, statement int) {
 			visitTestBody(s, func(x *hir.Expr) {
-				if x.Kind == hir.RuntimeOp && !abap.SupportsRuntimeExpr(x) {
+				if x.Kind == hir.RuntimeOp && !abap.SupportsRuntimeOp(x.Op) {
 					refusals = append(refusals, bodyRefusal{x.ID, statement, fmt.Sprintf("node %d (%s): runtime operation %s has no ABAP emitter", x.ID, x.Source, x.Op)})
 				}
 			})
@@ -211,10 +211,8 @@ func trapABAPTestRefusals(lowering *RegistryLowering, keepGoing bool) ([]Unattri
 		unattributable = append(unattributable, UnattributableRefusal{Node: node.ID, Location: node.Source, Operation: operation, Message: message})
 	}
 	if keepGoing {
-		// Tagged union families emit through the car U1 ABI (the emitter
-		// itself stores union references as dynamic), so nothing is erased
-		// here; union.read and payload projection still trap their owning
-		// bodies above.
+		// Tagged union families emit through the ABAP union ABI (payload
+		// objects behind one payload interface), so nothing is erased here.
 		// Ownerless catalogue operations: with every owning body already
 		// trapped, whatever UsedRuntimeOps still reports lives outside the
 		// test bodies (union declarations, interface signatures). Interfaces

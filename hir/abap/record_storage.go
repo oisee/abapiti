@@ -136,6 +136,11 @@ func (b *body) erasedPropertyLookup(x *hir.Expr, n, a, key string) {
 	b.line("CLEAR " + d + ".\nCLEAR " + adapter + ".\nIF " + a + " IS NOT BOUND.\nRAISE EXCEPTION TYPE " + trap + " EXPORTING reason = `object lookup requires a receiver`.\nENDIF.")
 	b.line("TRY.\n" + d + " ?= " + a + ".\nCATCH cx_sy_move_cast_error.\nENDTRY.")
 	b.line("IF " + d + " IS NOT BOUND.\nTRY.\n" + adapter + " ?= " + a + ".\nCATCH cx_sy_move_cast_error.\nRAISE EXCEPTION TYPE " + trap + " EXPORTING reason = `object lookup lacks structural storage`.\nENDTRY.\n" + d + " = " + adapter + "->source( ).\nENDIF.")
+	if len(e.p.Unions) > 0 {
+		// A union payload reaches erased object code boxed by reference.
+		native := b.rawTemp("REF TO object")
+		b.line("IF " + d + " IS BOUND AND " + d + "->tag = " + e.name("runtime.dynamic") + "=>tag_ref.\n" + native + " = " + d + "->oval.\nIF " + native + " IS NOT INSTANCE OF " + e.name("view.storage") + ".\nRAISE EXCEPTION TYPE " + trap + " EXPORTING reason = `object lookup lacks structural storage`.\nENDIF.\n" + adapter + " ?= " + native + ".\n" + d + " = " + adapter + "->source( ).\nENDIF.")
+	}
 	b.line("IF " + d + " IS NOT BOUND.\nIF " + adapter + "->structural( ) <> abap_true AND " + a + " IS NOT INSTANCE OF " + e.name("runtime.arraymark") + ".\nRAISE EXCEPTION TYPE " + trap + " EXPORTING reason = `object lookup refuses nominal storage`.\nENDIF.\n" + present + " = " + adapter + "->has( " + key + " ).\nELSE.\nIF " + d + "->tag <> " + e.name("runtime.dynamic") + "=>tag_object AND " + d + "->tag <> " + e.name("runtime.dynamic") + "=>tag_array.\nRAISE EXCEPTION TYPE " + trap + " EXPORTING reason = `object lookup requires structural object or array`.\nENDIF.\n" + present + " = " + d + "->has( " + key + " ).\nENDIF.")
 	clauses := []string{}
 	for _, v := range []string{"constructor", "__proto__", "hasOwnProperty", "isPrototypeOf", "propertyIsEnumerable", "toLocaleString", "toString", "valueOf", "__defineGetter__", "__defineSetter__", "__lookupGetter__", "__lookupSetter__"} {

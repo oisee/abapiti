@@ -233,7 +233,7 @@ func (b *body) liveUnbox(n, d string, t hir.Type) {
 		return
 	}
 	if t.Kind == hir.UnionRef {
-		b.line(n + " = " + e.unionFamily(t.Name, "") + "=>check( " + d + " ).")
+		b.unionFromDynamic(n, d, t)
 		return
 	}
 	switch t.Kind {

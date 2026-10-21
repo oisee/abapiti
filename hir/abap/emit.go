@@ -75,9 +75,10 @@ type emitter struct {
 	// asked has() (owner.field -> members); has() becomes a comparison chain.
 	constSets map[string][]string
 
-	// unionPayloads and unionFamilies stay nil without structural families.
-	unionPayloads map[string]bool
-	unionFamilies map[string]map[string]bool
+	// unions, unionUses and unionReads stay nil without structural families.
+	unions     *unionModel
+	unionUses  map[string]map[string]bool
+	unionReads map[string][]unionRead
 }
 
 // Emit returns one source per global declaration, including all runtime dependencies.
@@ -288,7 +289,7 @@ func emitNamed(p *hir.Program, refusals *[]error, assertionOwners map[string]boo
 	for _, c := range p.Classes {
 		e.class(c)
 	}
-	if e.unionFamilies != nil {
+	if e.unionUses != nil {
 		e.unionFamilyClasses()
 	}
 	if e.configJSON {
@@ -387,6 +388,8 @@ func (e *emitter) typ(t hir.Type) string {
 		return "REF TO " + e.name(t.Name)
 	case hir.InterfaceRef:
 		return "REF TO " + e.name(t.Name)
+	case hir.UnionRef:
+		return "REF TO " + e.unionInterface()
 	case hir.ClassValue:
 		e.descriptors = true
 		return "REF TO " + e.name("runtime.classvalue")
@@ -704,7 +707,7 @@ func (e *emitter) class(c *hir.Class) {
 	s += " CREATE PUBLIC.\nPUBLIC SECTION.\n"
 	b.WriteString(s)
 	e.liveClassDeclaration(&b, c)
-	e.unionLayoutDeclaration(&b, c)
+	e.unionPayloadDeclaration(&b, c)
 	if e.recordDelete && c.Super == "" {
 		fmt.Fprintf(&b, "DATA %s TYPE HASHED TABLE OF string WITH UNIQUE KEY table_line.\n", e.name("record.deleted"))
 	}
@@ -851,7 +854,7 @@ func (e *emitter) class(c *hir.Class) {
 		}
 	}
 	e.liveClassImplementation(&b, c)
-	e.unionLayoutImplementation(&b, c)
+	e.unionPayloadImplementation(&b, c)
 	b.WriteString("ENDCLASS.\n")
 	out := b.String()
 	if len(e.initChunks[c.Name]) > 0 || e.initFailures[c.Name] {
@@ -1060,6 +1063,12 @@ func (b *body) convert(value string, src, dst hir.Type) string {
 		// A typed value into an erased `any` slot: box it.
 		n := b.temp(dst)
 		b.boxDynamic(n, value, src)
+		return n
+	}
+	if src.Kind == hir.Dynamic && (dst.Kind == hir.UnionRef || dst.Kind == hir.Optional && dst.Args[0].Kind == hir.UnionRef) {
+		// An untyped value enters a family through its checked admission.
+		n := b.temp(dst)
+		b.liveUnbox(n, value, dst)
 		return n
 	}
 	if src.Kind == hir.Dynamic && (dst.IsRef() || dst.Kind == hir.String || dst.Kind == hir.Number || dst.Kind == hir.Bool || dst.Kind == hir.ClassValue) {
@@ -2619,10 +2628,11 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 			return
 		}
 		b.e.configJSON = true
-		b.e.subsetJSONRoots = append(b.e.subsetJSONRoots, x.X.Type)
+		root := unionStorage(x.X.Type)
+		b.e.subsetJSONRoots = append(b.e.subsetJSONRoots, root)
 		w := b.rawTemp("REF TO " + b.e.name("runtime.configJSON"))
 		b.line("CREATE OBJECT " + w + ".")
-		b.line(n + " = " + w + "->" + b.e.name("json.write.subset."+x.X.Type.String()) + "( " + a + " ).")
+		b.line(n + " = " + w + "->" + b.e.name("json.write.subset."+root.String()) + "( " + a + " ).")
 		// JSON.stringify(undefined/function) has no string result. The HIR
 		// string ABI cannot represent it, so refuse rather than return empty.
 		b.line("IF " + n + " IS INITIAL.")
@@ -2659,7 +2669,7 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 			b.line("ENDIF.\nENDIF.\nENDIF.")
 		}
 		b.line("CREATE OBJECT " + w + ".")
-		b.line(n + " = " + w + "->" + b.e.name("json.write."+x.X.Type.String()) + "( " + a + " ).")
+		b.line(n + " = " + w + "->" + b.e.name("json.write."+unionStorage(x.X.Type).String()) + "( " + a + " ).")
 		return
 	case "lsp.isTextDocumentEdit", "lsp.isRenameFile", "lsp.isCreateFile", "lsp.isDeleteFile":
 		guard := b.e.lspGuardsRuntime()
@@ -3357,7 +3367,7 @@ func wrap(src string) (string, error) {
 // boxDynamic preserves identity and absence instead of boxing the ABI wrapper
 // itself. Objects already represented as graph nodes flow through unchanged.
 func (b *body) boxDynamic(n, a string, t hir.Type) {
-	if t.Kind == hir.Dynamic || t.Kind == hir.UnionRef {
+	if t.Kind == hir.Dynamic {
 		b.line(n + " = " + a + ".")
 		return
 	}
