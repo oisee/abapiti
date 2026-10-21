@@ -21,7 +21,7 @@ func dynamicKeys(d *dynamic) *array[jsString] {
  if d.Tag==2 {if v,ok:=d.Value.(interface{nominalOwnKeys()*array[jsString]});ok {return v.nominalOwnKeys()}}
  if d.Tag!=tagObject {panic(newTrap("own-key enumeration requires original structural property storage"))}
  out:=d.Value.(*orderedMap[jsString,*dynamic]).keys()
- index:=func(k jsString)(uint64,bool){s:=k.String();n,err:=strconv.ParseUint(s,10,32);return n,err==nil && n<4294967295 && strconv.FormatUint(n,10)==s}
+ index:=func(k jsString)(uint64,bool){n,ok:=parseCanonicalIndex(k.String(),32);return n,ok&&n<4294967295}
  for i:=1;i<len(out.Items);i++ {for j:=i;j>0;j-- {a,ai:=index(out.Items[j-1]);b,bi:=index(out.Items[j]);if !bi || ai&&a<=b {break};out.Items[j-1],out.Items[j]=out.Items[j],out.Items[j-1]}}
  return out
 }

@@ -213,7 +213,7 @@ func (m *orderedMap[K,V]) configJSON(w *configJSONWriter) jsString {
  if m==nil {return str("null")};w.enter(m);defer w.leave(m)
  entries:=[]entry[jsString,any]{};for _,e:=range m.Entries {k,ok:=any(e.Key).(jsString);if !ok {panic(newTrap("config JSON requires string record keys"))};entries=append(entries,entry[jsString,any]{k,e.Value})};return w.object(entries)
 }
-func jsonIndex(k jsString) (uint64,bool) {s:=k.String();n,err:=strconv.ParseUint(s,10,32);return n,err==nil&&n<4294967295&&strconv.FormatUint(n,10)==s}
+func jsonIndex(k jsString) (uint64,bool) {n,ok:=parseCanonicalIndex(k.String(),32);return n,ok&&n<4294967295}
 func (w *configJSONWriter) object(entries []entry[jsString,any]) jsString {
  // ES own-key ordering: canonical array indices first, other strings in insertion order.
  indexed:=[]entry[jsString,any]{};rest:=[]entry[jsString,any]{}

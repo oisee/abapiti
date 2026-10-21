@@ -1278,6 +1278,29 @@ func dynTruth(d *dynamic) bool {
 	}
 	return true
 }
+// parseCanonicalIndex is the shared canonical-index decision for object keys:
+// non-empty, ASCII digits only, no leading zero below "0", short enough for
+// the bit width, and a FormatUint round-trip. The digit precheck keeps
+// non-numeric keys like "length" off strconv's error path, which allocates a
+// *strconv.NumError on every miss.
+func parseCanonicalIndex(s string, bits int) (uint64, bool) {
+	if len(s) == 0 || len(s) > 10 {
+		return 0, false
+	}
+	for i := 0; i < len(s); i++ {
+		if s[i] < '0' || s[i] > '9' {
+			return 0, false
+		}
+		if i == 0 && s[i] == '0' && len(s) > 1 {
+			return 0, false
+		}
+	}
+	n, err := strconv.ParseUint(s, 10, bits)
+	if err != nil || strconv.FormatUint(n, 10) != s {
+		return 0, false
+	}
+	return n, true
+}
 func (d *dynamic) get(k jsString) *dynamic {
 	if d == nil {
 		panic(newRangeFault())
@@ -1303,9 +1326,8 @@ func (d *dynamic) get(k jsString) *dynamic {
 		if k == str("length") {
 			return box(float64(len(a.Items)))
 		}
-		s := k.String()
-		i, err := strconv.ParseUint(s, 10, 31)
-		if err != nil || s == "" || strconv.FormatUint(i, 10) != s {
+		i, ok := parseCanonicalIndex(k.String(), 31)
+		if !ok {
 			panic(newRangeFault())
 		}
 		return box(a.get(int32(i)).Value)
