@@ -109,9 +109,13 @@ does not hit follow by file:line:col.
 root or cascade, owner method, and coverage evidence. A trap counts as a
 cascade when its message is `unresolved field|method X` and X itself is a
 trapped function. Reached guards are listed in `reached-guards.tsv` and are
-not counted. They trap only when their runtime check fails. The same goes for
-runtime domain checks such as castRef, which have no trap site. The summary
-line is `step4-traps: N reached (A/G unknown) M unreached`.
+not counted. They trap only when their runtime check fails, so the hits of a
+guard site (the innermost V8 range at its source node) prove at most that the
+owner or call site executed — never that the checked branch fired. The same
+goes for runtime domain checks such as castRef, which have no trap site. The
+summary line is `step4-traps: N reached (A/G unknown) M unreached; guards: K
+reached-owner`, where N/M keep counting only unconditional and lowering traps
+and K is the guard sites with hits.
 
 Boundary tests: `PYTHONDONTWRITEBYTECODE=1 python3 tools/selfhost-step4-test.py`.
 

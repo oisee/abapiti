@@ -9,14 +9,21 @@ captured inputs on exit, and prints its Node reference SHA256. --expect-ref is o
 --list-traps skips go build/run/cmp: from the one emission it lists every trap
 site whose source lies in code the Node reference executed (V8 block coverage)
 in <out-dir>/reached-traps.tsv, ordered by first execution in a breakpoint
-replay of the reference, and prints `step4-traps: N reached (A/G unknown) M unreached`.
+replay of the reference, and prints
+`step4-traps: N reached (A/G unknown) M unreached; guards: K reached-owner`.
+Conditional guard traps (trap-sites.json Kind "guard": the direct branch of an
+If, e.g. TDZ or override key checks) never count as reached traps: their hits
+come from the innermost V8 range at the source node — branch coverage for a
+real conditional, but only owner/call-site execution for a compiler-inserted
+check whose branch has no Node counterpart. K counts the guards with hits.
 
 --abap (step 4b, implies --list-traps) emits ABAP with `emit-abap --keep-going` into
 <out-dir>/abap instead of Go: TS-HA refusals trap whole owning bodies, ownerless
 type/declaration refusals are recorded (evidence/unattributable-refusals.json) and
 omitted so emission finishes, and the reached list covers the body traps together with
-the lowering traps (`step4b-traps: ...`); unattributable counts and a trap breakdown
-by operation/message go to <out-dir>/step4b-summary.txt. The reference run
+the lowering traps (`step4b-traps: ...; guards: K reached-owner; unattributable: U`);
+unattributable counts and a trap breakdown by operation/message go to
+<out-dir>/step4b-summary.txt. The reference run
 then also writes <out-dir>/fs-snapshot.json (tools/fs-snapshot-recorder.mjs), both
 extern modules bind to ZCL_ABAPITI_HOSTIO, `--initialize` adds ZCL_ABAPITI_MAIN, and
 the host class is copied into <out-dir>/abap/src (docs/extern-modules.md).
@@ -304,16 +311,20 @@ def order_rows(rows, hits_order):
 def write_traps(out, rows, unknown_a, unknown_g):
     """Write reached traps; runtime-check guards go to reached-guards.tsv and are not counted."""
     certain = [r for r in rows if r.get('Kind') != 'guard']
+    guards = [r for r in rows if r.get('Kind') == 'guard' and r['hits']]
     reached = [r for r in certain if r['hits']]
     unreached = sum(1 for r in certain if r['hits'] == 0)
-    for name, selected in (('reached-traps.tsv', reached), ('reached-guards.tsv', [r for r in rows if r.get('Kind') == 'guard' and r['hits']])):
+    for name, selected in (('reached-traps.tsv', reached), ('reached-guards.tsv', guards)):
         with (out / name).open('w') as f:
             f.write('location\tkind: message\thits\troot-or-cascade\tmethod\tevidence\n')
             for r in selected:
                 location = f"{r['file']}:{r['line']}:{r['col']}"
                 message = ' '.join(r.get('Message', '').split())
                 f.write(f"{location}\t{r.get('Kind', 'body')}: {message}\t{r['hits']}\t{r['root']}\t{r['Class']}.{r['Method']}\t{r['evidence']}\n")
-    return f'step4-traps: {len(reached)} reached ({unknown_a}/{unknown_g} unknown) {unreached} unreached'
+    # Guards only fire if their condition holds, so owner execution is not trap
+    # execution: keep the old prefix and numbers for unconditional/lowering
+    # traps and report guards as a separate reached-owner count.
+    return f'step4-traps: {len(reached)} reached ({unknown_a}/{unknown_g} unknown) {unreached} unreached; guards: {len(guards)} reached-owner'
 
 
 OPERATION = re.compile(r'runtime operation ([A-Za-z0-9_.]+)')

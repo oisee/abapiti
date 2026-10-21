@@ -86,6 +86,7 @@ type Expr = Meta & ({readonly e:'num';readonly value:number;readonly type:Type} 
 type TypedExpr = Expr & {readonly type:Type};
 type ValueExpr = TypedExpr & {readonly arith?:boolean};
 function wrap(x:ValueExpr):Expr {const args=[{value:x}];return {e:'call',args,type:{k:'num'}};}
+const helper=():void=>{eval("x");}; helper();
 class Probe {static run():string {const x:ValueExpr={e:'num',value:7,type:{k:'num'}};const y=wrap(x);return y.e==='call' && y.args[0].value.e==='num' ? ''+y.args[0].value.value : 'bad';}}`
 	for name, text := range map[string]string{
 		"tsconfig.json": `{"compilerOptions":{"strict":true,"target":"es2022"},"files":["probe.ts"]}`,
@@ -122,6 +123,12 @@ class Probe {static run():string {const x:ValueExpr={e:'num',value:7,type:{k:'nu
 	sites, err := os.ReadFile(filepath.Join(dir, "keep", "evidence", "trap-sites.json"))
 	if err != nil || !strings.Contains(string(sites), `"Kind": "body"`) || !strings.Contains(string(sites), `"Method": "run"`) {
 		t.Fatalf("owning bodies must keep the whole-body trap policy: %v\n%s", err, sites)
+	}
+	// The refused module callable's call site stays a conditional TDZ guard
+	// (fires only when the ready flag was never set), not an unconditional
+	// refusal: the 4b classifier must be able to tell the two apart.
+	if !strings.Contains(string(sites), `"Kind": "guard"`) || !strings.Contains(string(sites), "module callable probe.ts.module.helper was not initialized") {
+		t.Fatalf("trap-sites.json lacks the TDZ call guard: %s", sites)
 	}
 	stub := ""
 	entries, err := os.ReadDir(filepath.Join(dir, "keep", "src"))

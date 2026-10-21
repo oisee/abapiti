@@ -193,6 +193,45 @@ class Step4Test(unittest.TestCase):
                     rows, _, _ = TOOL['classify_traps']([dict(site, Kind=kind)], osg, osg / 'lint', osg / 'transpiler', {str(path): functions})
                     self.assertEqual((rows[0]['hits'], rows[0]['evidence']), (0, 'block'))
 
+    def test_guard_traps_report_reached_owners_separately(self):
+        """A guard never counts as a reached trap; owners report separately.
+
+        A guard inside a real conditional keeps the branch's count (V8 block
+        coverage nests), so a never-taken branch stays out even though the
+        owner function ran. A compiler-inserted check (TDZ, override keys) has
+        no Node branch at its source node, so its hits only prove the owner or
+        call site executed: reached-owner, not reached.
+        """
+        text = 'function f(a) {\n  if (a) { refuse(); }\n  helper();\n}\n'
+        branch = text.index('{ refuse')
+
+        def source(offset):
+            return f"tools/lib.mjs:{text.count(chr(10), 0, offset) + 1}:{offset - text.rfind(chr(10), 0, offset)}"
+
+        functions = [
+            dict(functionName='', ranges=[dict(startOffset=0, endOffset=len(text), count=1)]),
+            dict(functionName='f', ranges=[dict(startOffset=0, endOffset=text.rindex('\n'), count=5),
+                                           dict(startOffset=branch, endOffset=text.index('}', branch) + 1, count=0)]),
+        ]
+        sites = [
+            dict(Class='tools/lib.mjs.module', Method='f', Source=source(text.index('refuse')), Kind='guard', Message='refusal inside a real branch'),
+            dict(Class='tools/lib.mjs.module', Method='f', Source=source(text.index('helper')), Kind='guard', Message='module callable helper was not initialized'),
+        ]
+        with tempfile.TemporaryDirectory() as directory:
+            osg = Path(directory)
+            path = osg / 'tools/lib.mjs'
+            path.parent.mkdir()
+            path.write_text(text)
+            rows, unknown_a, unknown_g = TOOL['classify_traps'](sites, osg, osg / 'lint', osg / 'transpiler', {str(path): functions})
+            self.assertEqual((unknown_a, unknown_g), (0, 0))
+            self.assertEqual([(r['hits'], r['evidence']) for r in rows], [(0, 'block'), (5, 'block')])
+            line = TOOL['write_traps'](osg, rows, 0, 0)
+            self.assertEqual(line, 'step4-traps: 0 reached (0/0 unknown) 0 unreached; guards: 1 reached-owner')
+            guards = (osg / 'reached-guards.tsv').read_text().splitlines()
+            self.assertEqual(len(guards), 2)  # header + the owner-reached guard
+            self.assertIn('module callable helper', guards[1])
+            self.assertEqual((osg / 'reached-traps.tsv').read_text().count('\n'), 1)  # header only
+
     def test_list_traps_orders_by_replay_and_excludes_guards(self):
         main = TOOL['main']
         source = "import {readFileSync} from 'node:fs';\nconst inputs=JSON.parse(readFileSync(new URL('./step4-inputs.json', import.meta.url), 'utf8'));\nprocess.stdout.write(emitGo(program));\n"
@@ -276,7 +315,7 @@ class Step4Test(unittest.TestCase):
                 prefix = 'step4-reference: sha256=' + hashlib.sha256(b'package main\n').hexdigest() + '\n' if custom else ''
                 self.assertFalse(inputs_path.exists())
                 summary = 'step4-traps:' if not abap else 'step4b-traps:'
-                self.assertEqual(capture.getvalue(), prefix + summary + ' 2 reached (1/0 unknown) 1 unreached' + ('; unattributable: n/a\n' if abap else '\n'))
+                self.assertEqual(capture.getvalue(), prefix + summary + ' 2 reached (1/0 unknown) 1 unreached; guards: 1 reached-owner' + ('; unattributable: n/a\n' if abap else '\n'))
                 if abap:
                     self.assertIn('unattributable refusals: none recorded (no --keep-going evidence)',
                                   (out / 'step4b-summary.txt').read_text())

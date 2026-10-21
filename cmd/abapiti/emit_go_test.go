@@ -20,7 +20,7 @@ func TestEmitGoFailureTrapsAndModuleInitialization(t *testing.T) {
 		"tsconfig.json":       `{"compilerOptions":{"strict":true,"target":"es2022"},"files":["probe.ts","host.ts"]}`,
 		"initialization.json": `["host.ts","probe.ts"]`,
 		"host.ts":             `export declare function writeText(file:string,text:string):void;`,
-		"probe.ts":            fmt.Sprintf(`import {writeText} from './host'; writeText(%q,"initialized"); class Probe {static bad():void {eval("unreviewed");}}`, marker),
+		"probe.ts":            fmt.Sprintf(`import {writeText} from './host'; writeText(%q,"initialized"); const helper=():void=>{eval("unreviewed-helper");}; helper(); class Probe {static bad():void {eval("unreviewed");}}`, marker),
 		"externs.json":        fmt.Sprintf(`{"modules":[{"file":"host.ts","goImport":"github.com/oisee/abapiti/extern/hostio","goDir":%q}]}`, host),
 	} {
 		if err := os.WriteFile(filepath.Join(dir, name), []byte(text), 0600); err != nil {
@@ -47,6 +47,12 @@ func TestEmitGoFailureTrapsAndModuleInitialization(t *testing.T) {
 	sites, err := os.ReadFile(filepath.Join(dir, "go", "evidence", "trap-sites.json"))
 	if err != nil || !strings.Contains(string(sites), `"Method": "bad"`) || !strings.Contains(string(sites), `"Source": "probe.ts:1:`) || !strings.Contains(string(sites), `"Kind": "body"`) {
 		t.Fatalf("trap-sites.json lacks the located body trap: %v\n%s", err, sites)
+	}
+	// The refused module callable leaves its ready flag unset, so every call
+	// site carries a conditional TDZ guard: a trap that only fires if its
+	// condition holds, not an unconditional lowering trap.
+	if !strings.Contains(string(sites), `"Kind": "guard"`) || !strings.Contains(string(sites), "module callable probe.ts.module.helper was not initialized") {
+		t.Fatalf("trap-sites.json lacks the TDZ call guard: %s", sites)
 	}
 	program := exec.Command(filepath.Join(dir, "go", "program"))
 	output, err := program.CombinedOutput()
