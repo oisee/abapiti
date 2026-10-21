@@ -5,8 +5,8 @@ root=$(git rev-parse --show-toplevel)
 osg="$work/open-steamgate"
 gen="$work/hir"
 trap 'rm -rf "$gen"' EXIT
-rm -rf "$gen/TestRuntimeDebtFixtures" "$gen/TestNumericFixtures" "$gen/TestFixtures" "$gen/Test750Semantics" "$gen/TestEmitSyntaxFeatures" "$gen/TestEmitStringRepeatMatch" "$gen/TestEmitRegExpExec" "$gen/TestEmitPOSIXRegexJSClasses" "$gen/TestConfigJSONFixtures" "$gen/TestJSONSubsetFixtures" "$gen/TestJSONSubsetMaterializedFixtures" "$gen/TestJSONSubsetConfigFixture" "$gen/TestLiveClassViewJSONNodeOracle" "$gen/JSONStructural" "$gen/TestEmitSwitchGroupedLabels"
-(cd "$root" && ABAPITI_TEST_OUT="$gen" go test -p 2 ./hir/abap -run '^(TestFixtures|TestNumericFixtures|Test750Semantics|TestRuntimeDebtFixtures|TestConfigJSONFixtures|TestJSONSubsetFixtures|TestJSONSubsetMaterializedFixtures|TestJSONSubsetConfigFixture)$' -count=1)
+rm -rf "$gen/TestRuntimeDebtFixtures" "$gen/TestNumericFixtures" "$gen/TestFixtures" "$gen/Test750Semantics" "$gen/TestEmitSyntaxFeatures" "$gen/TestEmitStringRepeatMatch" "$gen/TestEmitRegExpExec" "$gen/TestEmitPOSIXRegexJSClasses" "$gen/TestConfigJSONFixtures" "$gen/TestConfigJSONChunkedReferenceArm" "$gen/TestJSONSubsetFixtures" "$gen/TestJSONSubsetMaterializedFixtures" "$gen/TestJSONSubsetConfigFixture" "$gen/TestLiveClassViewJSONNodeOracle" "$gen/JSONStructural" "$gen/TestEmitSwitchGroupedLabels"
+(cd "$root" && ABAPITI_TEST_OUT="$gen" go test -p 2 ./hir/abap -run '^(TestFixtures|TestNumericFixtures|Test750Semantics|TestRuntimeDebtFixtures|TestConfigJSONFixtures|TestConfigJSONChunkedReferenceArm|TestJSONSubsetFixtures|TestJSONSubsetMaterializedFixtures|TestJSONSubsetConfigFixture)$' -count=1)
 for suite in TestEmitSyntaxFeatures TestEmitStringRepeatMatch TestEmitRegExpExec TestEmitPOSIXRegexJSClasses TestEmitSwitchGroupedLabels; do
   (cd "$root" && ABAPITI_TEST_OUT="$gen/$suite" go test -p 2 ./tsfront -run "^$suite$" -count=1)
 done
@@ -20,13 +20,14 @@ node "$root/.github/ci/hir-lint.mjs" "$gen/Test750Semantics" "$osg"
 for suite in TestEmitSyntaxFeatures TestEmitStringRepeatMatch TestEmitRegExpExec TestEmitPOSIXRegexJSClasses TestEmitSwitchGroupedLabels; do
   node "$root/.github/ci/hir-lint.mjs" "$gen/$suite" "$osg" --fixture
 done
-for classes in "$gen"/TestConfigJSONFixtures/case*; do
+for classes in "$gen"/TestConfigJSONFixtures/case* "$gen"/TestConfigJSONChunkedReferenceArm/case*; do
   node "$root/.github/ci/hir-lint.mjs" "$classes" "$osg"
 done
 for classes in "$gen"/TestJSONSubsetFixtures/case* "$gen"/TestJSONSubsetMaterializedFixtures/case*; do
   node "$root/.github/ci/hir-lint.mjs" "$classes" "$osg" --fixture
 done
 node "$root/.github/ci/hir-lint.mjs" "$gen/TestConfigJSONFixtures/case0" "$osg" config-json-v702
+node "$root/.github/ci/hir-lint.mjs" "$gen/TestConfigJSONChunkedReferenceArm/case0" "$osg" config-json-v702
 node "$root/.github/ci/hir-lint.mjs" "$gen/TestJSONSubsetConfigFixture" "$osg" --fixture
 node "$root/.github/ci/hir-lint.mjs" "$gen/TestLiveClassViewJSONNodeOracle/json-live" "$osg" --fixture
 for classes in "$gen"/JSONStructural/json-*; do
@@ -36,7 +37,7 @@ node "$root/.github/ci/osg-transpiler.mjs" "$osg"
 result=0
 # OSGO is the gate on every PR; OSG-JS runs nightly (HIR_RUNTIMES="osgo osgjs").
 for runtime in ${HIR_RUNTIMES:-osgo}; do
-  for suite in TestNumericFixtures TestFixtures TestRuntimeDebtFixtures Test750Semantics TestEmitSyntaxFeatures TestEmitStringRepeatMatch TestEmitRegExpExec TestEmitPOSIXRegexJSClasses TestEmitSwitchGroupedLabels TestConfigJSONFixtures/case{0,1,2,3} TestJSONSubsetFixtures/case{0,1,2,3,4,5} TestJSONSubsetMaterializedFixtures/case{0,1,2,3,4,5} TestJSONSubsetConfigFixture TestLiveClassViewJSONNodeOracle/json-live JSONStructural/json-structural JSONStructural/json-structural-live JSONStructural/json-structural-config JSONStructural/json-structural-wide; do
+  for suite in TestNumericFixtures TestFixtures TestRuntimeDebtFixtures Test750Semantics TestEmitSyntaxFeatures TestEmitStringRepeatMatch TestEmitRegExpExec TestEmitPOSIXRegexJSClasses TestEmitSwitchGroupedLabels TestConfigJSONFixtures/case{0,1,2,3} TestConfigJSONChunkedReferenceArm/case{0,1,3} TestJSONSubsetFixtures/case{0,1,2,3,4,5} TestJSONSubsetMaterializedFixtures/case{0,1,2,3,4,5} TestJSONSubsetConfigFixture TestLiveClassViewJSONNodeOracle/json-live JSONStructural/json-structural JSONStructural/json-structural-live JSONStructural/json-structural-config JSONStructural/json-structural-wide; do
     expected=7
     if [[ "$suite" != TestFixtures ]]; then expected=1; fi
     if [[ "$suite" == TestRuntimeDebtFixtures ]]; then expected=475; fi

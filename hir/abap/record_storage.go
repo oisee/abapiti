@@ -156,6 +156,10 @@ func (b *body) erasedPropertyLookup(x *hir.Expr, n, a, key string) {
 	}
 }
 
+// nativeDelete runs its class arms inline up to nativeDeleteArms, else in
+// parts of that many arms.
+var nativeDeleteArms = 256
+
 // Nominal optional slots can retain absence; required slots explicitly refuse.
 // Keep a separate deletion mask because an undefined value is still present.
 func (e *emitter) nativeRecordDeleteRuntime() string {
@@ -171,16 +175,16 @@ func (e *emitter) nativeDeletePart(testPart bool) string {
 		return name
 	}
 	e.types[name] = true
-	var code strings.Builder
-	fmt.Fprintf(&code, "CLASS %s DEFINITION PUBLIC CREATE PRIVATE.\nPUBLIC SECTION.\nCLASS-METHODS run IMPORTING p0 TYPE REF TO object key TYPE string RETURNING VALUE(result) TYPE abap_bool.\nPROTECTED SECTION.\nPRIVATE SECTION.\nENDCLASS.\nCLASS %s IMPLEMENTATION.\nMETHOD run.\nIF p0 IS NOT BOUND.\nRAISE EXCEPTION TYPE %s EXPORTING reason = `record_storage.go: nativeDelete: receiver is undefined`.\nENDIF.\n", name, name, e.name("view.refusal"))
+	refusal, factory := e.name("view.refusal"), ""
 	if e.testPackages && !testPart {
-		factory := e.name("runtime.classvalue.factory")
-		fmt.Fprintf(&code, "IF %s=>extension IS BOUND.\nDATA handled TYPE abap_bool.\n%s=>extension->delete( EXPORTING p0 = p0 key = key IMPORTING handled = handled result = result ).\nIF handled = abap_true.\nRETURN.\nENDIF.\nENDIF.\n", factory, factory)
+		factory = e.name("runtime.classvalue.factory")
 	}
+	var arms []string
 	for i, c := range e.classesByDepth() {
 		if e.testPackages && testDeclaration(c) != testPart {
 			continue
 		}
+		var code strings.Builder
 		fmt.Fprintf(&code, "IF p0 IS INSTANCE OF %s.\nDATA native%d TYPE REF TO %s.\nnative%d ?= p0.\n", e.name(c.Name), i, e.name(c.Name), i)
 		seen := map[string]bool{}
 		caseOpened := false
@@ -197,7 +201,7 @@ func (e *emitter) nativeDeletePart(testPart bool) string {
 				fmt.Fprintf(&code, "WHEN `%s`.\n", strings.ReplaceAll(f.Name, "`", "``"))
 				typ := e.semanticFieldType(base, f)
 				if prototypeProperty(f.Name) || typ.Kind != hir.Optional && typ.Kind != hir.Dynamic {
-					fmt.Fprintf(&code, "RAISE EXCEPTION TYPE %s EXPORTING reason = `record_storage.go: nativeDelete: required or prototype slot cannot retain absence`.\n", e.name("view.refusal"))
+					fmt.Fprintf(&code, "RAISE EXCEPTION TYPE %s EXPORTING reason = `record_storage.go: nativeDelete: required or prototype slot cannot retain absence`.\n", refusal)
 				} else {
 					fmt.Fprintf(&code, "CLEAR native%d->%s.\nINSERT key INTO TABLE native%d->%s.\n", i, e.member(f.Name), i, e.name("record.deleted"))
 				}
@@ -207,6 +211,33 @@ func (e *emitter) nativeDeletePart(testPart bool) string {
 			code.WriteString("ENDCASE.\n")
 		}
 		code.WriteString("result = abap_true.\nRETURN.\nENDIF.\n")
+		arms = append(arms, code.String())
+	}
+	// One arm per class with a CASE per field in a single method outgrows the
+	// host compiler's liveness tables (OSGo's Go build, ~3,900 classes). Parts
+	// keep the arm order: the first instance match still decides.
+	var parts []string
+	if len(arms) > nativeDeleteArms {
+		for i := 0; i < len(arms); i += nativeDeleteArms {
+			parts = append(parts, strings.Join(arms[i:min(i+nativeDeleteArms, len(arms))], ""))
+		}
+	}
+	var code strings.Builder
+	fmt.Fprintf(&code, "CLASS %s DEFINITION PUBLIC CREATE PRIVATE.\nPUBLIC SECTION.\nCLASS-METHODS run IMPORTING p0 TYPE REF TO object key TYPE string RETURNING VALUE(result) TYPE abap_bool.\nPROTECTED SECTION.\nPRIVATE SECTION.\n", name)
+	for i := range parts {
+		fmt.Fprintf(&code, "CLASS-METHODS run_%d IMPORTING p0 TYPE REF TO object key TYPE string EXPORTING handled TYPE abap_bool result TYPE abap_bool.\n", i)
+	}
+	fmt.Fprintf(&code, "ENDCLASS.\nCLASS %s IMPLEMENTATION.\nMETHOD run.\nIF p0 IS NOT BOUND.\nRAISE EXCEPTION TYPE %s EXPORTING reason = `record_storage.go: nativeDelete: receiver is undefined`.\nENDIF.\n", name, refusal)
+	if e.testPackages && !testPart {
+		fmt.Fprintf(&code, "IF %s=>extension IS BOUND.\nDATA handled TYPE abap_bool.\n%s=>extension->delete( EXPORTING p0 = p0 key = key IMPORTING handled = handled result = result ).\nIF handled = abap_true.\nRETURN.\nENDIF.\nENDIF.\n", factory, factory)
+	}
+	if parts == nil {
+		code.WriteString(strings.Join(arms, ""))
+	} else {
+		code.WriteString("DATA found TYPE abap_bool.\n")
+		for i := range parts {
+			fmt.Fprintf(&code, "run_%d( EXPORTING p0 = p0 key = key IMPORTING handled = found result = result ).\nIF found = abap_true.\nresult = abap_true.\nRETURN.\nENDIF.\n", i)
+		}
 	}
 	if testPart {
 		text := code.String()
@@ -214,10 +245,14 @@ func (e *emitter) nativeDeletePart(testPart bool) string {
 		text = strings.ReplaceAll(text, "result = abap_true.\nRETURN.", "handled = abap_true.\nresult = abap_true.\nRETURN.")
 		code.Reset()
 		code.WriteString(text)
-		code.WriteString("ENDMETHOD.\nENDCLASS.\n")
+		code.WriteString("ENDMETHOD.\n")
 	} else {
-		fmt.Fprintf(&code, "RAISE EXCEPTION TYPE %s EXPORTING reason = `record_storage.go: nativeDelete: native class layout unknown`.\nENDMETHOD.\nENDCLASS.\n", e.name("view.refusal"))
+		fmt.Fprintf(&code, "RAISE EXCEPTION TYPE %s EXPORTING reason = `record_storage.go: nativeDelete: native class layout unknown`.\nENDMETHOD.\n", refusal)
 	}
+	for i, part := range parts {
+		fmt.Fprintf(&code, "METHOD run_%d.\nCLEAR: handled, result.\n%sENDMETHOD.\n", i, strings.ReplaceAll(part, "result = abap_true.\nRETURN.", "handled = abap_true.\nresult = abap_true.\nRETURN."))
+	}
+	code.WriteString("ENDCLASS.\n")
 	e.files[name+".clas.abap"] = code.String()
 	return name
 }

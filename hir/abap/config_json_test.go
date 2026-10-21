@@ -212,6 +212,69 @@ func parsedConfigFixture(t *testing.T, input string) *hir.Program {
 }
 
 func TestConfigJSONFixtures(t *testing.T) {
+	configJSONFixtures(t, 0, 1, 2, 3)
+}
+
+// Tiny limits route the reference arm through chunk methods; the Node oracle
+// and the probe order (most-derived first) must not change.
+func TestConfigJSONChunkedReferenceArm(t *testing.T) {
+	probes, chunk := configJSONRefProbes, configJSONRefChunk
+	configJSONRefProbes, configJSONRefChunk = 2, 3
+	t.Cleanup(func() { configJSONRefProbes, configJSONRefChunk = probes, chunk })
+	files, names, err := emitABAPNamed(t, nativeConfigFixture(t, `{"global":{"files":"x"},"syntax":{"version":"v702"},"rules":{"a":{"exclude":[],"severity":"Error"}}}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	writer := files[names.Get("runtime.configJSON")+".clas.abap"]
+	method := names.Get("json.write." + hir.T(hir.Dynamic).String())
+	body := writer[strings.Index(writer, "METHOD "+method+".\n"):]
+	body = body[:strings.Index(body, "ENDMETHOD.")]
+	if strings.Contains(body, "CATCH cx_sy_move_cast_error.") {
+		t.Fatal("chunked reference arm still probes casts inline")
+	}
+	var order []string
+	for i := 0; ; i++ {
+		part := names.Get(fmt.Sprintf("json.write.%s.ref%d", hir.T(hir.Dynamic).String(), i))
+		at := strings.Index(writer, "METHOD "+part+".\n")
+		if at < 0 {
+			if i < 2 {
+				t.Fatalf("want at least two chunks, got %d", i)
+			}
+			break
+		}
+		if !strings.Contains(body, part+"( EXPORTING p0 = p0 IMPORTING result = result found = found ).") {
+			t.Fatalf("chunk %d is not dispatched", i)
+		}
+		chunk := writer[at:]
+		chunk = chunk[:strings.Index(chunk, "ENDMETHOD.")]
+		if n := strings.Count(chunk, "CATCH cx_sy_move_cast_error."); n == 0 || n > 3 {
+			t.Fatalf("chunk %d has %d probes", i, n)
+		}
+		for _, l := range strings.Split(chunk, "\n") {
+			if strings.HasSuffix(l, " ?= p0->oval.") {
+				order = append(order, strings.TrimSpace(strings.TrimSuffix(l, " ?= p0->oval.")))
+			}
+		}
+	}
+	configJSONRefProbes, configJSONRefChunk = probes, chunk
+	inline, inlineNames, err := emitABAPNamed(t, nativeConfigFixture(t, `{"global":{"files":"x"},"syntax":{"version":"v702"},"rules":{"a":{"exclude":[],"severity":"Error"}}}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var want []string
+	for _, l := range strings.Split(inline[inlineNames.Get("runtime.configJSON")+".clas.abap"], "\n") {
+		if strings.HasSuffix(l, " ?= p0->oval.") {
+			want = append(want, strings.TrimSpace(strings.TrimSuffix(l, " ?= p0->oval.")))
+		}
+	}
+	if strings.Join(order, ",") != strings.Join(want, ",") {
+		t.Fatalf("probe order changed:\n%v\n%v", order, want)
+	}
+	configJSONRefProbes, configJSONRefChunk = 2, 3
+	configJSONFixtures(t, 0, 1, 3)
+}
+
+func configJSONFixtures(t *testing.T, cases ...int) {
 	node, err := exec.LookPath("node")
 	if err != nil {
 		t.Fatal("Node is required for config JSON byte oracle")
@@ -228,7 +291,8 @@ func TestConfigJSONFixtures(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	for i, input := range inputs {
+	for _, i := range cases {
+		input := inputs[i]
 		script := `process.stdout.write(JSON.stringify(JSON.parse(process.argv[1])))`
 		if i == 3 {
 			script = `const o=JSON.parse(process.argv[1]);o.gone=undefined;o.undefArray=[undefined];process.stdout.write(JSON.stringify(o))`

@@ -18,6 +18,11 @@ var configJSONOrders = map[string][]string{
 	"src/_config.ts.IDependency":                                   {"url", "folder", "files"},
 }
 
+// The dynamic writer's reference arm stays one method up to
+// configJSONRefProbes cast probes (TS-HA closures have ~550), else it calls
+// methods of configJSONRefChunk probes each.
+var configJSONRefProbes, configJSONRefChunk = 1024, 256
+
 func configJSONOrder(e *emitter, c *hir.Class) ([]string, bool) {
 	order, ok := configJSONOrders[c.Name]
 	if strings.HasPrefix(c.Name, "shape.") && len(c.Fields) == 2 {
@@ -508,6 +513,8 @@ ENDMETHOD.
 				return n
 			}
 			sort.SliceStable(classes, func(i, j int) bool { return depth(classes[i]) > depth(classes[j]) })
+			type refProbe struct{ local, typ, write string }
+			var probes []refProbe
 			for _, c := range classes {
 				if subset {
 					if !e.jsonSubsetType(hir.Ref(c.Name)) {
@@ -517,7 +524,7 @@ ENDMETHOD.
 					continue
 				}
 				local := e.name("json.local." + c.Name)
-				line("DATA %s TYPE REF TO %s.\nTRY.\n%s ?= p0->oval.\nCATCH cx_sy_move_cast_error.\nCLEAR %s.\nENDTRY.\nIF %s IS BOUND.\nresult = %s.\nRETURN.\nENDIF.", local, e.name(c.Name), local, local, local, call(hir.Ref(c.Name), local))
+				probes = append(probes, refProbe{local, "REF TO " + e.name(c.Name), call(hir.Ref(c.Name), local)})
 			}
 			for _, k := range containerKeys {
 				t := containerTypes[k]
@@ -525,7 +532,33 @@ ENDMETHOD.
 					continue
 				}
 				local := e.name("json.local." + k)
-				line("DATA %s TYPE %s.\nTRY.\n%s ?= p0->oval.\nCATCH cx_sy_move_cast_error.\nCLEAR %s.\nENDTRY.\nIF %s IS BOUND.\nresult = %s.\nRETURN.\nENDIF.", local, e.typ(t), local, local, local, call(t, local))
+				probes = append(probes, refProbe{local, e.typ(t), call(t, local)})
+			}
+			probe := func(line func(string, ...any), p refProbe, found string) {
+				line("DATA %s TYPE %s.\nTRY.\n%s ?= p0->oval.\nCATCH cx_sy_move_cast_error.\nCLEAR %s.\nENDTRY.\nIF %s IS BOUND.\n%sresult = %s.\nRETURN.\nENDIF.", p.local, p.typ, p.local, p.local, p.local, found, p.write)
+			}
+			if len(probes) <= configJSONRefProbes {
+				for _, p := range probes {
+					probe(line, p, "")
+				}
+			} else {
+				// One cast probe per class in a single method grows the host
+				// compiler's liveness tables with locals x blocks; OSGo's Go build
+				// fails above ~1,900 probes. Chunks keep the probe order.
+				line("DATA found TYPE abap_bool.")
+				for i := 0; i < len(probes); i += configJSONRefChunk {
+					part := e.name(fmt.Sprintf("json.write.%s.ref%d", key, i/configJSONRefChunk))
+					fmt.Fprintf(&declarations, "METHODS %s IMPORTING p0 TYPE %s EXPORTING result TYPE string found TYPE abap_bool.\n", part, e.typ(t))
+					var chunk strings.Builder
+					chunkLine := func(f string, a ...any) { fmt.Fprintf(&chunk, f+"\n", a...) }
+					chunkLine("METHOD %s.\nCLEAR: result, found.", part)
+					for _, p := range probes[i:min(i+configJSONRefChunk, len(probes))] {
+						probe(chunkLine, p, "found = abap_true.\n")
+					}
+					chunkLine("ENDMETHOD.")
+					methods.WriteString(chunk.String())
+					line("%s( EXPORTING p0 = p0 IMPORTING result = result found = found ).\nIF found = abap_true.\nRETURN.\nENDIF.", part)
+				}
 			}
 			fail()
 			line("WHEN %s=>tag_class.", dyn)
