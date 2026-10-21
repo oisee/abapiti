@@ -175,6 +175,13 @@ func (e *emitter) runtime(t hir.Type) {
 		}
 		line("TYPES entries_type TYPE STANDARD TABLE OF entry WITH DEFAULT KEY" + secondary + ".")
 		line("DATA entries TYPE entries_type.")
+		insertion := ""
+		if t.Kind == hir.OrderedMap && e.usesReviewedOp("map.insertions") {
+			line("DATA inserts TYPE i.")
+			line("METHODS insertions RETURNING VALUE(result) TYPE i.")
+			method("insertions", "result = inserts.\n")
+			insertion = "inserts = inserts + 1.\n"
+		}
 		line("METHODS size RETURNING VALUE(result) TYPE i.")
 		method("size", "result = lines( entries ).\n")
 		line("METHODS has IMPORTING p0 TYPE " + key + " RETURNING VALUE(result) TYPE abap_bool.")
@@ -188,7 +195,7 @@ func (e *emitter) runtime(t hir.Type) {
 			val = "p1"
 		}
 		line("METHODS " + op + " IMPORTING p0 TYPE " + key + params + " RETURNING VALUE(result) TYPE REF TO " + name + ".")
-		method(op, "READ TABLE entries WITH KEY "+lookupKey+" = p0 ASSIGNING FIELD-SYMBOL(<row>).\nIF sy-subrc = 0.\n<row>-v = "+val+".\nELSE.\nAPPEND VALUE #( k = p0 v = "+val+" ) TO entries.\nENDIF.\nresult = me.\n")
+		method(op, "READ TABLE entries WITH KEY "+lookupKey+" = p0 ASSIGNING FIELD-SYMBOL(<row>).\nIF sy-subrc = 0.\n<row>-v = "+val+".\nELSE.\n"+insertion+"APPEND VALUE #( k = p0 v = "+val+" ) TO entries.\nENDIF.\nresult = me.\n")
 		if t.Kind == hir.OrderedMap && e.types["runtime.mapView"] && t.Args[0].Kind == hir.String {
 			line("METHODS delete IMPORTING p0 TYPE string RETURNING VALUE(result) TYPE abap_bool.")
 			method("delete", "DELETE TABLE entries WITH TABLE KEY by_k COMPONENTS k = p0.\nresult = xsdbool( sy-subrc = 0 ).\n")

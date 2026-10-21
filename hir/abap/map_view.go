@@ -10,7 +10,11 @@ import (
 func (e *emitter) mapStorageRuntime() {
 	d := e.name("runtime.dynamic")
 	s := e.name("map.storage")
-	e.files[s+".intf.abap"] = "INTERFACE " + s + " PUBLIC.\nMETHODS brand RETURNING VALUE(result) TYPE abap_bool.\nMETHODS get IMPORTING p0 TYPE string RETURNING VALUE(result) TYPE REF TO " + d + ".\nMETHODS put IMPORTING p0 TYPE string p1 TYPE REF TO " + d + ".\nMETHODS has IMPORTING p0 TYPE string RETURNING VALUE(result) TYPE abap_bool.\nMETHODS remove IMPORTING p0 TYPE string RETURNING VALUE(result) TYPE abap_bool.\nMETHODS clear.\nMETHODS keys RETURNING VALUE(result) TYPE REF TO " + d + ".\nMETHODS size RETURNING VALUE(result) TYPE i.\nENDINTERFACE.\n"
+	counter := ""
+	if e.usesReviewedOp("map.insertions") {
+		counter = "METHODS insertions RETURNING VALUE(result) TYPE i.\n"
+	}
+	e.files[s+".intf.abap"] = "INTERFACE " + s + " PUBLIC.\n" + counter + "METHODS brand RETURNING VALUE(result) TYPE abap_bool.\nMETHODS get IMPORTING p0 TYPE string RETURNING VALUE(result) TYPE REF TO " + d + ".\nMETHODS put IMPORTING p0 TYPE string p1 TYPE REF TO " + d + ".\nMETHODS has IMPORTING p0 TYPE string RETURNING VALUE(result) TYPE abap_bool.\nMETHODS remove IMPORTING p0 TYPE string RETURNING VALUE(result) TYPE abap_bool.\nMETHODS clear.\nMETHODS keys RETURNING VALUE(result) TYPE REF TO " + d + ".\nMETHODS size RETURNING VALUE(result) TYPE i.\nENDINTERFACE.\n"
 }
 func (b *body) dynamicMapView(x *hir.Expr, n, a string) {
 	e := b.e
@@ -38,8 +42,8 @@ func (e *emitter) mapViewMethod(t hir.Type, method, code string) string {
 	b.mapLine("IF map_source IS BOUND.")
 	value := t.Args[1]
 	switch method {
-	case "size", "has":
-		b.mapLine("result = map_source->" + method + "( " + map[string]string{"size": "", "has": "p0"}[method] + " ).")
+	case "size", "has", "insertions":
+		b.mapLine("result = map_source->" + method + "( " + map[string]string{"size": "", "has": "p0", "insertions": ""}[method] + " ).")
 	case "delete":
 		b.mapLine("result = map_source->remove( p0 ).")
 	case "clear":
@@ -83,6 +87,9 @@ func (e *emitter) mapStorageImplementation(t hir.Type) string {
 	method := func(n, code string) { out.WriteString("METHOD " + s + "~" + n + ".\n" + code + "ENDMETHOD.\n") }
 	method("brand", "result = js_map.\n")
 	method("size", "result = size( ).\n")
+	if e.usesReviewedOp("map.insertions") {
+		method("insertions", "result = insertions( ).\n")
+	}
 	method("has", "result = has( p0 ).\n")
 	method("remove", "result = delete( p0 ).\n")
 	method("clear", "clear( ).\n")
