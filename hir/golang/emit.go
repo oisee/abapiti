@@ -374,6 +374,7 @@ type emitter struct {
 	code              strings.Builder
 	err               error
 	extra             strings.Builder
+	ownKeyTables      map[string]bool
 	lspGuards         bool
 	hirMath           bool
 	extraRuntimeKeys  bool
@@ -1011,10 +1012,7 @@ func (b *body) expr(x *hir.Expr) string {
 			code = e.name("new."+t.Name) + "(" + strings.Join(a, ",") + ")"
 			if e.extraRuntimeKeys && e.classBy(t.Name).Structural && x.OwnKeys != nil {
 				result := b.temp(t, code)
-				b.line("%s.ownKeys=&ownKeyState{}", result)
-				for _, key := range *x.OwnKeys {
-					b.line("%s.ownKeys.set(str(%q),nil)", result, key)
-				}
+				e.literalOwnKeys(b, result, *x.OwnKeys)
 				return result
 			}
 		} else {

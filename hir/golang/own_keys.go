@@ -20,8 +20,12 @@ func dynamicKeys(d *dynamic) *array[jsString] {
  }
  if d.Tag==2 {if v,ok:=d.Value.(interface{nominalOwnKeys()*array[jsString]});ok {return v.nominalOwnKeys()}}
  if d.Tag!=tagObject {panic(newTrap("own-key enumeration requires original structural property storage"))}
- out:=d.Value.(*orderedMap[jsString,*dynamic]).keys()
- index:=func(k jsString)(uint64,bool){n,ok:=parseCanonicalIndex(k.String(),32);return n,ok&&n<4294967295}
+ return sortOwnKeys(d.Value.(*orderedMap[jsString,*dynamic]).keys())
+}
+// Integer-like keys enumerate first, ascending; the rest keep insertion order.
+// A canonical index starts with an ASCII digit, so others skip the decode.
+func sortOwnKeys(out *array[jsString]) *array[jsString] {
+ index:=func(k jsString)(uint64,bool){if len(k)<2 || k[1]!=0 || k[0]<'0' || k[0]>'9' {return 0,false};n,ok:=parseCanonicalIndex(k.String(),32);return n,ok&&n<4294967295}
  for i:=1;i<len(out.Items);i++ {for j:=i;j>0;j-- {a,ai:=index(out.Items[j-1]);b,bi:=index(out.Items[j]);if !bi || ai&&a<=b {break};out.Items[j-1],out.Items[j]=out.Items[j],out.Items[j-1]}}
  return out
 }
@@ -35,7 +39,7 @@ func (e *emitter) tracksOwnKeys(c *hir.Class) bool {
 
 func (e *emitter) ownKeyClass(c *hir.Class) {
 	if c.Structural || e.nativeJSON {
-		e.line("func (self *%s) nominalOwnKeys() *array[jsString] {if self==nil {panic(newRangeFault())};if self.ownKeys==nil {panic(newTrap(%q))};return dynamicKeys(&dynamic{Tag:tagObject,Value:self.ownKeys.materialize()})}", e.obj(c.Name), "structural constructor has no proven own-property order")
+		e.line("func (self *%s) nominalOwnKeys() *array[jsString] {if self==nil {panic(newRangeFault())};if self.ownKeys==nil {panic(newTrap(%q))};return sortOwnKeys(self.ownKeys.keys())}", e.obj(c.Name), "structural constructor has no proven own-property order")
 		return
 	}
 	if c.Ctor == nil || len(c.Ctor.Params) != 0 {
@@ -69,6 +73,34 @@ func (e *emitter) ownKeyClass(c *hir.Class) {
 		}
 	}
 	e.line("return dynamicKeys(&dynamic{Tag:tagObject,Value:bag})}")
+}
+
+// literalOwnKeys gives a fresh structural record its statically proven key
+// sequence: a shared package-level names table (one per distinct sequence)
+// with every bit set, so no ordered map exists until an out-of-order write,
+// unknown key or delete materialises one. The table is only ever read.
+func (e *emitter) literalOwnKeys(b *body, result string, keys []string) {
+	if len(keys) == 0 || len(keys) > 64 {
+		b.line("%s.ownKeys=&ownKeyState{}", result)
+		for _, key := range keys {
+			b.line("%s.ownKeys.set(str(%q),nil)", result, key)
+		}
+		return
+	}
+	names := make([]string, len(keys))
+	for i, key := range keys {
+		names[i] = "str(" + strconv.Quote(key) + ")"
+	}
+	id := "ownkeys.literal." + strings.Join(keys, "\x00")
+	table := e.name(id)
+	if e.ownKeyTables == nil {
+		e.ownKeyTables = map[string]bool{}
+	}
+	if !e.ownKeyTables[id] {
+		e.ownKeyTables[id] = true
+		fmt.Fprintf(&e.extra, "var %s = []jsString{%s}\n", table, strings.Join(names, ","))
+	}
+	b.line("%s.ownKeys=&ownKeyState{names:%s,mask:%#x}", result, table, ^uint64(0)>>(64-len(keys)))
 }
 
 // newOwnKeys points every level of a new nominal instance at one key-order
