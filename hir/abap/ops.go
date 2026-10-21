@@ -7,6 +7,7 @@ import (
 )
 
 var supportedOps = map[string]bool{
+	"map.view": true, "set.view": true,
 	"map.insertions": true,
 	"weak.lookupKey": true, "weak.writeKey": true,
 	"host.getenv":      true,
@@ -86,7 +87,7 @@ var supportedOps = map[string]bool{
 // Operations without a reviewed ABAP implementation retain explicit refusals.
 var unsupportedOps = map[string]bool{
 	"container.readonlyClassView": true, "container.readonlyView": true,
-	"map.view": true, "set.view": true, "arrayLike.length": true,
+	"arrayLike.length":   true,
 	"number.strictIsNaN": true, "regexp.matchAllNext": true,
 	"string.parseFloat": true,
 

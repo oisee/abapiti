@@ -8,7 +8,7 @@ import (
 )
 
 func (e *emitter) runtime(t hir.Type) {
-	t = arrayStorage(unionStorage(t))
+	t = e.containerStorage(arrayStorage(unionStorage(t)))
 	id := "runtime." + t.String()
 	if e.types[id] {
 		return
@@ -28,8 +28,11 @@ func (e *emitter) runtime(t hir.Type) {
 			}
 		}
 		s = e.setIterationMethod(t, n, s)
+		s = e.referenceSetMethod(t, n, s)
 		if t.Kind == hir.OrderedMap {
 			s = e.mapViewMethod(t, n, s)
+			s = e.typedMapMethod(t, n, s)
+			s = e.referenceMapMethod(t, n, s)
 		}
 		impl.WriteString("METHOD " + n + ".\n" + s + "ENDMETHOD.\n")
 	}
@@ -154,6 +157,9 @@ func (e *emitter) runtime(t hir.Type) {
 			impl.WriteString(iterationImpl)
 		}
 		line(e.mapViewDefinition(t))
+		if definition := e.typedMapDefinition(t); definition != "" {
+			line(definition)
+		}
 		if t.Kind == hir.OrderedMap {
 			e.chaiMaps = append(e.chaiMaps, t)
 		}
@@ -196,9 +202,13 @@ func (e *emitter) runtime(t hir.Type) {
 		}
 		line("METHODS " + op + " IMPORTING p0 TYPE " + key + params + " RETURNING VALUE(result) TYPE REF TO " + name + ".")
 		method(op, "READ TABLE entries WITH KEY "+lookupKey+" = p0 ASSIGNING FIELD-SYMBOL(<row>).\nIF sy-subrc = 0.\n<row>-v = "+val+".\nELSE.\n"+insertion+"APPEND VALUE #( k = p0 v = "+val+" ) TO entries.\nENDIF.\nresult = me.\n")
-		if t.Kind == hir.OrderedMap && e.types["runtime.mapView"] && t.Args[0].Kind == hir.String {
-			line("METHODS delete IMPORTING p0 TYPE string RETURNING VALUE(result) TYPE abap_bool.")
-			method("delete", "DELETE TABLE entries WITH TABLE KEY by_k COMPONENTS k = p0.\nresult = xsdbool( sy-subrc = 0 ).\n")
+		if t.Kind == hir.OrderedMap && (e.typedMapViews() || e.types["runtime.mapView"] && t.Args[0].Kind == hir.String) {
+			line("METHODS delete IMPORTING p0 TYPE " + key + " RETURNING VALUE(result) TYPE abap_bool.")
+			deleteCode := "DELETE TABLE entries WITH TABLE KEY by_k COMPONENTS k = p0.\nresult = xsdbool( sy-subrc = 0 ).\n"
+			if e.typedMapViews() {
+				deleteCode = "DELETE entries WHERE k = p0.\nresult = xsdbool( sy-subrc = 0 ).\n"
+			}
+			method("delete", deleteCode)
 			line("METHODS clear.")
 			method("clear", "CLEAR entries.\n")
 		}
@@ -246,7 +256,7 @@ func (e *emitter) runtime(t hir.Type) {
 		method(op, "result = NEW #( ).\nLOOP AT entries INTO DATA(row).\nAPPEND row-k TO result->items.\nENDLOOP.\n")
 	}
 	e.files[name+".clas.abap"] = "CLASS " + name + " DEFINITION PUBLIC CREATE PUBLIC.\nPUBLIC SECTION.\n" + def.String() + "PROTECTED SECTION.\nPRIVATE SECTION.\nENDCLASS.\nCLASS " + name + " IMPLEMENTATION.\n" + impl.String() + "ENDCLASS.\n"
-	if extra := e.mapStorageImplementation(t); extra != "" {
+	if extra := e.mapStorageImplementation(t) + e.typedMapImplementation(t); extra != "" {
 		e.files[name+".clas.abap"] = strings.TrimSuffix(e.files[name+".clas.abap"], "ENDCLASS.\n") + extra + "ENDCLASS.\n"
 	}
 	e.liveRecordMapRuntime(t)
