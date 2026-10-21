@@ -219,7 +219,7 @@ func (l *lowerer) readonlyContainerConversion(x *hir.Expr, dst hir.Type) *hir.Ex
 		if src.Kind == hir.Optional {
 			src = src.Args[0]
 		}
-		if l.readonlyContainerAssignable(dst.Args[0], src) && !l.dataArraySubtype(dst.Args[0], src) {
+		if l.readonlyContainerAssignable(dst.Args[0], src) && !l.dataArraySubtype(dst.Args[0], src) && !l.nominalElementUpcast(dst.Args[0], src) {
 			if x.Type.Kind != hir.Optional {
 				return l.coerce(l.coerce(x, dst.Args[0]), dst)
 			}
@@ -230,8 +230,22 @@ func (l *lowerer) readonlyContainerConversion(x *hir.Expr, dst hir.Type) *hir.Ex
 				Y: &hir.Expr{Kind: hir.Lit, Node: x.Node, Type: dst}, Z: l.coerce(l.coerce(present, dst.Args[0]), dst)}
 		}
 	}
-	if l.readonlyContainerAssignable(dst, x.Type) && !l.dataArraySubtype(dst, x.Type) {
+	if l.readonlyContainerAssignable(dst, x.Type) && !l.dataArraySubtype(dst, x.Type) && !l.nominalElementUpcast(dst, x.Type) {
 		return l.rtOp("container.readonlyView", x, dst)
 	}
 	return nil
+}
+
+// A readonly array of nominal subclass (or implementing class) references is
+// read as its superclass array without conversion: object references up-cast
+// on read in Go and ABAP, so the pre-view lowering keeps the same storage.
+func (l *lowerer) nominalElementUpcast(dst, src hir.Type) bool {
+	if dst.Kind != hir.Array || src.Kind != hir.Array || len(dst.Args) != 1 || len(src.Args) != 1 {
+		return false
+	}
+	a, b := dst.Args[0], src.Args[0]
+	if b.Kind != hir.ClassRef || a.Kind != hir.ClassRef && a.Kind != hir.InterfaceRef || a.Equal(b) || l.shapeLike[a.Name] || l.shapeLike[b.Name] {
+		return false
+	}
+	return l.refAccepts(a, b)
 }
