@@ -462,9 +462,10 @@ def main(args):
             order = [int(x) for x in hits.read_text().split()]
             traps = write_traps(out, order_rows(rows, order), unknown_a, unknown_g)
             return 0
-        # Keep the large generated package's compiler heap below the scope cap.
+        # GOMEMLIMIT keeps the large generated package's compiler heap below the
+        # scope cap; the default GOGC is cheaper here than GOGC=50 (about 7 s).
         heavy(['go', 'build', '-o', out / 'gogen', '.'], 'build', cwd=out / 'go', memory='24G',
-              extra={'GOMEMLIMIT': env.get('GOMEMLIMIT', '12GiB'), 'GOGC': env.get('GOGC', '50')})
+              extra={'GOMEMLIMIT': env.get('GOMEMLIMIT', '12GiB'), 'GOGC': env.get('STEP4_BUILD_GOGC', '100')})
         build = 'ok'
         with actual.open('wb') as f:
             try:
