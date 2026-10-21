@@ -27,6 +27,7 @@ func newEmitABAPCmd() *cobra.Command {
 	f.String("overrides", "none", "Source-pinned overrides: none or registry")
 	f.String("reachability", "", "Generic workload coverage manifest; unexecuted bodies become traps")
 	f.String("initialize", "", "JSON array of source files; emits ZCL_ABAPITI_MAIN=>RUN calling their module initializers in this order")
+	f.Bool("keep-going", false, "Measurement mode: record type/declaration-level refusals in evidence/unattributable-refusals.json, omit the unemittable declaration and finish emission; body refusals still trap whole owning bodies")
 	return cmd
 }
 func init() { rootCmd.AddCommand(newEmitABAPCmd()) }
@@ -86,20 +87,45 @@ func runEmitABAP(cmd *cobra.Command, args []string) error {
 	if err := r.Err(); err != nil {
 		return err
 	}
-	gap, err := json.MarshalIndent(tsfront.MeasureABAPTestGap(r), "", "  ")
+	keepGoing, _ := f.GetBool("keep-going")
+	gap := tsfront.MeasureABAPTestGap(r)
+	if keepGoing {
+		gap = tsfront.MeasureABAPTestGapKeepGoing(r)
+	}
+	data, err := json.MarshalIndent(gap, "", "  ")
 	if err != nil {
 		return err
 	}
-	if err := writeSources(evidence, map[string]string{"abap-gap.json": string(gap) + "\n"}); err != nil {
+	if err := writeSources(evidence, map[string]string{"abap-gap.json": string(data) + "\n"}); err != nil {
 		return err
 	}
-	if err := tsfront.TrapABAPTestRefusals(r); err != nil {
+	// Unattributable refusals are written before emission: a later refusal
+	// then leaves the record of every construct that has no owning body.
+	var unattributable []tsfront.UnattributableRefusal
+	if keepGoing {
+		if unattributable, err = tsfront.TrapABAPTestRefusalsKeepGoing(r); err != nil {
+			return err
+		}
+		rows, err := json.MarshalIndent(unattributable, "", "  ")
+		if err != nil {
+			return err
+		}
+		if err := writeSources(evidence, map[string]string{"unattributable-refusals.json": string(rows) + "\n"}); err != nil {
+			return err
+		}
+	} else if err = tsfront.TrapABAPTestRefusals(r); err != nil {
 		return err
 	}
 	if err := writeEvidence(evidence, r); err != nil {
 		return err
 	}
-	files, names, err := abap.EmitNamed(r.Prog)
+	var files map[string]string
+	var names *hir.Names
+	if keepGoing {
+		files, names, err = abap.EmitNamedKeepGoing(r.Prog)
+	} else {
+		files, names, err = abap.EmitNamed(r.Prog)
+	}
 	if err != nil {
 		return err
 	}
@@ -138,7 +164,11 @@ func runEmitABAP(cmd *cobra.Command, args []string) error {
 	if err := writeSources(evidence, map[string]string{"names.json": string(sourceMap), "abap-size.json": string(size) + "\n"}); err != nil {
 		return err
 	}
-	fmt.Fprintf(cmd.OutOrStdout(), "emit-abap: %d files, %d lines, %d bytes, %d lines over 255\n", len(files), lines, bytes, len(report.LongLines))
+	fmt.Fprintf(cmd.OutOrStdout(), "emit-abap: %d files, %d lines, %d bytes, %d lines over 255", len(files), lines, bytes, len(report.LongLines))
+	if keepGoing {
+		fmt.Fprintf(cmd.OutOrStdout(), ", %d unattributable refusals", len(unattributable))
+	}
+	fmt.Fprintln(cmd.OutOrStdout())
 	return nil
 }
 

@@ -11,9 +11,12 @@ site whose source lies in code the Node reference executed (V8 block coverage)
 in <out-dir>/reached-traps.tsv, ordered by first execution in a breakpoint
 replay of the reference, and prints `step4-traps: N reached (A/G unknown) M unreached`.
 
---abap (step 4b, implies --list-traps) emits ABAP with `emit-abap` into <out-dir>/abap
-instead of Go: TS-HA refusals trap whole owning bodies, and the reached list covers
-them together with the lowering traps (`step4b-traps: ...`). The reference run
+--abap (step 4b, implies --list-traps) emits ABAP with `emit-abap --keep-going` into
+<out-dir>/abap instead of Go: TS-HA refusals trap whole owning bodies, ownerless
+type/declaration refusals are recorded (evidence/unattributable-refusals.json) and
+omitted so emission finishes, and the reached list covers the body traps together with
+the lowering traps (`step4b-traps: ...`); unattributable counts and a trap breakdown
+by operation/message go to <out-dir>/step4b-summary.txt. The reference run
 then also writes <out-dir>/fs-snapshot.json (tools/fs-snapshot-recorder.mjs), both
 extern modules bind to ZCL_ABAPITI_HOSTIO, `--initialize` adds ZCL_ABAPITI_MAIN, and
 the host class is copied into <out-dir>/abap/src (docs/extern-modules.md).
@@ -313,6 +316,44 @@ def write_traps(out, rows, unknown_a, unknown_g):
     return f'step4-traps: {len(reached)} reached ({unknown_a}/{unknown_g} unknown) {unreached} unreached'
 
 
+OPERATION = re.compile(r'runtime operation ([A-Za-z0-9_.]+)')
+
+
+def trap_breakdown(sites, limit=30):
+    """Count trap sites by operation when the message names one, else by message."""
+    counts = {}
+    for site in sites:
+        message = ' '.join(site.get('Message', '').split())
+        m = OPERATION.search(message)
+        key = m.group(1) if m else (message.split(';')[0][:120] or '<empty>')
+        counts[key] = counts.get(key, 0) + 1
+    return sorted(counts.items(), key=lambda kv: (-kv[1], kv[0]))[:limit], len(counts)
+
+
+def write_step4b_summary(out, sites):
+    """Record keep-going evidence: unattributable refusals and a trap breakdown."""
+    lines = []
+    path = out / 'abap/evidence/unattributable-refusals.json'
+    if path.exists():
+        rows = json.loads(path.read_text()) or []
+        by_op = {}
+        for row in rows:
+            by_op[row.get('operation') or '<none>'] = by_op.get(row.get('operation') or '<none>', 0) + 1
+        lines.append(f'unattributable refusals: {len(rows)}')
+        for op, n in sorted(by_op.items(), key=lambda kv: (-kv[1], kv[0])):
+            lines.append(f'  {op}: {n}')
+        for row in rows[:10]:
+            lines.append(f"  node {row.get('node')} ({row.get('location')}): {row.get('message')}")
+    else:
+        lines.append('unattributable refusals: none recorded (no --keep-going evidence)')
+    top, distinct = trap_breakdown(sites)
+    lines.append(f'trap sites: {len(sites)} in {distinct} operations/messages (top {len(top)})')
+    for op, n in top:
+        lines.append(f'  {op}: {n}')
+    (out / 'step4b-summary.txt').write_text('\n'.join(lines) + '\n')
+    return f'unattributable: {len(rows) if path.exists() else "n/a"}'
+
+
 def main(args):
     inputs = None
     if '--inputs' in args:
@@ -450,7 +491,7 @@ def main(args):
         # The driver's only edits are host IO. Keep all other unsupported sites
         # in the emitted program as located traps, using the existing policy.
         if abap:
-            heavy([binary, 'emit-abap', '--tsconfig', config_path, '--externs', extern_path,
+            heavy([binary, 'emit-abap', '--keep-going', '--tsconfig', config_path, '--externs', extern_path,
                    '--overrides', 'registry', '--reachability', out / 'reach.json',
                    '--initialize', out / 'initialization.json',
                    '-o', out / 'abap', *lists], 'emit')
@@ -486,7 +527,7 @@ def main(args):
             order = [int(x) for x in hits.read_text().split()]
             traps = write_traps(out, order_rows(rows, order), unknown_a, unknown_g)
             if abap:
-                traps = traps.replace('step4-traps:', 'step4b-traps:', 1)
+                traps = traps.replace('step4-traps:', 'step4b-traps:', 1) + '; ' + write_step4b_summary(out, sites)
             return 0
         # Keep the large generated package's compiler heap below the scope cap.
         heavy(['go', 'build', '-o', out / 'gogen', '.'], 'build', cwd=out / 'go', memory='24G',

@@ -275,7 +275,11 @@ class Step4Test(unittest.TestCase):
                 self.assertEqual(driver.read_text(), source)
                 prefix = 'step4-reference: sha256=' + hashlib.sha256(b'package main\n').hexdigest() + '\n' if custom else ''
                 self.assertFalse(inputs_path.exists())
-                self.assertEqual(capture.getvalue(), prefix + ('step4b-traps:' if abap else 'step4-traps:') + ' 2 reached (1/0 unknown) 1 unreached\n')
+                summary = 'step4-traps:' if not abap else 'step4b-traps:'
+                self.assertEqual(capture.getvalue(), prefix + summary + ' 2 reached (1/0 unknown) 1 unreached' + ('; unattributable: n/a\n' if abap else '\n'))
+                if abap:
+                    self.assertIn('unattributable refusals: none recorded (no --keep-going evidence)',
+                                  (out / 'step4b-summary.txt').read_text())
                 self.assertEqual((out / 'abap/src/zcl_abapiti_hostio.clas.abap').exists(), abap)
                 rows = [line.split('\t') for line in (out / 'reached-traps.tsv').read_text().splitlines()[1:]]
                 self.assertEqual([(r[0], r[2], r[3]) for r in rows], [('tools/lib.mjs:2:1', '1', 'root'), ('tools/lib.mjs:3:1', '4', 'root')])
