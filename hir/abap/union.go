@@ -85,16 +85,16 @@ func (e *emitter) unionRuntime() string {
 	def.WriteString("CLASS-METHODS record IMPORTING p0 TYPE REF TO " + d + " RETURNING VALUE(result) TYPE abap_bool.\n")
 	def.WriteString("CLASS-METHODS has IMPORTING p0 TYPE REF TO " + d + " p1 TYPE string RETURNING VALUE(result) TYPE abap_bool.\n")
 	def.WriteString("CLASS-METHODS literal IMPORTING p0 TYPE REF TO " + d + " p1 TYPE string p2 TYPE string RETURNING VALUE(result) TYPE abap_bool.\n")
-	impl.WriteString("METHOD box.\nDATA adapter TYPE REF TO " + storage + ".\nIF p0 IS NOT BOUND.\nRETURN.\nENDIF.\nTRY.\nresult ?= p0.\nCATCH cx_sy_move_cast_error.\nENDTRY.\nIF result IS BOUND.\nRETURN.\nENDIF.\n")
-	impl.WriteString("TRY.\nadapter ?= p0.\nCATCH cx_sy_move_cast_error.\nENDTRY.\nIF adapter IS BOUND.\nresult = adapter->source( ).\nENDIF.\nIF result IS NOT BOUND.\nCREATE OBJECT result.\nresult->tag = " + d + "=>tag_ref.\nresult->oval = p0.\nENDIF.\nENDMETHOD.\n")
+	impl.WriteString("METHOD box.\nDATA adapter TYPE REF TO " + storage + ".\nIF p0 IS NOT BOUND.\nRETURN.\nENDIF.\n" + clearedCastProbe("result", "p0", d) + "\nIF result IS BOUND.\nRETURN.\nENDIF.\n")
+	impl.WriteString(clearedCastProbe("adapter", "p0", storage) + "\nIF adapter IS BOUND.\nresult = adapter->source( ).\nENDIF.\nIF result IS NOT BOUND.\nCREATE OBJECT result.\nresult->tag = " + d + "=>tag_ref.\nresult->oval = p0.\nENDIF.\nENDMETHOD.\n")
 	impl.WriteString("METHOD record.\nDATA adapter TYPE REF TO " + storage + ".\nIF p0 IS NOT BOUND.\nRETURN.\nENDIF.\nIF p0->tag = " + d + "=>tag_object.\nresult = abap_true.\nRETURN.\nENDIF.\nIF p0->tag <> " + d + "=>tag_ref.\nRETURN.\nENDIF.\n")
-	impl.WriteString("TRY.\nadapter ?= p0->oval.\nCATCH cx_sy_move_cast_error.\nRETURN.\nENDTRY.\nresult = adapter->structural( ).\nENDMETHOD.\n")
+	impl.WriteString(castOrRaise("adapter", "p0->oval", storage, "RETURN.") + "\nresult = adapter->structural( ).\nENDMETHOD.\n")
 	impl.WriteString("METHOD has.\nDATA adapter TYPE REF TO " + storage + ".\nIF p0->tag = " + d + "=>tag_object.\nREAD TABLE p0->entries WITH KEY k = p1 TRANSPORTING NO FIELDS.\nresult = xsdbool( sy-subrc = 0 ).\nRETURN.\nENDIF.\nadapter ?= p0->oval.\nresult = adapter->has( p1 ).\nENDMETHOD.\n")
 	impl.WriteString("METHOD literal.\nDATA v TYPE REF TO " + d + ".\nv = p0->get( p1 ).\nIF v IS BOUND AND v->tag = " + d + "=>tag_string AND v->sval = p2.\nresult = abap_true.\nENDIF.\nENDMETHOD.\n")
 	if array {
 		e.isArrayUsed = true
 		def.WriteString("CLASS-METHODS array IMPORTING p0 TYPE REF TO " + d + " RETURNING VALUE(result) TYPE abap_bool.\n")
-		impl.WriteString("METHOD array.\nDATA mark TYPE REF TO " + e.name("runtime.arraymark") + ".\nIF p0->tag = " + d + "=>tag_array.\nresult = abap_true.\nELSEIF p0->tag = " + d + "=>tag_ref AND p0->oval IS BOUND.\nTRY.\nmark ?= p0->oval.\nresult = abap_true.\nCATCH cx_sy_move_cast_error.\nENDTRY.\nENDIF.\nENDMETHOD.\n")
+		impl.WriteString("METHOD array.\nIF p0->tag = " + d + "=>tag_array.\nresult = abap_true.\nELSEIF p0->tag = " + d + "=>tag_ref AND p0->oval IS INSTANCE OF " + e.name("runtime.arraymark") + ".\nresult = abap_true.\nENDIF.\nENDMETHOD.\n")
 	}
 	def.WriteString("PROTECTED SECTION.\nPRIVATE SECTION.\nENDCLASS.\n")
 	e.files[file] = def.String() + "CLASS " + name + " IMPLEMENTATION.\n" + impl.String() + "ENDCLASS.\n"

@@ -53,7 +53,7 @@ func (b *body) u3DynamicRuntime(x *hir.Expr, n string) bool {
 	probe := b.rawTemp("REF TO " + iface)
 	b.line("CLEAR " + probe + ".")
 	b.line("IF " + a + " IS BOUND AND " + a + "->tag = " + d + "=>tag_ref.")
-	b.line("TRY.\n" + probe + " ?= " + a + "->oval.\nCATCH cx_sy_move_cast_error.\nENDTRY.\nENDIF.")
+	b.line(clearedCastProbe(probe, a+"->oval", iface) + "\nENDIF.")
 	if x.Op != "dynamic.values" {
 		want := "1"
 		if x.Op == "dynamic.isSet" {

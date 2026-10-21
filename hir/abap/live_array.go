@@ -188,7 +188,7 @@ func (b *body) arrayView(t hir.Type, n, a string) {
 	}
 	b.line("CLEAR " + n + ".")
 	e.isArrayUsed = true
-	b.line("IF " + a + " IS BOUND.\nIF " + a + "->tag = " + d + "=>tag_ref.\nTRY.\n" + n + " ?= " + a + "->oval.\nCATCH cx_sy_move_cast_error.\nIF " + a + "->oval IS NOT INSTANCE OF " + e.name("runtime.arraymark") + ".\nRAISE EXCEPTION TYPE " + trap + " EXPORTING reason = `live_array.go: arrayView: reference is not array storage`.\nENDIF.\nCREATE OBJECT " + n + ".\n" + n + "->source = " + a + ".\nENDTRY.\nELSEIF " + a + "->tag = " + d + "=>tag_array.\nCREATE OBJECT " + n + ".\n" + n + "->source = " + a + ".\nELSE.\nRAISE EXCEPTION TYPE " + trap + " EXPORTING reason = `live_array.go: arrayView: source is neither array graph nor reference`.\nENDIF.\n" + n + "->load( ).")
+	b.line("IF " + a + " IS BOUND.\nIF " + a + "->tag = " + d + "=>tag_ref.\n" + castOrElse(n, a+"->oval", refClass(e.typ(t)), "IF "+a+"->oval IS NOT INSTANCE OF "+e.name("runtime.arraymark")+".\nRAISE EXCEPTION TYPE "+trap+" EXPORTING reason = `live_array.go: arrayView: reference is not array storage`.\nENDIF.\nCREATE OBJECT "+n+".\n"+n+"->source = "+a+".") + "\nELSEIF " + a + "->tag = " + d + "=>tag_array.\nCREATE OBJECT " + n + ".\n" + n + "->source = " + a + ".\nELSE.\nRAISE EXCEPTION TYPE " + trap + " EXPORTING reason = `live_array.go: arrayView: source is neither array graph nor reference`.\nENDIF.\n" + n + "->load( ).")
 	// Validate every present element at publication and again on subsequent reads.
 	if t.Args[0].IsRef() && t.Args[0].Name != hir.RootObject {
 		row := b.temp(hir.Ref(hir.RootObject))

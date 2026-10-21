@@ -26,7 +26,6 @@ done
 for classes in "$gen"/TestJSONSubsetFixtures/case* "$gen"/TestJSONSubsetMaterializedFixtures/case*; do
   node "$root/.github/ci/hir-lint.mjs" "$classes" "$osg" --fixture
 done
-node "$root/.github/ci/hir-lint.mjs" "$gen/TestConfigJSONFixtures/case0" "$osg" config-json-v702
 node "$root/.github/ci/hir-lint.mjs" "$gen/TestJSONSubsetConfigFixture" "$osg" --fixture
 node "$root/.github/ci/hir-lint.mjs" "$gen/TestLiveClassViewJSONNodeOracle/json-live" "$osg" --fixture
 for classes in "$gen"/JSONStructural/json-*; do

@@ -240,7 +240,7 @@ ENDMETHOD.
 			if t.Args[0].Equal(hir.Ref(hir.RootObject)) {
 				// Reference-array storage is erased. A dynamic view must inspect
 				// each element, rather than guessing a static element type.
-				line("DATA boxed TYPE REF TO %s.\nCLEAR boxed.\nIF item IS BOUND.\nTRY.\nboxed ?= item.\nCATCH cx_sy_move_cast_error.\nCREATE OBJECT boxed.\nboxed->tag = %s=>tag_ref.\nboxed->oval = item.\nENDTRY.\nENDIF.\ntext = %s.", dyn, dyn, call(hir.T(hir.Dynamic), "boxed"))
+				line("DATA boxed TYPE REF TO %s.\nCLEAR boxed.\nIF item IS BOUND.\nIF item IS INSTANCE OF %s.\nboxed ?= item.\nELSE.\nCREATE OBJECT boxed.\nboxed->tag = %s=>tag_ref.\nboxed->oval = item.\nENDIF.\nENDIF.\ntext = %s.", dyn, dyn, dyn, call(hir.T(hir.Dynamic), "boxed"))
 			} else {
 				line("text = %s.", call(t.Args[0], "item"))
 			}
@@ -517,7 +517,7 @@ ENDMETHOD.
 					continue
 				}
 				local := e.name("json.local." + c.Name)
-				line("DATA %s TYPE REF TO %s.\nTRY.\n%s ?= p0->oval.\nCATCH cx_sy_move_cast_error.\nCLEAR %s.\nENDTRY.\nIF %s IS BOUND.\nresult = %s.\nRETURN.\nENDIF.", local, e.name(c.Name), local, local, local, call(hir.Ref(c.Name), local))
+				line("DATA %s TYPE REF TO %s.\nIF p0->oval IS INSTANCE OF %s.\n%s ?= p0->oval.\nresult = %s.\nRETURN.\nENDIF.", local, e.name(c.Name), e.name(c.Name), local, call(hir.Ref(c.Name), local))
 			}
 			for _, k := range containerKeys {
 				t := containerTypes[k]
@@ -525,7 +525,7 @@ ENDMETHOD.
 					continue
 				}
 				local := e.name("json.local." + k)
-				line("DATA %s TYPE %s.\nTRY.\n%s ?= p0->oval.\nCATCH cx_sy_move_cast_error.\nCLEAR %s.\nENDTRY.\nIF %s IS BOUND.\nresult = %s.\nRETURN.\nENDIF.", local, e.typ(t), local, local, local, call(t, local))
+				line("DATA %s TYPE %s.\nIF p0->oval IS INSTANCE OF %s.\n%s ?= p0->oval.\nresult = %s.\nRETURN.\nENDIF.", local, e.typ(t), refClass(e.typ(t)), local, call(t, local))
 			}
 			fail()
 			line("WHEN %s=>tag_class.", dyn)

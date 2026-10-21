@@ -761,9 +761,9 @@ func TestWideShapeHasNoConstructor(t *testing.T) {
 	}
 }
 
-// instanceof against an interface is a checked cast, not IS INSTANCE OF
-// (OSG-JS ignores interfaces there: open-steamgate inbox 039).
-func TestInterfaceInstanceOfIsACheckedCast(t *testing.T) {
+// instanceof against an interface is IS INSTANCE OF without a TRY (OSG-JS
+// honours interfaces since open-steamgate inbox 039).
+func TestInterfaceInstanceOfWithoutTry(t *testing.T) {
 	iface := &hir.Interface{Name: "marker"}
 	obj := hir.Ref(hir.RootObject)
 	m := method("f", hir.T(hir.Bool), ret(&hir.Expr{Kind: hir.InstanceOf, Type: hir.T(hir.Bool), Owner: "marker", X: hir.V("o", obj)}))
@@ -774,7 +774,7 @@ func TestInterfaceInstanceOfIsACheckedCast(t *testing.T) {
 		t.Fatal(err)
 	}
 	for name, src := range files {
-		if strings.HasSuffix(name, ".clas.abap") && (strings.Contains(src, "IS INSTANCE OF") || !strings.Contains(src, "CATCH cx_sy_move_cast_error")) {
+		if strings.HasSuffix(name, ".clas.abap") && strings.Contains(name, "probe") != strings.Contains(src, " IS INSTANCE OF z_marker_") || strings.Contains(src, "cx_sy_move_cast_error") {
 			t.Fatalf("%s:\n%s", name, src)
 		}
 	}

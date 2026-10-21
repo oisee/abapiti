@@ -36,8 +36,9 @@ numbers, precision-sensitive values, surrogate pairs and isolated units,
 unknown properties, undefined omission/array nulls, and cycle refusal.
 Every byte expectation is computed by Node during fixture generation.
 
-The config writer, parser and typed materializers pass the ABAP 7.02 syntax gate; all generated
-fixtures pass hir-lint with no comments and lines at most 255 bytes.
+All generated fixtures, including the config writer, parser and typed materializers, pass
+hir-lint (ABAP 7.50) with no comments and lines at most 255 bytes. The former 7.02 gate for
+the config classes was retired when cast probes moved from TRY to IS INSTANCE OF (7.40).
 `.github/ci/hir-unit.sh` runs the four config cases on both osgo and OSG-JS,
 alongside the existing HIR and lexer suites. The checkout is pinned at
 `7720f6e29b41a6a12faee17ea65076ac6f046552`, with transpiler/runtime

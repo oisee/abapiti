@@ -130,10 +130,9 @@ ENDIF.
 IF p0->tag = $D=>tag_ref.
 DATA storage TYPE REF TO $S.
 DATA source TYPE REF TO $D.
-TRY.
+IF p0->oval IS INSTANCE OF $S.
 storage ?= p0->oval.
-CATCH cx_sy_move_cast_error.
-ENDTRY.
+ENDIF.
 IF storage IS BOUND.
 source = storage->source( ).
 IF source IS BOUND.
@@ -157,11 +156,10 @@ ENDWHILE.
 RETURN.
 ENDIF.
 DATA native TYPE REF TO $I.
-TRY.
-native ?= p0->oval.
-CATCH cx_sy_move_cast_error.
+IF p0->oval IS BOUND AND p0->oval IS NOT INSTANCE OF $I.
 RAISE EXCEPTION TYPE $T EXPORTING reason = 'own_keys.go: keys: reference lacks own-key adapter'.
-ENDTRY.
+ENDIF.
+native ?= p0->oval.
 result = native->keys( ).
 RETURN.
 ENDIF.

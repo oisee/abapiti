@@ -33,11 +33,10 @@ result = xsdbool( sy-subrc <> 0 ).
 ENDIF.
 ELSEIF tag = tag_ref.
 DATA adapter TYPE REF TO $S.
-TRY.
-adapter ?= oval.
-CATCH cx_sy_move_cast_error.
+IF oval IS BOUND AND oval IS NOT INSTANCE OF $S.
 RAISE EXCEPTION TYPE $E EXPORTING reason = 'record_storage.go: dynamic.has: reference lacks view storage'.
-ENDTRY.
+ENDIF.
+adapter ?= oval.
 result = adapter->has( p0 ).
 ELSE.
 RAISE EXCEPTION TYPE $E EXPORTING reason = 'record_storage.go: dynamic.has: source is not object or reference'.
@@ -49,11 +48,10 @@ DELETE entries WHERE k = p0.
 result = abap_true.
 ELSEIF tag = tag_ref.
 DATA adapter TYPE REF TO $S.
-TRY.
-adapter ?= oval.
-CATCH cx_sy_move_cast_error.
+IF oval IS BOUND AND oval IS NOT INSTANCE OF $S.
 RAISE EXCEPTION TYPE $E EXPORTING reason = 'record_storage.go: dynamic.delete: reference lacks view storage'.
-ENDTRY.
+ENDIF.
+adapter ?= oval.
 result = adapter->delete( p0 ).
 ELSE.
 RAISE EXCEPTION TYPE $E EXPORTING reason = 'record_storage.go: dynamic.delete: source is not object or reference'.
@@ -63,7 +61,7 @@ ENDMETHOD.
 	if e.recordDelete {
 		fallback := e.nativeRecordDeleteRuntime()
 		start := strings.Index(code, "METHOD delete.")
-		code = code[:start] + strings.Replace(code[start:], "CATCH cx_sy_move_cast_error.\nRAISE EXCEPTION TYPE $E EXPORTING reason = 'record_storage.go: dynamic.delete: reference lacks view storage'.", "CATCH cx_sy_move_cast_error.\nresult = "+fallback+"=>run( p0 = oval key = p0 ).\nRETURN.", 1)
+		code = code[:start] + strings.Replace(code[start:], "IS NOT INSTANCE OF $S.\nRAISE EXCEPTION TYPE $E EXPORTING reason = 'record_storage.go: dynamic.delete: reference lacks view storage'.", "IS NOT INSTANCE OF $S.\nresult = "+fallback+"=>run( p0 = oval key = p0 ).\nRETURN.", 1)
 	}
 	text = strings.Replace(text, "METHOD as_ref.\n", "METHOD as_ref.\nIF tag = tag_object OR tag = tag_array.\nresult = me.\nRETURN.\nENDIF.\n", 1)
 	text = strings.TrimSuffix(text, "ENDCLASS.\n") + strings.NewReplacer("$S", adapter, "$E", trap).Replace(code) + "ENDCLASS.\n"
@@ -134,8 +132,8 @@ func (b *body) erasedPropertyLookup(x *hir.Expr, n, a, key string) {
 	inherited := b.temp(hir.T(hir.Bool))
 	trap := e.name("view.refusal")
 	b.line("CLEAR " + d + ".\nCLEAR " + adapter + ".\nIF " + a + " IS NOT BOUND.\nRAISE EXCEPTION TYPE " + trap + " EXPORTING reason = `object lookup requires a receiver`.\nENDIF.")
-	b.line("TRY.\n" + d + " ?= " + a + ".\nCATCH cx_sy_move_cast_error.\nENDTRY.")
-	b.line("IF " + d + " IS NOT BOUND.\nTRY.\n" + adapter + " ?= " + a + ".\nCATCH cx_sy_move_cast_error.\nRAISE EXCEPTION TYPE " + trap + " EXPORTING reason = `object lookup lacks structural storage`.\nENDTRY.\n" + d + " = " + adapter + "->source( ).\nENDIF.")
+	b.line(clearedCastProbe(d, a, e.name("runtime.dynamic")))
+	b.line("IF " + d + " IS NOT BOUND.\n" + castOrRaise(adapter, a, e.name("view.storage"), "RAISE EXCEPTION TYPE "+trap+" EXPORTING reason = `object lookup lacks structural storage`.") + "\n" + d + " = " + adapter + "->source( ).\nENDIF.")
 	b.line("IF " + d + " IS NOT BOUND.\nIF " + adapter + "->structural( ) <> abap_true AND " + a + " IS NOT INSTANCE OF " + e.name("runtime.arraymark") + ".\nRAISE EXCEPTION TYPE " + trap + " EXPORTING reason = `object lookup refuses nominal storage`.\nENDIF.\n" + present + " = " + adapter + "->has( " + key + " ).\nELSE.\nIF " + d + "->tag <> " + e.name("runtime.dynamic") + "=>tag_object AND " + d + "->tag <> " + e.name("runtime.dynamic") + "=>tag_array.\nRAISE EXCEPTION TYPE " + trap + " EXPORTING reason = `object lookup requires structural object or array`.\nENDIF.\n" + present + " = " + d + "->has( " + key + " ).\nENDIF.")
 	clauses := []string{}
 	for _, v := range []string{"constructor", "__proto__", "hasOwnProperty", "isPrototypeOf", "propertyIsEnumerable", "toLocaleString", "toString", "valueOf", "__defineGetter__", "__defineSetter__", "__lookupGetter__", "__lookupSetter__"} {

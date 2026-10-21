@@ -215,7 +215,7 @@ ENDCLASS.
 		}
 	}
 	if len(e.liveClasses) > 0 {
-		box.WriteString("DATA adapter TYPE REF TO " + e.name("view.storage") + ".\nTRY.\nadapter ?= p0.\nCATCH cx_sy_move_cast_error.\nENDTRY.\nIF adapter IS BOUND AND adapter->source( ) IS BOUND.\nRAISE EXCEPTION TYPE $T.\nENDIF.\n")
+		box.WriteString("DATA adapter TYPE REF TO " + e.name("view.storage") + ".\n" + clearedCastProbe("adapter", "p0", e.name("view.storage")) + "\nIF adapter IS BOUND AND adapter->source( ) IS BOUND.\nRAISE EXCEPTION TYPE $T.\nENDIF.\n")
 	}
 	for i, c := range e.p.Classes {
 		if !strings.HasPrefix(c.Name, "closure.") {
