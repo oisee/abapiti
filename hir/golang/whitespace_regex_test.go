@@ -33,7 +33,7 @@ func TestWhitespaceRegexNodeOracle(t *testing.T) {
 	for _, s := range inputs {
 		fmt.Fprintf(&main, "%q,", s)
 	}
-	main.WriteString(`};units:=func(s jsString){for i:=int32(0);i<s.length();i++{fmt.Printf("%d,",s.charCodeAt(i))}};for _,s:=range inputs {r:=newRegExp(str("\\s+"),str("g"));r.LastIndex=1;m:=r.exec(str(s));units(str(s).replaceRegex(newRegExp(str("\\s+"),str("g")),str("_")));fmt.Print(":");if m!=nil {units(m.Items[0]);fmt.Printf(":%d",m.MatchIndex)}else{fmt.Print("null:null")};fmt.Printf(":%d\n",r.LastIndex)}`)
+	main.WriteString(`};units:=func(s jsString){for i:=int32(0);i<s.length();i++{fmt.Printf("%d,",s.charCodeAt(i))}};for _,s:=range inputs {r:=newRegExp(str("\\s+"),str("g"));r.LastIndex=1;m:=r.exec(str(s));units(str(s).replaceRegex(newRegExp(str("\\s+"),str("g")),str("_")));fmt.Print(":");if m!=nil {units(m.Items[0]);fmt.Printf(":%d",m.matchIndex())}else{fmt.Print("null:null")};fmt.Printf(":%d\n",r.LastIndex)}`)
 	got := execute(t, &hir.Program{}, main.String())
 	if got != string(want) {
 		t.Fatal("whitespace replace/exec differs from Node")

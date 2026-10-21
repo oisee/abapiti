@@ -5,16 +5,16 @@ import "strings"
 // Go maps cannot retrieve a NaN key. Use a comparable canonical key for JS
 // SameValueZero, while keeping the original values in insertion order.
 func sameValueZeroRuntime(source string) string {
-	start := strings.Index(source, "type orderedSet[")
-	end := strings.Index(source[start:], "func (a *array[T]) reverse") + start
+	start := mustIndex(source, "type orderedSet[", "SameValueZero set block")
+	end := mustIndex(source[start:], "func (a *array[T]) reverse", "SameValueZero set block end") + start
 	block := source[start:end]
 	block = strings.ReplaceAll(block, "map[collectionIndexKey[T]]int", "map[any]int")
 	block = strings.ReplaceAll(block, "collectionKey(", "setKey(")
 	block = strings.ReplaceAll(block, "if x==v", "if setKey(x)==setKey(v)")
-	block = strings.Replace(block, "func (s *orderedSet[T]) add(v T) *orderedSet[T] {", "func (s *orderedSet[T]) add(v T) *orderedSet[T] {v=normalizeSetValue(v);", 1)
+	block = mustReplace(block, "func (s *orderedSet[T]) add(v T) *orderedSet[T] {", "func (s *orderedSet[T]) add(v T) *orderedSet[T] {v=normalizeSetValue(v);", "SameValueZero set add")
 	source = source[:start] + block + source[end:]
-	start = strings.Index(source, "func (s *orderedSet[T]) delete")
-	end = strings.Index(source[start:], "func (s *orderedSet[T]) copy") + start
+	start = mustIndex(source, "func (s *orderedSet[T]) delete", "SameValueZero set delete")
+	end = mustIndex(source[start:], "func (s *orderedSet[T]) copy", "SameValueZero set delete end") + start
 	source = source[:start] + strings.ReplaceAll(source[start:end], "collectionKey(", "setKey(") + source[end:]
 	return source + setSameValueZeroSource
 }

@@ -1,50 +1,65 @@
 package golang
 
-import "strings"
-
 // Only live-view programs use the proxy ABI. Native arrays retain their storage;
 // a typed proxy delegates every element read and mutation to the original array.
 func liveArrayRuntime(source string) string {
-	source = strings.Replace(source, "type array[T any] struct{ Items []T;", "type array[T any] struct{ Items []T; live liveArrayStorage; source *dynamic; decode func(*dynamic) T;", 1)
+	source = mustReplace(source, "type arrayExtra[T any] struct{", "type arrayExtra[T any] struct{ live liveArrayStorage; source *dynamic; decode func(*dynamic) T;", "arrayExtra live fields")
 	guards := map[string]string{
-		"reserve(n int)":                        "if a.live!=nil {return}",
-		"chaiLength() int":                      "if a.live!=nil {return int(a.length())}",
-		"push(v T) int32":                       "if a.live!=nil {n:=a.length();a.live.livePut(n,box(v));return n+1}",
-		"get(i int32) optional[T]":              "if a.live!=nil {v,ok:=a.live.liveGet(i);if !ok {return optional[T]{}};return present(a.decode(v))}",
-		"put(i int32, v T)":                     "if a.live!=nil {a.live.livePut(i,box(v));return}",
-		"has(i int32) bool":                     "if a.live!=nil {_,ok:=a.live.liveGet(i);return ok}",
-		"delete(i int32) bool":                  "if a.live!=nil {return a.live.liveDelete(i)}",
-		"reverse() *array[T]":                   "if a.live!=nil {a.live.liveReverse();return a}",
-		"unshift(v T) int32":                    "if a.live!=nil {a.live.liveSplice(0,0,box(v),true);return a.length()}",
-		"concat(b *array[T]) *array[T]":         "if a.live!=nil || b.live!=nil {out:=a.slice0();for i:=int32(0);i<b.length();i++ {v:=b.get(i);if !v.Has {panic(newTrap(\"live array concat refuses holes\"))};out.push(v.Value)};return out}",
-		"slice0() *array[T]":                    "if a.live!=nil {return a.slice2(0,a.length())}",
-		"slice1(i int32) *array[T]":             "if a.live!=nil {return a.slice2(i,a.length())}",
-		"slice2(i, j int32) *array[T]":          "if a.live!=nil {return a.liveSlice(i,j)}",
-		"slice2(i,j int32) *array[T]":           "if a.live!=nil {return a.liveSlice(i,j)}",
-		"splice1(i int32) *array[T]":            "if a.live!=nil {return a.splice2(i,a.length())}",
-		"splice1_view(i int32) *array[T]":       "if a.live!=nil {return a.splice1(i)}",
-		"splice2(i, n int32) *array[T]":         "if a.live!=nil {return a.proxySplice(i,n,nil,false)}",
-		"spliceDrop2(i, n int32) *array[T]":     "if a.live!=nil {a.proxySplice(i,n,nil,false);return nil}",
-		"spliceDrop2(i,n int32) *array[T]":      "if a.live!=nil {a.proxySplice(i,n,nil,false);return nil}",
-		"splice2(i,n int32) *array[T]":          "if a.live!=nil {return a.proxySplice(i,n,nil,false)}",
-		"splice3(i, n int32, v T) *array[T]":    "if a.live!=nil {return a.proxySplice(i,n,box(v),true)}",
-		"splice3(i,n int32,v T) *array[T]":      "if a.live!=nil {return a.proxySplice(i,n,box(v),true)}",
-		"pop() optional[T]":                     "if a.live!=nil {n:=a.length();if n==0 {return optional[T]{}};v:=a.get(n-1);a.live.liveSplice(n-1,1,nil,false);return v}",
-		"shift() optional[T]":                   "if a.live!=nil {if a.length()==0 {return optional[T]{}};v:=a.get(0);a.live.liveSplice(0,1,nil,false);return v}",
-		"indexOf(v T) int32":                    "if a.live!=nil {for i:=int32(0);i<a.length();i++ {x:=a.get(i);if x.Has && equal(x.Value,v) {return i}};return -1}",
-		"join(sep optional[jsString]) jsString": "if a.live!=nil {return (&array[T]{Items:a.values()}).join(sep)}",
+		"reserve(n int)":                        "if a.isLive() {return}",
+		"chaiLength() int":                      "if a.isLive() {return int(a.length())}",
+		"push(v T) int32":                       "if a.isLive() {n:=a.length();a.extra.live.livePut(n,box(v));return n+1}",
+		"get(i int32) optional[T]":              "if a.isLive() {v,ok:=a.extra.live.liveGet(i);if !ok {return optional[T]{}};return present(a.extra.decode(v))}",
+		"put(i int32, v T)":                     "if a.isLive() {a.extra.live.livePut(i,box(v));return}",
+		"has(i int32) bool":                     "if a.isLive() {_,ok:=a.extra.live.liveGet(i);return ok}",
+		"delete(i int32) bool":                  "if a.isLive() {return a.extra.live.liveDelete(i)}",
+		"reverse() *array[T]":                   "if a.isLive() {a.extra.live.liveReverse();return a}",
+		"unshift(v T) int32":                    "if a.isLive() {a.extra.live.liveSplice(0,0,box(v),true);return a.length()}",
+		"concat(b *array[T]) *array[T]":         "if a.isLive() || b.isLive() {out:=a.slice0();for i:=int32(0);i<b.length();i++ {v:=b.get(i);if !v.Has {panic(newTrap(\"live array concat refuses holes\"))};out.push(v.Value)};return out}",
+		"slice0() *array[T]":                    "if a.isLive() {return a.slice2(0,a.length())}",
+		"slice1(i int32) *array[T]":             "if a.isLive() {return a.slice2(i,a.length())}",
+		"slice2(i, j int32) *array[T]":          "if a.isLive() {return a.liveSlice(i,j)}",
+		"slice2(i,j int32) *array[T]":           "if a.isLive() {return a.liveSlice(i,j)}",
+		"splice1(i int32) *array[T]":            "if a.isLive() {return a.splice2(i,a.length())}",
+		"splice1_view(i int32) *array[T]":       "if a.isLive() {return a.splice1(i)}",
+		"splice2(i, n int32) *array[T]":         "if a.isLive() {return a.proxySplice(i,n,nil,false)}",
+		"spliceDrop2(i, n int32) *array[T]":     "if a.isLive() {a.proxySplice(i,n,nil,false);return nil}",
+		"spliceDrop2(i,n int32) *array[T]":      "if a.isLive() {a.proxySplice(i,n,nil,false);return nil}",
+		"splice2(i,n int32) *array[T]":          "if a.isLive() {return a.proxySplice(i,n,nil,false)}",
+		"splice3(i, n int32, v T) *array[T]":    "if a.isLive() {return a.proxySplice(i,n,box(v),true)}",
+		"splice3(i,n int32,v T) *array[T]":      "if a.isLive() {return a.proxySplice(i,n,box(v),true)}",
+		"pop() optional[T]":                     "if a.isLive() {n:=a.length();if n==0 {return optional[T]{}};v:=a.get(n-1);a.extra.live.liveSplice(n-1,1,nil,false);return v}",
+		"shift() optional[T]":                   "if a.isLive() {if a.length()==0 {return optional[T]{}};v:=a.get(0);a.extra.live.liveSplice(0,1,nil,false);return v}",
+		"indexOf(v T) int32":                    "if a.isLive() {for i:=int32(0);i<a.length();i++ {x:=a.get(i);if x.Has && equal(x.Value,v) {return i}};return -1}",
+		"join(sep optional[jsString]) jsString": "if a.isLive() {return (&array[T]{Items:a.values()}).join(sep)}",
 	}
-	source = strings.Replace(source, "slice0() *array[T]        {", "slice0() *array[T] {", 1)
-	source = strings.Replace(source, "splice1(i int32) *array[T]      {", "splice1(i int32) *array[T] {", 1)
+	// Dense one-line methods keep gofmt alignment; sparseRuntime has already
+	// rewritten them whenever live views are enabled.
+	source = optionalReplace(source, "slice0() *array[T]        {", "slice0() *array[T] {", "slice0 alignment")
+	source = optionalReplace(source, "splice1(i int32) *array[T]      {", "splice1(i int32) *array[T] {", "splice1 alignment")
+	// chaiLength exists only when the chai deep-equal runtime was appended
+	// (it runs before this patcher); the spaced signatures match only the
+	// dense pre-sparse methods, which sparseRuntime has already rewritten.
+	optional := map[string]bool{
+		"chaiLength() int":                   true,
+		"slice2(i, j int32) *array[T]":       true,
+		"splice2(i, n int32) *array[T]":      true,
+		"spliceDrop2(i, n int32) *array[T]":  true,
+		"splice3(i, n int32, v T) *array[T]": true,
+	}
 	for signature, guard := range guards {
-		source = strings.Replace(source, "func (a *array[T]) "+signature+" {", "func (a *array[T]) "+signature+" {"+guard+";", 1)
+		old := "func (a *array[T]) " + signature + " {"
+		if optional[signature] {
+			source = optionalReplace(source, old, old+guard+";", "live array guard "+signature)
+		} else {
+			source = mustReplace(source, old, old+guard+";", "live array guard "+signature)
+		}
 	}
 	// The sparse implementation has an independent includes loop.
-	source = strings.Replace(source, "func (a *array[T]) includes(v T) bool {\n", "func (a *array[T]) includes(v T) bool {\nif a.live!=nil {return a.indexOf(v)>=0};\n", 1)
-	source = strings.Replace(source, "func presentArray[T any](a *array[optional[T]]) *array[T] {", "func presentArray[T any](a *array[optional[T]]) *array[T] {if a!=nil && a.live!=nil {panic(newTrap(\"optional narrowing of a live array is unsupported\"))};", 1)
-	source = strings.Replace(source, "func referenceArray[T any](a *array[T]) *array[any] {", "func referenceArray[T any](a *array[T]) *array[any] {if a!=nil && a.live!=nil {panic(newTrap(\"reference repacking of a live array is unsupported\"))};", 1)
-	source = strings.Replace(source, "func (s *orderedSet[T]) fromArray(a *array[T]) *orderedSet[T] {", "func (s *orderedSet[T]) fromArray(a *array[T]) *orderedSet[T] {if a!=nil && a.live!=nil {for _,v:=range a.values() {s.add(v)};return s};", 1)
-	source = strings.Replace(source, "func (d *dynamic) put(k jsString, v *dynamic) {", "func (d *dynamic) put(k jsString, v *dynamic) {if d!=nil && d.Tag==tagArray {d.Value.(*array[any]).dynamicPut(k,v);return};", 1)
+	source = mustReplace(source, "func (a *array[T]) includes(v T) bool {\n", "func (a *array[T]) includes(v T) bool {\nif a.isLive() {return a.indexOf(v)>=0};\n", "live includes guard")
+	source = mustReplace(source, "func presentArray[T any](a *array[optional[T]]) *array[T] {", "func presentArray[T any](a *array[optional[T]]) *array[T] {if a!=nil && a.isLive() {panic(newTrap(\"optional narrowing of a live array is unsupported\"))};", "live presentArray guard")
+	source = mustReplace(source, "func referenceArray[T any](a *array[T]) *array[any] {", "func referenceArray[T any](a *array[T]) *array[any] {if a!=nil && a.isLive() {panic(newTrap(\"reference repacking of a live array is unsupported\"))};", "live referenceArray guard")
+	source = mustReplace(source, "func (s *orderedSet[T]) fromArray(a *array[T]) *orderedSet[T] {", "func (s *orderedSet[T]) fromArray(a *array[T]) *orderedSet[T] {if a!=nil && a.isLive() {for _,v:=range a.values() {s.add(v)};return s};", "live fromArray guard")
+	source = mustReplace(source, "func (d *dynamic) put(k jsString, v *dynamic) {", "func (d *dynamic) put(k jsString, v *dynamic) {if d!=nil && d.Tag==tagArray {d.Value.(*array[any]).dynamicPut(k,v);return};", "live dynamic put guard")
 	return source + liveArraySource
 }
 
@@ -99,18 +114,19 @@ func liveArrayView[T any](d *dynamic,decode func(*dynamic)T) *array[T] {
  var zero T
  // Erased reference storage still needs the element converter on every read.
  if reflect.TypeOf(zero)!=nil {if v,ok:=d.Value.(*array[T]);ok {return v}}
- return &array[T]{live:a,source:d,decode:decode}
+ return &array[T]{extra:&arrayExtra[T]{live:a,source:d,decode:decode}}
 }
 func liveReadonlyArrayView[T any](d *dynamic,decode func(*dynamic)T) *array[T] {
  // Parsed-array assertions retain their existing admission boundary. Typed
  // native covariance attaches its decoder lazily without scanning storage.
  if d!=nil && d.Tag==tagArray {return liveArrayView(d,decode)}
  if d==nil {return nil};src,ok:=d.Value.(liveArrayStorage);if !ok {panic(newTrap("readonly array view requires array storage"))}
- return &array[T]{live:src,source:d,decode:decode}
+ return &array[T]{extra:&arrayExtra[T]{live:src,source:d,decode:decode}}
 }
-func (a *array[T]) dynamicSource() *dynamic {if a==nil {return nil};return a.source}
-func (a *array[T]) length() int32 {if a.live!=nil {return a.live.liveLength()};return int32(len(a.Items))}
-func (a *array[T]) values() []T {if a.live==nil {return a.Items};out:=make([]T,a.length());for i:=range out {v:=a.get(int32(i));if !v.Has {panic(newTrap("live typed array dense read refuses holes"))};out[i]=v.Value};return out}
+func (a *array[T]) isLive() bool {return a.extra!=nil && a.extra.live!=nil}
+func (a *array[T]) dynamicSource() *dynamic {if a==nil || a.extra==nil {return nil};return a.extra.source}
+func (a *array[T]) length() int32 {if a.isLive() {return a.extra.live.liveLength()};return int32(len(a.Items))}
+func (a *array[T]) values() []T {if !a.isLive() {return a.Items};out:=make([]T,a.length());for i:=range out {v:=a.get(int32(i));if !v.Has {panic(newTrap("live typed array dense read refuses holes"))};out[i]=v.Value};return out}
 func (a *array[T]) liveLength() int32 {return a.length()}
 func (a *array[T]) liveGet(i int32)(*dynamic,bool) {v:=a.get(i);return box(v.Value),v.Has}
 func (a *array[T]) livePut(i int32,v *dynamic) {a.put(i,liveArrayElement[T](v))}
@@ -122,7 +138,7 @@ func (a *array[T]) liveSlice(i,j int32) *array[T] {
 }
 func (a *array[T]) proxySplice(i,n int32,v *dynamic,insert bool) *array[T] {
  i=sliceIndex(i,a.length());n=max(0,min(n,a.length()-i))
- out:=a.liveSlice(i,i+n);a.live.liveSplice(i,n,v,insert);return out
+ out:=a.liveSlice(i,i+n);a.extra.live.liveSplice(i,n,v,insert);return out
 }
 func (a *array[T]) liveSplice(i,n int32,v *dynamic,insert bool) *array[any] {
  var value T;if insert {value=liveArrayElement[T](v)}

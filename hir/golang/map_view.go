@@ -51,7 +51,7 @@ func (b *body) mapView(x *hir.Expr) string {
 // Every access delegates to original storage; boxing unwraps the proxy so
 // identity, keys, and subsequent writes through the original alias stay live.
 func mapViewRuntime(source string) string {
-	source = strings.Replace(source, "type orderedMap[K comparable, V any] struct {", "type orderedMap[K comparable, V any] struct { proxy *mapProxy[K,V];decode func(*dynamic)V;", 1)
+	source = mustReplace(source, "type orderedMap[K comparable, V any] struct {", "type orderedMap[K comparable, V any] struct { proxy *mapProxy[K,V];decode func(*dynamic)V;", "map proxy fields")
 	guards := map[string]string{
 		"set(k K, v V) *orderedMap[K, V]": "if m.proxy!=nil {m.proxy.set(k,v);return m}",
 		"get(k K) optional[V]":            "if m.proxy!=nil {return m.proxy.get(k)}",
@@ -62,13 +62,17 @@ func mapViewRuntime(source string) string {
 	}
 	for method, guard := range guards {
 		// Methods predate consistent generic receiver spacing.
+		var old string
 		for _, recv := range []string{"func (m *orderedMap[K, V]) ", "func (m *orderedMap[K,V]) "} {
-			old := recv + method + " {"
-			if strings.Contains(source, old) {
-				source = strings.Replace(source, old, old+guard+";", 1)
+			if candidate := recv + method + " {"; strings.Contains(source, candidate) {
+				old = candidate
 				break
 			}
 		}
+		if old == "" {
+			panic("map proxy patch target moved: " + method)
+		}
+		source = mustReplace(source, old, old+guard+";", "map proxy guard "+method)
 	}
 	insertions := "int32(len(m.Entries))"
 	if strings.Contains(source, " inserts int32;") {
@@ -123,9 +127,9 @@ func (e *emitter) usesObjectCarriers() bool {
 // A live data/array view and its original object are the same JS key. Keep
 // native fast indexes for programs without these views.
 func storageIdentityRuntime(source string) string {
-	source = strings.Replace(source, "struct {Value K; NaN bool}", "struct {Value K; NaN bool; Identity any}", 1)
-	source = strings.Replace(source, "func collectionKey[K comparable](k K) collectionIndexKey[K] {", "func collectionKey[K comparable](k K) collectionIndexKey[K] {if !nilRef(k) {switch x:=any(k).(type) {case jsString,bool,int32,int64,float64:default:if s,ok:=x.(interface{dynamicSource()*dynamic});ok && s.dynamicSource()!=nil {return collectionIndexKey[K]{Identity:s.dynamicSource().Value}};if d,ok:=x.(*dynamic);ok && (d.Tag==2||d.Tag==tagObject||d.Tag==tagArray||d.Tag==10) {return collectionIndexKey[K]{Identity:d.Value}};return collectionIndexKey[K]{Identity:x}}};", 1)
-	source = strings.Replace(source, "func setKey(v any) any {", "func setKey(v any) any {if s,ok:=v.(interface{dynamicSource()*dynamic});ok && s.dynamicSource()!=nil {return setKey(s.dynamicSource().Value)};", 1)
+	source = mustReplace(source, "struct {Value K; NaN bool}", "struct {Value K; NaN bool; Identity any}", "collection key identity")
+	source = mustReplace(source, "func collectionKey[K comparable](k K) collectionIndexKey[K] {", "func collectionKey[K comparable](k K) collectionIndexKey[K] {if !nilRef(k) {switch x:=any(k).(type) {case jsString,bool,int32,int64,float64:default:if s,ok:=x.(interface{dynamicSource()*dynamic});ok && s.dynamicSource()!=nil {return collectionIndexKey[K]{Identity:s.dynamicSource().Value}};if d,ok:=x.(*dynamic);ok && (d.Tag==2||d.Tag==tagObject||d.Tag==tagArray||d.Tag==10) {return collectionIndexKey[K]{Identity:d.Value}};return collectionIndexKey[K]{Identity:x}}};", "collection key identity")
+	source = mustReplace(source, "func setKey(v any) any {", "func setKey(v any) any {if s,ok:=v.(interface{dynamicSource()*dynamic});ok && s.dynamicSource()!=nil {return setKey(s.dynamicSource().Value)};", "set key identity")
 	return source
 }
 

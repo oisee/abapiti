@@ -551,8 +551,18 @@ func numberString(x float64) jsString {
 
 type loopControl struct {Target string;Continue bool}
 
-type array[T any] struct{ Items []T; MatchIndex int32; HasMatchIndex bool; Missing map[int32]bool }
-func (a *array[T]) matchIndex() int32 {if !a.HasMatchIndex {panic(newTrap("global match index is not supported"))};return a.MatchIndex}
+// Ordinary arrays only use Items. Views, holes and exec metadata are rare, so
+// they live behind one lazily allocated pointer to keep the header small.
+type array[T any] struct{ Items []T; extra *arrayExtra[T] }
+type arrayExtra[T any] struct{ MatchIndex int32; HasMatchIndex bool; Missing map[int32]bool }
+func (a *array[T]) ext() *arrayExtra[T] {if a.extra==nil {a.extra=&arrayExtra[T]{}};return a.extra}
+func (a *array[T]) missing() map[int32]bool {if a.extra==nil {return nil};return a.extra.Missing}
+// matchArray allocates an exec result and its metadata together.
+func matchArray(index int32) *array[jsString] {
+ m:=&struct{a array[jsString];x arrayExtra[jsString]}{}
+ m.x.MatchIndex,m.x.HasMatchIndex=index,true;m.a.extra=&m.x;return &m.a
+}
+func (a *array[T]) matchIndex() int32 {if a.extra==nil || !a.extra.HasMatchIndex {panic(newTrap("global match index is not supported"))};return a.extra.MatchIndex}
 func presentArray[T any](a *array[optional[T]]) *array[T] {
  if a==nil{return nil};out:=&array[T]{Items:make([]T,len(a.Items))}
  for i,v:=range a.Items {out.Items[i]=unwrap(v)}
@@ -576,13 +586,13 @@ func (a *array[T]) push(v T) int32 {
  return int32(len(a.Items))
 }
 func (a *array[T]) get(i int32) optional[T] {
-	if i < 0 || int(i) >= len(a.Items) || a.Missing[i] {
+	if i < 0 || int(i) >= len(a.Items) || a.missing()[i] {
 		return optional[T]{}
 	}
 	return present(a.Items[i])
 }
 func (a *array[T]) put(i int32, v T) {
-	delete(a.Missing,i)
+	if a.extra!=nil {delete(a.extra.Missing,i)}
 	if i < 0 {
 		panic(newRangeFault())
 	}
@@ -1112,10 +1122,10 @@ func (r *jsRegExp) exec(s jsString) *array[jsString] {
  if m==nil {if stateful {r.LastIndex=0};return nil}
  if wrapped {m=m[2:];for i:=range m {if m[i]>=0 {m[i]+=byteBase}}}
  if r.Source==str("^(-?)0+(?=\\d)") {m[1]--;m=m[:len(m)-2]}
- out:=&array[jsString]{HasMatchIndex:true,MatchIndex:int32(utf8.RuneCountInString(input[:m[0]]))}
+ out:=matchArray(int32(utf8.RuneCountInString(input[:m[0]])))
  if stateful {r.LastIndex=int32(utf8.RuneCountInString(input[:m[1]]))}
  for i:=0;i<len(m);i+=2 {
-  if m[i]<0 {if out.Missing==nil {out.Missing=map[int32]bool{}};out.Missing[int32(len(out.Items))]=true;out.Items=append(out.Items,str(""));continue}
+  if m[i]<0 {if out.extra.Missing==nil {out.extra.Missing=map[int32]bool{}};out.extra.Missing[int32(len(out.Items))]=true;out.Items=append(out.Items,str(""));continue}
   a:=int32(utf8.RuneCountInString(input[:m[i]]));b:=int32(utf8.RuneCountInString(input[:m[i+1]]))
   out.Items=append(out.Items,s[2*a:2*b])
  }
@@ -1139,7 +1149,7 @@ func (s jsString) replaceRegex(r *jsRegExp, v jsString) jsString {
  out:=jsString("");last:=int32(0)
  for {
   match:=r.exec(s);if match==nil {break}
-  start:=match.MatchIndex;end:=start+match.Items[0].length()
+  start:=match.matchIndex();end:=start+match.Items[0].length()
   out+=s[2*last:2*start]+getSubstitution(s,v,start,end,match.Items,names)
   last=end
   if !global {break}

@@ -131,17 +131,14 @@ func fastCollectionRuntime(source string) (string, error) {
 	var extra strings.Builder
 	fast := fastCollectionSource
 	if strings.Contains(source, "type setReadProxy[") {
-		fast = strings.Replace(fast, "type fastOrderedSet[T comparable] struct {", "type fastOrderedSet[T comparable] struct {readProxy *setReadProxy[T];", 1)
+		fast = mustReplace(fast, "type fastOrderedSet[T comparable] struct {", "type fastOrderedSet[T comparable] struct {readProxy *setReadProxy[T];", "fast Set read proxy")
 		fast = fastSetViewRuntime(fast)
 	}
 	if strings.Contains(source, " iteration *array[T];") {
 		fast = setIterationFastRuntime(fast)
 	}
 	if strings.Contains(source, " inserts int32;") {
-		if !strings.Contains(fast, " m.index[k]=len(m.Entries);") {
-			panic("map insertion fast-path patch target moved")
-		}
-		fast = strings.Replace(fast, " m.index[k]=len(m.Entries);", " m.inserts++;m.index[k]=len(m.Entries);", 1)
+		fast = mustReplace(fast, " m.index[k]=len(m.Entries);", " m.inserts++;m.index[k]=len(m.Entries);", "fast map insertions")
 	}
 	extra.WriteString(fast)
 	rename := strings.NewReplacer("orderedMap[", "fastOrderedMap[", "orderedSet[", "fastOrderedSet[")

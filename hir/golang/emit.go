@@ -227,8 +227,8 @@ func emitPackage(p *hir.Program, pkg string, profile bool) (map[string]string, *
 		e.extendedRegex = true
 		runtime += regexSplitRuntimeSource
 		if e.regexA16 {
-			runtime = strings.Replace(runtime, "func (s jsString) splitRegex(pattern *jsRegExp, limit float64) *array[jsString] {", `func (s jsString) splitRegex(pattern *jsRegExp, limit float64) *array[jsString] {
- if pattern.Flags.indexOf(str("u"))>=0 || pattern.labelGuard {panic(newTrap("regexp split is outside the checked split grammar"))}`, 1)
+			runtime = mustReplace(runtime, "func (s jsString) splitRegex(pattern *jsRegExp, limit float64) *array[jsString] {", `func (s jsString) splitRegex(pattern *jsRegExp, limit float64) *array[jsString] {
+ if pattern.Flags.indexOf(str("u"))>=0 || pattern.labelGuard {panic(newTrap("regexp split is outside the checked split grammar"))}`, "regex split A16 guard")
 		}
 	}
 	if e.extraRuntimeKeys {
@@ -238,26 +238,28 @@ func emitPackage(p *hir.Program, pkg string, profile bool) (map[string]string, *
 		}
 	}
 	if e.liveStorage() || e.usesMapViews() {
-		runtime = strings.Replace(runtime, "return a == b\n}", "return dynEqual(box(a), box(b))\n}", 1)
-		runtime = strings.Replace(runtime, "return equal(a.Value, b.Value)", "return a.Value == b.Value", -1)
+		runtime = mustReplace(runtime, "return a == b\n}", "return dynEqual(box(a), box(b))\n}", "live equal dispatch")
+		runtime = strings.ReplaceAll(mustContain(runtime, "return equal(a.Value, b.Value)", "dynamic equal fast path"), "return equal(a.Value, b.Value)", "return a.Value == b.Value")
 	}
 	if e.extendedRegex {
 		runtime += strings.TrimPrefix(jsregex.RuntimeSource, "package jsregex")
 		if e.regexA16 {
 			runtime += strings.TrimPrefix(jsregex.IteratorRuntimeSource, "package jsregex")
 		}
-		runtime = strings.Replace(runtime, ` if !ok {panic(newTrap("unreviewed JavaScript regexp /" + p + "/" + f))}`, ` if !ok {if translated,accepted:=TranslateSubset(p,f);accepted {spec=[2]string{translated,""};ok=true}}
- if !ok {panic(newTrap("unreviewed JavaScript regexp /" + p + "/" + f))}`, 1)
+		runtime = mustReplace(runtime, ` if !ok {panic(newTrap("unreviewed JavaScript regexp /" + p + "/" + f))}`, ` if !ok {if translated,accepted:=TranslateSubset(p,f);accepted {spec=[2]string{translated,""};ok=true}}
+ if !ok {panic(newTrap("unreviewed JavaScript regexp /" + p + "/" + f))}`, "unreviewed regexp TranslateSubset fallback")
 	}
 	if e.regexA16 {
-		runtime = strings.Replace(runtime, "if translated,accepted:=TranslateSubset(p,f);accepted", "if translated,accepted:=TranslateIteratorSubset(p,f);accepted", 1)
+		// The call site is installed by the extendedRegex patch above; regexA16
+		// alone (e.g. a reviewed pattern with the iterator grammar) omits it.
+		runtime = optionalReplace(runtime, "if translated,accepted:=TranslateSubset(p,f);accepted", "if translated,accepted:=TranslateIteratorSubset(p,f);accepted", "TranslateIteratorSubset dispatch")
 	}
 	if e.regexExtended {
-		runtime += strings.Replace(strings.TrimPrefix(jsregex.ExtendedRuntimeSource, "package jsregex"), "import \"strings\"\n", "", 1)
-		runtime = strings.Replace(runtime, "if translated,accepted:=TranslateIteratorSubset(p,f);accepted", "if translated,accepted:=TranslateExtendedSubset(p,f);accepted", 1)
+		runtime += mustReplace(strings.TrimPrefix(jsregex.ExtendedRuntimeSource, "package jsregex"), "import \"strings\"\n", "", "extended regexp strings import")
+		runtime = mustReplace(runtime, "if translated,accepted:=TranslateIteratorSubset(p,f);accepted", "if translated,accepted:=TranslateExtendedSubset(p,f);accepted", "TranslateExtendedSubset dispatch")
 	}
 	if e.constructorArgs {
-		runtime = strings.Replace(runtime, "Factory func() any", "Factory func() any; ArgsFactory func(*array[any]) any", 1)
+		runtime = mustReplace(runtime, "Factory func() any", "Factory func() any; ArgsFactory func(*array[any]) any", "constructor args factory")
 	}
 	if e.usesTypedCatch {
 		runtime += "\nfunc (p payload[T]) payloadValue() any {return p.Value}\n"
@@ -266,7 +268,7 @@ func emitPackage(p *hir.Program, pkg string, profile bool) (map[string]string, *
 		runtime = sparseRuntime(runtime)
 	}
 	if e.chaiDeep {
-		runtime = strings.Replace(runtime, "type orderedMap[K comparable, V any] struct {", "type orderedMap[K comparable, V any] struct { enumerableRecord bool;", 1)
+		runtime = mustReplace(runtime, "type orderedMap[K comparable, V any] struct {", "type orderedMap[K comparable, V any] struct { enumerableRecord bool;", "chai enumerable record flag")
 		runtime += chaiDeepRuntimeSource
 	}
 	if e.spreadRuntime {
@@ -277,7 +279,7 @@ func emitPackage(p *hir.Program, pkg string, profile bool) (map[string]string, *
 	}
 	if e.collectionProbe {
 		runtime += dynIsCollectionSource
-		runtime = strings.Replace(runtime, "type orderedMap[K comparable, V any] struct {", "type orderedMap[K comparable, V any] struct { jsMap bool;", 1)
+		runtime = mustReplace(runtime, "type orderedMap[K comparable, V any] struct {", "type orderedMap[K comparable, V any] struct { jsMap bool;", "collection probe jsMap flag")
 	}
 	if e.liveStorage() {
 		runtime = liveArrayRuntime(runtime)

@@ -15,7 +15,7 @@ func TestStringRepeatAndMatchRuntime(t *testing.T) {
  fault(func(){str("x").repeat(-1)});fault(func(){str("").repeat(1/zero)});fault(func(){str("x").repeat(-1/zero)})
  r:=newRegExp(str("(a)(b)"),str(""));r.LastIndex=99
  check(str("xyz").match(r)==nil)
- m:=str("😀ab").match(r);check(m.MatchIndex==2 && len(m.Items)==3 && m.Items[0]==str("ab") && m.Items[1]==str("a") && m.Items[2]==str("b") && r.LastIndex==99)
+ m:=str("😀ab").match(r);check(m.matchIndex()==2 && len(m.Items)==3 && m.Items[0]==str("ab") && m.Items[1]==str("a") && m.Items[2]==str("b") && r.LastIndex==99)
  g:=newRegExp(str("&"),str("g"));g.LastIndex=99
  all:=str("&&&").match(g);check(len(all.Items)==3 && all.Items[0]==str("&") && g.LastIndex==0)
  check(str("xyz").match(g)==nil && g.LastIndex==0)

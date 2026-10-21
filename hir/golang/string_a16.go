@@ -2,7 +2,6 @@ package golang
 
 import (
 	"strconv"
-	"strings"
 
 	"github.com/oisee/abapiti/hir"
 	"github.com/oisee/abapiti/hir/jsregex"
@@ -22,20 +21,23 @@ func (e *emitter) stringA16Runtime(runtime string) string {
 	iterator = iterator || replaceNext
 	_, groups := ops["array.matchGroups"]
 	if iterator || groups || e.regexA16 {
-		runtime = strings.Replace(runtime, "type jsRegExp struct {", "type jsRegExp struct { labelGuard bool;", 1)
-		runtime = strings.Replace(runtime, "denied:denied}", "denied:denied,labelGuard:p=="+strconv.Quote(jsregex.IteratorLabelPattern)+"}", 1)
-		runtime = strings.Replace(runtime, "HasMatchIndex bool; Missing", "HasMatchIndex bool; MatchGroups *dynamic; Missing", 1)
-		start := strings.Index(runtime, "func (r *jsRegExp) exec(s jsString)")
-		end := strings.Index(runtime[start:], "func (r *jsRegExp) test(") + start
+		runtime = mustReplace(runtime, "type jsRegExp struct {", "type jsRegExp struct { labelGuard bool;", "regexp label guard field")
+		// The constructor literal; the program-cache literal further down
+		// also ends in denied:denied} and must stay untouched.
+		runtime = mustReplace(runtime, "&jsRegExp{Source:source,Flags:flags,compiled:compiled,denied:denied}", "&jsRegExp{Source:source,Flags:flags,compiled:compiled,denied:denied,labelGuard:p=="+strconv.Quote(jsregex.IteratorLabelPattern)+"}", "regexp label guard init")
+		runtime = mustReplace(runtime, "HasMatchIndex bool; Missing", "HasMatchIndex bool; MatchGroups *dynamic; Missing", "regexp match groups field")
+		runtime += "\nfunc (a *array[T]) matchGroups() *dynamic {if a.extra==nil {return nil};return a.extra.MatchGroups}\n"
+		start := mustIndex(runtime, "func (r *jsRegExp) exec(s jsString)", "A16 exec")
+		end := mustIndex(runtime[start:], "func (r *jsRegExp) test(", "A16 exec end") + start
 		runtime = runtime[:start] + regexpExecA16Source + runtime[end:]
-		start = strings.Index(runtime, "func (s jsString) match(r *jsRegExp)")
-		end = strings.Index(runtime[start:], "func (r *jsRegExp) toString()") + start
+		start = mustIndex(runtime, "func (s jsString) match(r *jsRegExp)", "A16 match")
+		end = mustIndex(runtime[start:], "func (r *jsRegExp) toString()", "A16 match end") + start
 		runtime = runtime[:start] + regexpMatchA16Source + runtime[end:]
-		start = strings.Index(runtime, "func (s jsString) replaceRegex(")
-		end = strings.Index(runtime[start:], "func (s jsString) match(") + start
+		start = mustIndex(runtime, "func (s jsString) replaceRegex(", "A16 replaceRegex")
+		end = mustIndex(runtime[start:], "func (s jsString) match(", "A16 replaceRegex end") + start
 		runtime = runtime[:start] + regexpReplaceA16Source + runtime[end:]
 		if !e.regexSplit {
-			runtime = strings.Replace(runtime, `"unicode/utf8"`, "", 1)
+			runtime = mustReplace(runtime, `"unicode/utf8"`, "", "A16 utf8 import")
 		}
 		runtime += matchAllSource
 	}
@@ -103,15 +105,15 @@ func (r *jsRegExp) exec(s jsString) *array[jsString] {
  if wrapped{m=m[2:];for i:=range m{if m[i]>=0{m[i]+=byteBase}}}
  if r.labelGuard{m=m[2:]}
  if r.Source==str("^(-?)0+(?=\\d)"){m[1]--;m=m[:len(m)-2]}
- out:=&array[jsString]{HasMatchIndex:true,MatchIndex:offsets[m[0]]}
+ out:=matchArray(offsets[m[0]])
  if stateful{r.LastIndex=offsets[m[1]]}
  names:=r.compiled.SubexpNames()
  if r.labelGuard{names=names[1:]}
  var groups *orderedMap[jsString,*dynamic]
  for j,name:=range names {if j>0&&name!=""{if groups==nil{groups=&orderedMap[jsString,*dynamic]{}};var value *dynamic;if m[2*j]>=0{value=box(s[2*offsets[m[2*j]]:2*offsets[m[2*j+1]]])};groups.set(str(name),value)}}
- if groups!=nil{out.MatchGroups=&dynamic{Tag:tagObject,Value:groups}}
+ if groups!=nil{out.extra.MatchGroups=&dynamic{Tag:tagObject,Value:groups}}
  for j:=0;j<len(m);j+=2{
-  if m[j]<0{if out.Missing==nil{out.Missing=map[int32]bool{}};out.Missing[int32(len(out.Items))]=true;out.Items=append(out.Items,str(""));continue}
+  if m[j]<0{if out.extra.Missing==nil{out.extra.Missing=map[int32]bool{}};out.extra.Missing[int32(len(out.Items))]=true;out.Items=append(out.Items,str(""));continue}
   out.Items=append(out.Items,s[2*offsets[m[j]]:2*offsets[m[j+1]]])
  }
  return out
@@ -151,7 +153,7 @@ func (s jsString) replaceRegex(r *jsRegExp,v jsString) jsString {
  for {
   var m *array[jsString];if global{m=r.matchAllNext(s)}else{m=r.exec(s)}
   if m==nil{break}
-  start:=m.MatchIndex;end:=start+m.Items[0].length()
+  start:=m.matchIndex();end:=start+m.Items[0].length()
   out+=s[2*last:2*start]+getSubstitution(s,v,start,end,m.Items,names);last=end
   if !global{break}
  }
