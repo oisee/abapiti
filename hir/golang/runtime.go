@@ -14,6 +14,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 	"unicode"
 	"unicode/utf16"
@@ -994,8 +995,46 @@ type jsRegExp struct {
 var macroPlaceholderPattern=regexp.MustCompile("^&[1-9][0-9]*$")
 var literalAlternativePattern=regexp.MustCompile("^\\^[A-Za-z0-9_|()?]+\\$?$")
 
+// Translation and compilation are pure in (pattern, flags); construction
+// shares the immutable programs and keeps a fresh object with its own
+// lastIndex. Failures are not cached, so they trap again on every call.
+type jsRegExpKey struct{pattern, flags string}
+type jsRegExpProgram struct{source jsString; compiled, denied *regexp.Regexp}
+type jsRegExpWrapKey struct{re *regexp.Regexp; prefix string; sticky bool}
+var jsRegExpCache struct {
+ sync.Mutex
+ programs map[jsRegExpKey]*jsRegExpProgram
+ wrapped map[jsRegExpWrapKey]*regexp.Regexp
+}
+const jsRegExpCacheLimit=4096
 func newRegExp(pattern, flags jsString) *jsRegExp {
-	p, f := pattern.String(), flags.String()
+ p, f := pattern.String(), flags.String()
+ key:=jsRegExpKey{p,f}
+ jsRegExpCache.Lock();program:=jsRegExpCache.programs[key];jsRegExpCache.Unlock()
+ if program==nil {
+  program=compileRegExpProgram(p,f)
+  jsRegExpCache.Lock()
+  if jsRegExpCache.programs==nil {jsRegExpCache.programs=map[jsRegExpKey]*jsRegExpProgram{}}
+  if len(jsRegExpCache.programs)<jsRegExpCacheLimit {jsRegExpCache.programs[key]=program}
+  jsRegExpCache.Unlock()
+ }
+ source,compiled,denied:=program.source,program.compiled,program.denied
+ return &jsRegExp{Source:source,Flags:flags,compiled:compiled,denied:denied}
+}
+// wrappedRegExp is "\\A"+prefix+scan+"("+re+")", compiled once per variant.
+func wrappedRegExp(re *regexp.Regexp, prefix string, sticky bool) *regexp.Regexp {
+ key:=jsRegExpWrapKey{re,prefix,sticky}
+ jsRegExpCache.Lock();w:=jsRegExpCache.wrapped[key];jsRegExpCache.Unlock()
+ if w!=nil {return w}
+ scan:="(?s:.*?)";if sticky {scan=""}
+ w=regexp.MustCompile("\\A"+prefix+scan+"("+re.String()+")")
+ jsRegExpCache.Lock()
+ if jsRegExpCache.wrapped==nil {jsRegExpCache.wrapped=map[jsRegExpWrapKey]*regexp.Regexp{}}
+ if len(jsRegExpCache.wrapped)<jsRegExpCacheLimit {jsRegExpCache.wrapped[key]=w}
+ jsRegExpCache.Unlock()
+ return w
+}
+func compileRegExpProgram(p, f string) *jsRegExpProgram {
  spec, ok := reviewedRegexPatterns[p+"/"+f]
  if !ok && f=="g" && macroPlaceholderPattern.MatchString(p) {spec=[2]string{p,""};ok=true}
  if !ok && (f==""||f=="i") && literalAlternativePattern.MatchString(p) {
@@ -1006,8 +1045,7 @@ func newRegExp(pattern, flags jsString) *jsRegExp {
  if !ok {panic(newTrap("unreviewed JavaScript regexp /" + p + "/" + f))}
  var denied *regexp.Regexp
  if spec[1]!="" {denied=regexp.MustCompile(spec[1])}
- source:=jsRegExpSource(p)
- return &jsRegExp{Source:source,Flags:flags,compiled:compileCheckedRegexp(spec[0],p,f),denied:denied}
+ return &jsRegExpProgram{source:jsRegExpSource(p),compiled:compileCheckedRegexp(spec[0],p,f),denied:denied}
 
 }
 // jsRegExpSource is RegExp.prototype.source as V8 escapes it: "/" outside a
@@ -1063,13 +1101,12 @@ func (r *jsRegExp) exec(s jsString) *array[jsString] {
   // Keep one preceding UTF-16 unit for word boundaries. A mandatory unit
   // prevents non-m start anchors from matching at a sliced-subject boundary.
   // This avoids RE2's 1000-repeat limit for arbitrarily large lastIndex.
-  prefix:="\\A"
+  prefix:=""
   if start>0 {
    for unit:=int32(0);unit<start-1;unit++ {_,size:=utf8.DecodeRuneInString(input[byteBase:]);byteBase+=size}
-   searchInput=input[byteBase:];prefix+="(?s:.)"
+   searchInput=input[byteBase:];prefix="(?s:.)"
   }
-  scan:="(?s:.*?)";if r.Flags.indexOf(str("y"))>=0 {scan=""}
-  re=regexp.MustCompile(prefix+scan+"("+re.String()+")")
+  re=wrappedRegExp(re,prefix,r.Flags.indexOf(str("y"))>=0)
  }
  m:=re.FindStringSubmatchIndex(searchInput)
  if m==nil {if stateful {r.LastIndex=0};return nil}
