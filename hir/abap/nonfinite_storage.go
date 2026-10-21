@@ -335,6 +335,16 @@ func (a *numberStorage) expr(m *hir.Method, x *hir.Expr) bool {
 	if x == nil {
 		return false
 	}
+	if x.Kind == hir.RuntimeOp {
+		switch x.Op {
+		case "number.abs":
+			a.retainParserStorage(m, x.X)
+		case "number.isInteger", "number.isSafeInteger", "number.isFinite":
+			if x.X != nil && x.X.Kind == hir.RuntimeOp && x.X.Op == "dynamic.of" {
+				a.retainParserStorage(m, x.X.X)
+			}
+		}
+	}
 	left, right, third := a.expr(m, x.X), a.expr(m, x.Y), a.expr(m, x.Z)
 	for _, v := range x.Args {
 		a.expr(m, v)

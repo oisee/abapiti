@@ -7,6 +7,12 @@ import (
 )
 
 var supportedOps = map[string]bool{
+	"number.isInteger":     true,
+	"number.isSafeInteger": true,
+	"number.isFinite":      true,
+	"number.abs":           true,
+	"number.hex16":         true,
+
 	"map.checkedGet": true, "map.checkedSet": true, "map.checkedValues": true,
 	"string.splitRegex": true, "string.padStart": true, "string.parseFloatNumber": true, "string.toNumber": true,
 	"string.sha1Hex": true, "xml.parseWithErrors": true,
@@ -60,9 +66,9 @@ var supportedOps = map[string]bool{
 var unsupportedOps = map[string]bool{
 	"collection.get": true, "collection.has": true, "container.readonlyClassView": true, "container.readonlyView": true,
 	"map.view": true, "set.view": true, "host.stderrWrite": true,
-	"number.hex16":     true,
-	"arrayLike.length": true,
-	"number.isInteger": true, "number.isSafeInteger": true, "number.isFinite": true, "number.strictIsNaN": true, "number.abs": true, "host.getenv": true, "string.codePoints": true, "dynamic.values": true,
+
+	"arrayLike.length":   true,
+	"number.strictIsNaN": true, "host.getenv": true, "string.codePoints": true, "dynamic.values": true,
 	"string.padEnd": true, "string.relativeAt": true, "regexp.clone": true, "regexp.flags": true, "regexp.matchAllNext": true,
 	"string.parseFloat": true,
 	"array.spread0":     true,
