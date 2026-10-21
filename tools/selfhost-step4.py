@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Emit, build and compare TS-HG gogen against the pinned Node step-4 driver.
 
-Usage: tools/selfhost-step4.py [--inputs PATH] [--expect-ref <sha256-prefix>] [--list-traps] <abapiti-bin> <osg> <abaplint> <transpiler> <out-dir>
+Usage: tools/selfhost-step4.py [--inputs PATH] [--expect-ref <sha256-prefix>] [--list-traps] [--abap] <abapiti-bin> <osg> <abaplint> <transpiler> <out-dir>
 
 --inputs stages an alternative inputs JSON for Node, replay and Go, restoring the
 captured inputs on exit, and prints its Node reference SHA256. --expect-ref is optional.
@@ -10,6 +10,10 @@ captured inputs on exit, and prints its Node reference SHA256. --expect-ref is o
 site whose source lies in code the Node reference executed (V8 block coverage)
 in <out-dir>/reached-traps.tsv, ordered by first execution in a breakpoint
 replay of the reference, and prints `step4-traps: N reached (A/G unknown) M unreached`.
+
+--abap (step 4b, implies --list-traps) emits ABAP with `emit-abap` into <out-dir>/abap
+instead of Go: TS-HA refusals trap whole owning bodies, and the reached list covers
+them together with the lowering traps (`step4b-traps: ...`).
 
 Environment: STEP4_NO_SYSTEMD=1 (or no systemd-run on PATH) runs steps directly under the
 caller's memory cap; GOCACHE defaults to <out-dir>/go-build when unset.
@@ -324,8 +328,9 @@ def main(args):
             return 2
         expect = args[i + 1].lower()
         args = args[:i] + args[i + 2:]
-    list_traps = '--list-traps' in args
-    args = [a for a in args if a != '--list-traps']
+    abap = '--abap' in args
+    list_traps = abap or '--list-traps' in args
+    args = [a for a in args if a not in ('--list-traps', '--abap')]
     if len(args) != 5:
         print(__doc__, file=sys.stderr)
         return 2
@@ -432,16 +437,21 @@ def main(args):
         extern_path.write_text(json.dumps(externs, indent=2) + '\n')
         # The driver's only edits are host IO. Keep all other unsupported sites
         # in the emitted program as located traps, using the existing policy.
-        heavy([binary, 'emit-go', '--tsconfig', config_path, '--externs', extern_path,
-               '--overrides', 'registry', '--trap-on-failure', '--reachability', out / 'reach.json',
-               '--initialize', out / 'initialization.json',
-               '-o', out / 'go', *lists], 'emit')
+        if abap:
+            heavy([binary, 'emit-abap', '--tsconfig', config_path, '--externs', extern_path,
+                   '--overrides', 'registry', '--reachability', out / 'reach.json',
+                   '-o', out / 'abap', *lists], 'emit')
+        else:
+            heavy([binary, 'emit-go', '--tsconfig', config_path, '--externs', extern_path,
+                   '--overrides', 'registry', '--trap-on-failure', '--reachability', out / 'reach.json',
+                   '--initialize', out / 'initialization.json',
+                   '-o', out / 'go', *lists], 'emit')
         if list_traps:
             # The replay runs the original driver, like the reference.
             driver.write_bytes(original)
             for path in temporary:
                 path.unlink(missing_ok=True)
-            sites_path = out / 'go/evidence/trap-sites.json'
+            sites_path = out / ('abap' if abap else 'go') / 'evidence/trap-sites.json'
             if sites_path.exists():
                 sites = json.loads(sites_path.read_text()) or []
             else:  # older abapiti: whole-body traps only
@@ -461,6 +471,8 @@ def main(args):
                 raise RuntimeError('breakpoint replay output differs from the reference')
             order = [int(x) for x in hits.read_text().split()]
             traps = write_traps(out, order_rows(rows, order), unknown_a, unknown_g)
+            if abap:
+                traps = traps.replace('step4-traps:', 'step4b-traps:', 1)
             return 0
         # Keep the large generated package's compiler heap below the scope cap.
         heavy(['go', 'build', '-o', out / 'gogen', '.'], 'build', cwd=out / 'go', memory='24G',
