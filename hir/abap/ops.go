@@ -7,6 +7,8 @@ import (
 )
 
 var supportedOps = map[string]bool{
+	"host.getenv":      true,
+	"host.stderrWrite": true,
 
 	"dynamic.isMap":  true,
 	"dynamic.isSet":  true,
@@ -81,7 +83,6 @@ var supportedOps = map[string]bool{
 
 // Operations without a reviewed ABAP implementation retain explicit refusals.
 var unsupportedOps = map[string]bool{
-	"host.getenv": true, "host.stderrWrite": true,
 	"container.readonlyClassView": true, "container.readonlyView": true,
 	"map.view": true, "set.view": true, "arrayLike.length": true,
 	"number.strictIsNaN": true, "regexp.matchAllNext": true,

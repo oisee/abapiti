@@ -2177,6 +2177,9 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 	if b.bigintRuntime(x, n) {
 		return
 	}
+	if b.u3HostRuntime(x, n) {
+		return
+	}
 	if b.u3DynamicRuntime(x, n) {
 		return
 	}
