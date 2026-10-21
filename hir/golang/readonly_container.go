@@ -60,7 +60,7 @@ func (s *orderedSet[T]) identityHas(query *dynamic)bool {if s.readProxy!=nil {re
 `
 
 func readonlySetRuntime(source string) string {
-	source = strings.Replace(source, "type orderedSet[T comparable] struct {", "type orderedSet[T comparable] struct { readProxy *setReadProxy[T];", 1)
+	source = mustReplace(source, "type orderedSet[T comparable] struct {", "type orderedSet[T comparable] struct { readProxy *setReadProxy[T];", "readonly Set read proxy")
 	for signature, guard := range map[string]string{
 		"has(v T) bool":           "if s.readProxy!=nil {return s.readProxy.storage.identityHas(box(v))}",
 		"add(v T) *orderedSet[T]": "if s.readProxy!=nil {panic(newTrap(\"readonly Set view cannot write\"))}",

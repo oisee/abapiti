@@ -1,11 +1,9 @@
 package golang
 
-import "strings"
-
 // Only live-view programs use the proxy ABI. Native arrays retain their storage;
 // a typed proxy delegates every element read and mutation to the original array.
 func liveArrayRuntime(source string) string {
-	source = strings.Replace(source, "type arrayExtra[T any] struct{", "type arrayExtra[T any] struct{ live liveArrayStorage; source *dynamic; decode func(*dynamic) T;", 1)
+	source = mustReplace(source, "type arrayExtra[T any] struct{", "type arrayExtra[T any] struct{ live liveArrayStorage; source *dynamic; decode func(*dynamic) T;", "arrayExtra live fields")
 	guards := map[string]string{
 		"reserve(n int)":                        "if a.isLive() {return}",
 		"chaiLength() int":                      "if a.isLive() {return int(a.length())}",
@@ -34,17 +32,34 @@ func liveArrayRuntime(source string) string {
 		"indexOf(v T) int32":                    "if a.isLive() {for i:=int32(0);i<a.length();i++ {x:=a.get(i);if x.Has && equal(x.Value,v) {return i}};return -1}",
 		"join(sep optional[jsString]) jsString": "if a.isLive() {return (&array[T]{Items:a.values()}).join(sep)}",
 	}
-	source = strings.Replace(source, "slice0() *array[T]        {", "slice0() *array[T] {", 1)
-	source = strings.Replace(source, "splice1(i int32) *array[T]      {", "splice1(i int32) *array[T] {", 1)
+	// Dense one-line methods keep gofmt alignment; sparseRuntime has already
+	// rewritten them whenever live views are enabled.
+	source = optionalReplace(source, "slice0() *array[T]        {", "slice0() *array[T] {", "slice0 alignment")
+	source = optionalReplace(source, "splice1(i int32) *array[T]      {", "splice1(i int32) *array[T] {", "splice1 alignment")
+	// chaiLength exists only when the chai deep-equal runtime was appended
+	// (it runs before this patcher); the spaced signatures match only the
+	// dense pre-sparse methods, which sparseRuntime has already rewritten.
+	optional := map[string]bool{
+		"chaiLength() int":                   true,
+		"slice2(i, j int32) *array[T]":       true,
+		"splice2(i, n int32) *array[T]":      true,
+		"spliceDrop2(i, n int32) *array[T]":  true,
+		"splice3(i, n int32, v T) *array[T]": true,
+	}
 	for signature, guard := range guards {
-		source = strings.Replace(source, "func (a *array[T]) "+signature+" {", "func (a *array[T]) "+signature+" {"+guard+";", 1)
+		old := "func (a *array[T]) " + signature + " {"
+		if optional[signature] {
+			source = optionalReplace(source, old, old+guard+";", "live array guard "+signature)
+		} else {
+			source = mustReplace(source, old, old+guard+";", "live array guard "+signature)
+		}
 	}
 	// The sparse implementation has an independent includes loop.
-	source = strings.Replace(source, "func (a *array[T]) includes(v T) bool {\n", "func (a *array[T]) includes(v T) bool {\nif a.isLive() {return a.indexOf(v)>=0};\n", 1)
-	source = strings.Replace(source, "func presentArray[T any](a *array[optional[T]]) *array[T] {", "func presentArray[T any](a *array[optional[T]]) *array[T] {if a!=nil && a.isLive() {panic(newTrap(\"optional narrowing of a live array is unsupported\"))};", 1)
-	source = strings.Replace(source, "func referenceArray[T any](a *array[T]) *array[any] {", "func referenceArray[T any](a *array[T]) *array[any] {if a!=nil && a.isLive() {panic(newTrap(\"reference repacking of a live array is unsupported\"))};", 1)
-	source = strings.Replace(source, "func (s *orderedSet[T]) fromArray(a *array[T]) *orderedSet[T] {", "func (s *orderedSet[T]) fromArray(a *array[T]) *orderedSet[T] {if a!=nil && a.isLive() {for _,v:=range a.values() {s.add(v)};return s};", 1)
-	source = strings.Replace(source, "func (d *dynamic) put(k jsString, v *dynamic) {", "func (d *dynamic) put(k jsString, v *dynamic) {if d!=nil && d.Tag==tagArray {d.Value.(*array[any]).dynamicPut(k,v);return};", 1)
+	source = mustReplace(source, "func (a *array[T]) includes(v T) bool {\n", "func (a *array[T]) includes(v T) bool {\nif a.isLive() {return a.indexOf(v)>=0};\n", "live includes guard")
+	source = mustReplace(source, "func presentArray[T any](a *array[optional[T]]) *array[T] {", "func presentArray[T any](a *array[optional[T]]) *array[T] {if a!=nil && a.isLive() {panic(newTrap(\"optional narrowing of a live array is unsupported\"))};", "live presentArray guard")
+	source = mustReplace(source, "func referenceArray[T any](a *array[T]) *array[any] {", "func referenceArray[T any](a *array[T]) *array[any] {if a!=nil && a.isLive() {panic(newTrap(\"reference repacking of a live array is unsupported\"))};", "live referenceArray guard")
+	source = mustReplace(source, "func (s *orderedSet[T]) fromArray(a *array[T]) *orderedSet[T] {", "func (s *orderedSet[T]) fromArray(a *array[T]) *orderedSet[T] {if a!=nil && a.isLive() {for _,v:=range a.values() {s.add(v)};return s};", "live fromArray guard")
+	source = mustReplace(source, "func (d *dynamic) put(k jsString, v *dynamic) {", "func (d *dynamic) put(k jsString, v *dynamic) {if d!=nil && d.Tag==tagArray {d.Value.(*array[any]).dynamicPut(k,v);return};", "live dynamic put guard")
 	return source + liveArraySource
 }
 

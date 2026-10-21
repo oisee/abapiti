@@ -1,17 +1,15 @@
 package golang
 
-import "strings"
-
 // The legacy dense runtime stays byte-identical for programs that don't use
 // presence-sensitive callbacks/deletion. In the presence-aware ABI, a nil hole
 // map is dense; undefined is a value, never a hole.
 func sparseRuntime(source string) string {
 	// Unmatched regex captures are present undefined values, not holes.
 	// Preserve their separate Missing metadata when enabling sparse arrays.
-	source = strings.Replace(source, "type arrayExtra[T any] struct{", "type arrayExtra[T any] struct{ holes map[int]bool;", 1)
-	replace := func(start, end, body string) {
-		i := strings.Index(source, start)
-		j := strings.Index(source[i:], end) + i
+	source = mustReplace(source, "type arrayExtra[T any] struct{", "type arrayExtra[T any] struct{ holes map[int]bool;", "arrayExtra holes field")
+	replace := func(start, end, body, what string) {
+		i := mustIndex(source, start, "sparse "+what)
+		j := mustIndex(source[i:], end, "sparse "+what+" end") + i
 		source = source[:i] + body + "\n" + source[j:]
 	}
 	replace("func (a *array[T]) get(", "type entry[", `func (a *array[T]) has(i int32) bool {
@@ -38,7 +36,7 @@ func sparseRuntime(source string) string {
   for i:=range holes {if i>=lo && i<hi {out[i-lo]=true}}
   return out
  }
- `)
+ `, "get/put/has/delete")
 	replace("func (a *array[T]) reverse()", "func (a *array[T]) indexOf", `func (a *array[T]) reverse() *array[T] {
   n:=len(a.Items);holes:=map[int]bool{}
   for i:=range a.holeSet() {holes[n-1-i]=true};a.setHoles(holes)
@@ -89,19 +87,19 @@ func sparseRuntime(source string) string {
  func (a *array[T]) shift() optional[T] {
   if len(a.Items)==0 {return optional[T]{}};out:=a.get(0);a.setHoles(copyHoles(a.holeSet(),1,len(a.Items)));a.Items=a.Items[1:];return out
  }
- `)
-	source = strings.Replace(source, "if equal(x, v) {", "if a.has(int32(i)) && equal(x, v) {", 1)
-	source = strings.Replace(source, "func (a *array[T]) includes(v T) bool { return a.indexOf(v) >= 0 }", `func (a *array[T]) includes(v T) bool {
+ `, "collection methods")
+	source = mustReplace(source, "if equal(x, v) {", "if a.has(int32(i)) && equal(x, v) {", "sparse indexOf hole check")
+	source = mustReplace(source, "func (a *array[T]) includes(v T) bool { return a.indexOf(v) >= 0 }", `func (a *array[T]) includes(v T) bool {
  for i,x:=range a.Items {
   if !a.has(int32(i)) {r:=reflect.ValueOf(v);if nilRef(v) || r.Kind()==reflect.Struct && r.FieldByName("Has").IsValid() && !r.FieldByName("Has").Bool() {return true};continue}
   if equal(x,v) {return true}
  };return false
-}`, 1)
-	source = strings.Replace(source, "b.WriteString(string(primitiveString(v)))", "if a.has(int32(i)) {b.WriteString(string(primitiveString(v)))}", 1)
+}`, "sparse includes")
+	source = mustReplace(source, "b.WriteString(string(primitiveString(v)))", "if a.has(int32(i)) {b.WriteString(string(primitiveString(v)))}", "sparse join hole check")
 	// Both view conversions must preserve membership (including boxed undefined).
-	source = strings.Replace(source, "out:=&array[T]{Items:make([]T,len(a.Items))}", "out:=&array[T]{Items:make([]T,len(a.Items))};out.setHoles(copyHoles(a.holeSet(),0,len(a.Items)))", 1)
-	source = strings.Replace(source, "func referenceArray[T any](a *array[T]) *array[any] {\n\tout := &array[any]{}", "func referenceArray[T any](a *array[T]) *array[any] {\n\tif a==nil {return nil};out := &array[any]{};out.setHoles(copyHoles(a.holeSet(),0,len(a.Items)))", 1)
-	source = strings.Replace(source, "for i,v:=range a.Items {out.Items[i]=unwrap(v)}", "for i,v:=range a.Items {if a.has(int32(i)) {out.Items[i]=unwrap(v)}}", 1)
+	source = mustReplace(source, "out:=&array[T]{Items:make([]T,len(a.Items))}", "out:=&array[T]{Items:make([]T,len(a.Items))};out.setHoles(copyHoles(a.holeSet(),0,len(a.Items)))", "sparse presentArray holes")
+	source = mustReplace(source, "func referenceArray[T any](a *array[T]) *array[any] {\n\tout := &array[any]{}", "func referenceArray[T any](a *array[T]) *array[any] {\n\tif a==nil {return nil};out := &array[any]{};out.setHoles(copyHoles(a.holeSet(),0,len(a.Items)))", "sparse referenceArray holes")
+	source = mustReplace(source, "for i,v:=range a.Items {out.Items[i]=unwrap(v)}", "for i,v:=range a.Items {if a.has(int32(i)) {out.Items[i]=unwrap(v)}}", "sparse referenceArray unwrap")
 	return source + `
 func (a *array[T]) holeSet() map[int]bool {if a.extra==nil {return nil};return a.extra.holes}
 // An empty hole set is dense, so it never forces the extra allocation.

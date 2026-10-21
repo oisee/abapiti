@@ -2,7 +2,6 @@ package golang
 
 import (
 	"strconv"
-	"strings"
 
 	"github.com/oisee/abapiti/hir"
 	"github.com/oisee/abapiti/hir/jsregex"
@@ -22,21 +21,23 @@ func (e *emitter) stringA16Runtime(runtime string) string {
 	iterator = iterator || replaceNext
 	_, groups := ops["array.matchGroups"]
 	if iterator || groups || e.regexA16 {
-		runtime = strings.Replace(runtime, "type jsRegExp struct {", "type jsRegExp struct { labelGuard bool;", 1)
-		runtime = strings.Replace(runtime, "denied:denied}", "denied:denied,labelGuard:p=="+strconv.Quote(jsregex.IteratorLabelPattern)+"}", 1)
-		runtime = strings.Replace(runtime, "HasMatchIndex bool; Missing", "HasMatchIndex bool; MatchGroups *dynamic; Missing", 1)
+		runtime = mustReplace(runtime, "type jsRegExp struct {", "type jsRegExp struct { labelGuard bool;", "regexp label guard field")
+		// The constructor literal; the program-cache literal further down
+		// also ends in denied:denied} and must stay untouched.
+		runtime = mustReplace(runtime, "&jsRegExp{Source:source,Flags:flags,compiled:compiled,denied:denied}", "&jsRegExp{Source:source,Flags:flags,compiled:compiled,denied:denied,labelGuard:p=="+strconv.Quote(jsregex.IteratorLabelPattern)+"}", "regexp label guard init")
+		runtime = mustReplace(runtime, "HasMatchIndex bool; Missing", "HasMatchIndex bool; MatchGroups *dynamic; Missing", "regexp match groups field")
 		runtime += "\nfunc (a *array[T]) matchGroups() *dynamic {if a.extra==nil {return nil};return a.extra.MatchGroups}\n"
-		start := strings.Index(runtime, "func (r *jsRegExp) exec(s jsString)")
-		end := strings.Index(runtime[start:], "func (r *jsRegExp) test(") + start
+		start := mustIndex(runtime, "func (r *jsRegExp) exec(s jsString)", "A16 exec")
+		end := mustIndex(runtime[start:], "func (r *jsRegExp) test(", "A16 exec end") + start
 		runtime = runtime[:start] + regexpExecA16Source + runtime[end:]
-		start = strings.Index(runtime, "func (s jsString) match(r *jsRegExp)")
-		end = strings.Index(runtime[start:], "func (r *jsRegExp) toString()") + start
+		start = mustIndex(runtime, "func (s jsString) match(r *jsRegExp)", "A16 match")
+		end = mustIndex(runtime[start:], "func (r *jsRegExp) toString()", "A16 match end") + start
 		runtime = runtime[:start] + regexpMatchA16Source + runtime[end:]
-		start = strings.Index(runtime, "func (s jsString) replaceRegex(")
-		end = strings.Index(runtime[start:], "func (s jsString) match(") + start
+		start = mustIndex(runtime, "func (s jsString) replaceRegex(", "A16 replaceRegex")
+		end = mustIndex(runtime[start:], "func (s jsString) match(", "A16 replaceRegex end") + start
 		runtime = runtime[:start] + regexpReplaceA16Source + runtime[end:]
 		if !e.regexSplit {
-			runtime = strings.Replace(runtime, `"unicode/utf8"`, "", 1)
+			runtime = mustReplace(runtime, `"unicode/utf8"`, "", "A16 utf8 import")
 		}
 		runtime += matchAllSource
 	}
