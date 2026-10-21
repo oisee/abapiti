@@ -177,49 +177,74 @@ func (e *emitter) nativeDeletePart(testPart bool) string {
 		factory := e.name("runtime.classvalue.factory")
 		fmt.Fprintf(&code, "IF %s=>extension IS BOUND.\nDATA handled TYPE abap_bool.\n%s=>extension->delete( EXPORTING p0 = p0 key = key IMPORTING handled = handled result = result ).\nIF handled = abap_true.\nRETURN.\nENDIF.\nENDIF.\n", factory, factory)
 	}
-	for i, c := range e.classesByDepth() {
-		if e.testPackages && testDeclaration(c) != testPart {
-			continue
+	if e.recordDelete {
+		iface := e.nativeDeleteInterface(testPart)
+		fmt.Fprintf(&code, "IF p0 IS INSTANCE OF %s.\nDATA native TYPE REF TO %s.\nnative ?= p0.\n", iface, iface)
+		code.WriteString("result = native->delete_key( key ).\n")
+		if testPart {
+			code.WriteString("handled = abap_true.\n")
 		}
-		fmt.Fprintf(&code, "IF p0 IS INSTANCE OF %s.\nDATA native%d TYPE REF TO %s.\nnative%d ?= p0.\n", e.name(c.Name), i, e.name(c.Name), i)
-		seen := map[string]bool{}
-		caseOpened := false
-		for base := c; base != nil; base = e.classBy(base.Super) {
-			for _, f := range base.Fields {
-				if f.Static || seen[f.Name] {
-					continue
-				}
-				seen[f.Name] = true
-				if !caseOpened {
-					code.WriteString("CASE key.\n")
-					caseOpened = true
-				}
-				fmt.Fprintf(&code, "WHEN `%s`.\n", strings.ReplaceAll(f.Name, "`", "``"))
-				typ := e.semanticFieldType(base, f)
-				if prototypeProperty(f.Name) || typ.Kind != hir.Optional && typ.Kind != hir.Dynamic {
-					fmt.Fprintf(&code, "RAISE EXCEPTION TYPE %s EXPORTING reason = `record_storage.go: nativeDelete: required or prototype slot cannot retain absence`.\n", e.name("view.refusal"))
-				} else {
-					fmt.Fprintf(&code, "CLEAR native%d->%s.\nINSERT key INTO TABLE native%d->%s.\n", i, e.member(f.Name), i, e.name("record.deleted"))
-				}
-			}
-		}
-		if caseOpened {
-			code.WriteString("ENDCASE.\n")
-		}
-		code.WriteString("result = abap_true.\nRETURN.\nENDIF.\n")
+		code.WriteString("RETURN.\nENDIF.\n")
 	}
 	if testPart {
-		text := code.String()
-		text = strings.Replace(text, " RETURNING VALUE(result) TYPE abap_bool.", " EXPORTING handled TYPE abap_bool result TYPE abap_bool.", 1)
-		text = strings.ReplaceAll(text, "result = abap_true.\nRETURN.", "handled = abap_true.\nresult = abap_true.\nRETURN.")
+		text := strings.Replace(code.String(), " RETURNING VALUE(result) TYPE abap_bool.", " EXPORTING handled TYPE abap_bool result TYPE abap_bool.", 1)
 		code.Reset()
 		code.WriteString(text)
-		code.WriteString("ENDMETHOD.\nENDCLASS.\n")
 	} else {
-		fmt.Fprintf(&code, "RAISE EXCEPTION TYPE %s EXPORTING reason = `record_storage.go: nativeDelete: native class layout unknown`.\nENDMETHOD.\nENDCLASS.\n", e.name("view.refusal"))
+		fmt.Fprintf(&code, "RAISE EXCEPTION TYPE %s EXPORTING reason = `record_storage.go: nativeDelete: native class layout unknown`.\n", e.name("view.refusal"))
 	}
+	code.WriteString("ENDMETHOD.\nENDCLASS.\n")
 	e.files[name+".clas.abap"] = code.String()
 	return name
+}
+
+func (e *emitter) nativeDeleteInterface(testPart bool) string {
+	name := e.name("runtime.nativeDeletable")
+	if testPart {
+		name = "zif_lnt_test_delete"
+	}
+	e.files[name+".intf.abap"] = "INTERFACE " + name + " PUBLIC.\nMETHODS delete_key IMPORTING key TYPE string RETURNING VALUE(result) TYPE abap_bool.\nENDINTERFACE.\n"
+	return name
+}
+
+func (e *emitter) nativeDeleteDeclaration(out *strings.Builder, c *hir.Class) {
+	iface := e.nativeDeleteInterface(e.testPackages && testDeclaration(c))
+	for base := e.classBy(c.Super); base != nil; base = e.classBy(base.Super) {
+		if !e.testPackages || testDeclaration(base) == testDeclaration(c) {
+			fmt.Fprintf(out, "METHODS %s~delete_key REDEFINITION.\n", iface)
+			return
+		}
+	}
+	fmt.Fprintf(out, "INTERFACES %s.\n", iface)
+}
+
+func (e *emitter) nativeDeleteImplementation(out *strings.Builder, c *hir.Class) {
+	fmt.Fprintf(out, "METHOD %s~delete_key.\n", e.nativeDeleteInterface(e.testPackages && testDeclaration(c)))
+	seen := map[string]bool{}
+	caseOpened := false
+	for base := c; base != nil; base = e.classBy(base.Super) {
+		for _, f := range base.Fields {
+			if f.Static || seen[f.Name] {
+				continue
+			}
+			seen[f.Name] = true
+			if !caseOpened {
+				out.WriteString("CASE key.\n")
+				caseOpened = true
+			}
+			fmt.Fprintf(out, "WHEN `%s`.\n", strings.ReplaceAll(f.Name, "`", "``"))
+			typ := e.semanticFieldType(base, f)
+			if prototypeProperty(f.Name) || typ.Kind != hir.Optional && typ.Kind != hir.Dynamic {
+				fmt.Fprintf(out, "RAISE EXCEPTION TYPE %s EXPORTING reason = `record_storage.go: nativeDelete: required or prototype slot cannot retain absence`.\n", e.name("view.refusal"))
+			} else {
+				fmt.Fprintf(out, "CLEAR me->%s.\nINSERT key INTO TABLE me->%s.\n", e.member(f.Name), e.name("record.deleted"))
+			}
+		}
+	}
+	if caseOpened {
+		out.WriteString("ENDCASE.\n")
+	}
+	out.WriteString("result = abap_true.\nENDMETHOD.\n")
 }
 
 // These own slots can reveal inherited values after deletion. The nominal
