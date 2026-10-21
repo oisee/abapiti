@@ -9,6 +9,7 @@ import (
  "encoding/json"
 	"encoding/binary"
 	"math"
+	"math/bits"
 	"reflect"
 "runtime"
 	"regexp"
@@ -70,6 +71,18 @@ func (s *ownKeyState) set(k jsString, _ *dynamic) {
 	s.materialize().set(k, nil)
 }
 func (s *ownKeyState) delete(k jsString) bool { return s.materialize().delete(k) }
+func (s *ownKeyState) keys() *array[jsString] {
+	if s.m != nil {
+		return s.m.keys()
+	}
+	out := &array[jsString]{Items: make([]jsString, 0, bits.OnesCount64(s.mask))}
+	for i, n := range s.names {
+		if i < 64 && s.mask&(1<<uint(i)) != 0 {
+			out.Items = append(out.Items, n)
+		}
+	}
+	return out
+}
 
 func str(s string) jsString {
 	u := utf16.Encode([]rune(s))
