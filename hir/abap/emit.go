@@ -845,6 +845,9 @@ type body struct {
 	// any other local keeps its value between its evaluation and its use.
 	declared map[string]string
 	assigned map[string]bool
+	// fresh holds the temps no line has mentioned since their declaration
+	// (track).
+	fresh map[string]bool
 }
 
 func (e *emitter) body(c *hir.Class, m *hir.Method, name string) string {
@@ -952,6 +955,11 @@ func (b *body) initialize(owner string) {
 // iteration. Fold an immediately following assignment into its declaration;
 // explicit conversions retain the HIR type rather than ABAP literal inference.
 func (b *body) line(s string) {
+	if s != "" {
+		if s = b.track(s); s == "" {
+			return
+		}
+	}
 	prefix := b.lastName + " = "
 	if b.lastInit != "" && b.lastType != "REF TO object" && strings.HasPrefix(s, prefix) {
 		code := b.code.String()
@@ -974,7 +982,25 @@ func (b *body) line(s string) {
 	}
 	b.lastInit, b.lastName, b.lastType = "", "", ""
 	b.code.WriteString(s + "\n")
-	for _, l := range strings.Split(s, "\n") {
+}
+
+// track drops the CLEARs of untouched temps from s and follows the loop
+// nesting. A temp declared where executesOnce holds is untouched until a
+// line mentions it; a CLEAR of it that also runs at most once is a no-op.
+func (b *body) track(s string) string {
+	lines := strings.Split(s, "\n")
+	kept := lines[:0]
+	for _, l := range lines {
+		if n, ok := strings.CutPrefix(l, "CLEAR "); ok && b.fresh[strings.TrimSuffix(n, ".")] && strings.HasSuffix(n, ".") && b.executesOnce() {
+			continue
+		}
+		if len(b.fresh) > 0 {
+			for _, w := range strings.FieldsFunc(l, func(r rune) bool {
+				return !(r == '_' || r >= '0' && r <= '9' || r >= 'a' && r <= 'z' || r >= 'A' && r <= 'Z')
+			}) {
+				delete(b.fresh, w)
+			}
+		}
 		switch {
 		case l == "DO." || strings.HasPrefix(l, "DO ") && strings.HasSuffix(l, " TIMES.") || strings.HasPrefix(l, "WHILE ") || strings.HasPrefix(l, "LOOP AT "):
 			if b.openLoops >= 0 {
@@ -987,7 +1013,9 @@ func (b *body) line(s string) {
 				b.openLoops = -1
 			}
 		}
+		kept = append(kept, l)
 	}
+	return strings.Join(kept, "\n")
 }
 
 // executesOnce: a statement emitted now runs at most once per call. ABAP
@@ -1011,6 +1039,12 @@ func (b *body) rawTemp(typ string) string {
 		b.declared = map[string]string{}
 	}
 	b.declared[n] = typ
+	if b.executesOnce() {
+		if b.fresh == nil {
+			b.fresh = map[string]bool{}
+		}
+		b.fresh[n] = true
+	}
 	if !strings.Contains(typ, " LENGTH ") {
 		b.lastInit, b.lastName, b.lastType = init, n, typ
 	}

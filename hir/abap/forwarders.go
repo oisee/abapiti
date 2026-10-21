@@ -64,7 +64,7 @@ func exprHasSuperCallTo(x *hir.Expr, name string) bool {
 // implementation's type, call it, convert the result back.
 func (e *emitter) slotForwarder(c *hir.Class, slot, impl *hir.Method) string {
 	emitted := e.emittedMethod(c, slot)
-	b := &body{e: e, c: c, m: emitted, implemented: e.member(slot.Name), locals: map[string]string{}}
+	b := &body{e: e, c: c, m: emitted, implemented: e.member(slot.Name), locals: map[string]string{}, wholeMethod: true}
 	args := []string{}
 	for j, p := range impl.Params {
 		if j >= len(slot.Params) {

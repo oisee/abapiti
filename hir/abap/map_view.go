@@ -86,12 +86,12 @@ func (e *emitter) mapStorageImplementation(t hir.Type) string {
 	method("has", "result = has( p0 ).\n")
 	method("remove", "result = delete( p0 ).\n")
 	method("clear", "clear( ).\n")
-	b := &body{e: e, m: &hir.Method{Result: hir.T(hir.Void)}, locals: map[string]string{}}
+	b := &body{e: e, m: &hir.Method{Result: hir.T(hir.Void)}, locals: map[string]string{}, wholeMethod: true}
 	v := b.temp(hir.T(hir.Optional, t.Args[1]))
 	b.mapLine(v + " = get( p0 ).")
 	b.boxDynamic("result", v, hir.T(hir.Optional, t.Args[1]))
 	method("get", b.constantDeclarations()+b.code.String())
-	b = &body{e: e, m: &hir.Method{Result: hir.T(hir.Void)}, locals: map[string]string{}}
+	b = &body{e: e, m: &hir.Method{Result: hir.T(hir.Void)}, locals: map[string]string{}, wholeMethod: true}
 	v = b.temp(t.Args[1])
 	if t.Args[1].Kind != hir.Dynamic && t.Args[1].Kind != hir.Optional {
 		b.mapLine("IF p1 IS NOT BOUND.\nRAISE EXCEPTION TYPE cx_sy_move_cast_error.\nENDIF.")
@@ -100,7 +100,7 @@ func (e *emitter) mapStorageImplementation(t hir.Type) string {
 	ignored := b.temp(t)
 	b.mapLine(ignored + " = set( p0 = p0 p1 = " + v + " ).")
 	method("put", b.constantDeclarations()+b.code.String())
-	b = &body{e: e, m: &hir.Method{Result: hir.T(hir.Void)}, locals: map[string]string{}}
+	b = &body{e: e, m: &hir.Method{Result: hir.T(hir.Void)}, locals: map[string]string{}, wholeMethod: true}
 	keys := b.temp(hir.T(hir.Array, hir.T(hir.String)))
 	k := b.temp(hir.T(hir.String))
 	node := b.temp(hir.T(hir.Dynamic))

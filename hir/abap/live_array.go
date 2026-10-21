@@ -27,7 +27,9 @@ func (e *emitter) liveArrayRuntime(t hir.Type) {
 	d, storage, trap := e.name("runtime.dynamic"), e.name("view.storage"), e.name("view.refusal")
 	def := "DATA source TYPE REF TO " + d + ".\nMETHODS load.\nMETHODS save.\nINTERFACES " + storage + ".\n"
 	code := new(strings.Builder)
-	makeBody := func() *body { return &body{e: e, m: &hir.Method{Result: hir.T(hir.Void)}, locals: map[string]string{}} }
+	makeBody := func() *body {
+		return &body{e: e, m: &hir.Method{Result: hir.T(hir.Void)}, locals: map[string]string{}, wholeMethod: true}
+	}
 	b := makeBody()
 	b.line("IF source IS NOT BOUND.\nRETURN.\nENDIF.\nCLEAR items.\nmissing = source->missing.")
 	// Native arrays expose the same checked element storage as graph arrays.
