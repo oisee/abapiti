@@ -310,3 +310,21 @@ func TestExternShadowedNamespaceStaysExcluded(t *testing.T) {
 		t.Fatalf("extern initializer entered HIR:\n%s", dump)
 	}
 }
+
+func TestExternHostCapabilitiesRetainedWithoutCall(t *testing.T) {
+	r, _, _ := externProjectABAP(t,
+		`import * as host from './host'; class Probe {static run():string{return "ok";}}`,
+		`export function env(name:string):string|undefined{return undefined;} export function writeStderr(text:string):void{}`,
+		"zcl_probe_host")
+	requireExternClean(t, r)
+	if len(r.Prog.Externs) != 2 {
+		t.Fatalf("host declarations lost: %+v", r.Prog.Externs)
+	}
+	env, stderr := r.Prog.Externs[0], r.Prog.Externs[1]
+	if env.Name != "env" || !env.Result.Equal(hir.T(hir.Optional, hir.T(hir.String))) || env.Signature.ABAPClass != "zcl_probe_host" || env.Signature.ParamNames[0] != "name" {
+		t.Fatalf("incorrect env ABI: %+v", env)
+	}
+	if stderr.Name != "writeStderr" || stderr.Result.Kind != hir.Void {
+		t.Fatalf("incorrect stderr ABI: %+v", stderr)
+	}
+}

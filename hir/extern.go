@@ -82,3 +82,12 @@ func (v *verifier) externType(t Type, result bool) bool {
 	}
 	return true
 }
+
+// ExternBinding retains host capabilities even when no source call references
+// the declaration. Runtime host operations use the same declared extern ABI.
+type ExternBinding struct {
+	Module    string
+	Name      string
+	Result    Type
+	Signature ExternSignature
+}

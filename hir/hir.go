@@ -76,6 +76,7 @@ type Node struct {
 	InlinePath []string
 }
 type Program struct {
+	Externs    []ExternBinding `json:",omitempty"`
 	Classes    []*Class
 	Interfaces []*Interface
 	Unions     []*UnionDecl `json:",omitempty"`

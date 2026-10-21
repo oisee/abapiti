@@ -119,6 +119,10 @@ func (l *lowerer) prepareExterns(files []string, modules []ExternModule) ([]stri
 				l.diagf(n, "unsupported-extern-signature", "unsupported extern signature for %s", externDeclName(n))
 			} else {
 				l.externFunctions[n] = sig
+				name := n.Name().Text()
+				if sig.ABAPClass != "" && (name == "env" || name == "writeStderr" || name == "stderrWrite") {
+					l.out.Externs = append(l.out.Externs, hir.ExternBinding{Module: m.GoImport, Name: name, Result: l.mapTypeNode(n.Type()), Signature: *sig})
+				}
 			}
 		}
 		done()
