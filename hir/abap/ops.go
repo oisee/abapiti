@@ -50,21 +50,24 @@ var supportedOps = map[string]bool{
 	"i32.toString": true, "i64.toString": true, "i64.remainder2": true,
 	"number.ceil": true, "number.remainder2": true, "number.index": true, "number.fromI32": true, "number.toString": true,
 	"dynamic.of": true, "dynamic.isString": true, "dynamic.isFunction": true, "dynamic.asString": true, "dynamic.asRef": true,
+
+	// Structural families: boxed live records (union.go). Payload projection
+	// is refused per site, see SupportsRuntimeExpr.
+	"union.declarations": true, "union.check": true, "union.admit": true, "union.tag": true, "union.widen": true, "union.project": true,
 }
 
 // Operations without a reviewed ABAP implementation retain explicit refusals.
 var unsupportedOps = map[string]bool{
 	"collection.get": true, "collection.has": true, "container.readonlyClassView": true, "container.readonlyView": true,
-	"union.check": true, "map.view": true, "set.view": true, "host.stderrWrite": true,
+	"map.view": true, "set.view": true, "host.stderrWrite": true,
 	"number.hex16":     true,
 	"arrayLike.length": true,
 	"number.isInteger": true, "number.isSafeInteger": true, "number.isFinite": true, "number.strictIsNaN": true, "number.abs": true, "host.getenv": true, "string.codePoints": true, "dynamic.values": true,
 	"string.padEnd": true, "string.relativeAt": true, "regexp.clone": true, "regexp.flags": true, "regexp.matchAllNext": true,
 	"string.parseFloat": true,
 	"array.spread0":     true,
-	// Recursive structural families use the Go oracle until the ABAP ABI exists.
-	"union.admit": true, "union.project": true, "union.read": true,
-	"union.tag": true, "union.widen": true,
+	// Common family reads need guarded payload views.
+	"union.read": true,
 	// Spreading a tagged iterable (Set | array) needs a dynamic iteration ABI.
 	"dynamic.spread": true,
 	// Number(boxed) needs the dynamic ToPrimitive ABI; ABAP refuses at the call.
@@ -77,6 +80,15 @@ var unsupportedOps = map[string]bool{
 
 // SupportsRuntimeOp is false for unreviewed or newly introduced operations.
 func SupportsRuntimeOp(op string) bool { return supportedOps[op] }
+
+// SupportsRuntimeExpr refines SupportsRuntimeOp for one site: a union
+// projection to a payload class still has no ABAP emitter.
+func SupportsRuntimeExpr(x *hir.Expr) bool {
+	if x.Op == "union.project" && x.Type.Kind != hir.UnionRef {
+		return false
+	}
+	return SupportsRuntimeOp(x.Op)
+}
 
 // RuntimeOps reports the complete catalogue partition in sorted order.
 func RuntimeOps() (supported, unsupported []string) {

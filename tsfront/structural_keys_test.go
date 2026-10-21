@@ -16,7 +16,7 @@ type TypedExpr = Expr & {readonly type:Type};
 type ValueExpr = TypedExpr & {readonly arith?:boolean};
 function wrap(x:ValueExpr):Expr {const args=[{value:x}];return {e:'call',args,type:{k:'num'}};}
 class Probe {static run():string {const x:ValueExpr={e:'num',value:7,type:{k:'num'}};const y=wrap(x);return y.e==='call' && y.args[0].value.e==='num' ? ''+y.args[0].value.value : 'bad';}}
-`, "union.admit")
+`, "union.project")
 }
 
 // Instantiated Omit/Mutable interfaces retain their own fields, including when

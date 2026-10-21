@@ -15,14 +15,21 @@ import (
 
 func storageABAPProbe(t *testing.T, p *hir.Program, ownerName, want, refusedMethod string, refusalException ...string) {
 	t.Helper()
+	abapUnitProbe(t, p, ownerName, want, "string", refusedMethod, refusalException...)
+}
+
+// abapUnitProbe compares run( ) with the Node result in an ABAP variable of
+// type actual (string, or f for numeric results).
+func abapUnitProbe(t *testing.T, p *hir.Program, ownerName, want, actual, refusedMethod string, refusalException ...string) {
+	t.Helper()
 	files, names, err := emitABAPNamed(t, p)
 	if err != nil {
 		t.Fatal(err)
 	}
 	owner := names.Get(ownerName)
 	var unit strings.Builder
-	fmt.Fprint(&unit, "CLASS ltcl_probe DEFINITION FOR TESTING DURATION SHORT RISK LEVEL HARMLESS.\nPRIVATE SECTION.\nMETHODS check FOR TESTING.\nENDCLASS.\nCLASS ltcl_probe IMPLEMENTATION.\nMETHOD check.\nDATA actual TYPE string.\nDATA refused TYPE abap_bool.\n")
-	fmt.Fprintf(&unit, "actual = %s=>%s( ).\ncl_abap_unit_assert=>assert_equals( act = actual exp = `%s` ).\n", owner, names.Get("member.run"), strings.ReplaceAll(want, "`", "``"))
+	fmt.Fprintf(&unit, "CLASS ltcl_probe DEFINITION FOR TESTING DURATION SHORT RISK LEVEL HARMLESS.\nPRIVATE SECTION.\nMETHODS check FOR TESTING.\nENDCLASS.\nCLASS ltcl_probe IMPLEMENTATION.\nMETHOD check.\nDATA actual TYPE %s.\nDATA expected TYPE %s.\nDATA refused TYPE abap_bool.\n", actual, actual)
+	fmt.Fprintf(&unit, "expected = `%s`.\nactual = %s=>%s( ).\ncl_abap_unit_assert=>assert_equals( act = actual exp = expected ).\n", strings.ReplaceAll(want, "`", "``"), owner, names.Get("member.run"))
 	if refusedMethod != "" {
 		exception := "view.refusal"
 		if len(refusalException) > 0 {

@@ -32,7 +32,7 @@ func TestGogenA9GenericInstantiation(t *testing.T) {
 }
 
 func TestGogenA9MappedObject(t *testing.T) {
-	gogenTSOracle(t, `type Expr={e:"num";n:number}|{e:"wrap";child:Expr};interface Method {name:string;body:readonly Expr[];} interface Class {name:string;ctorParams?:readonly {name:string;type:Expr}[];methods:readonly Method[];} type Cache<T>=T extends readonly (infer V)[] ? readonly Cache<V>[] : T extends object ? {[K in keyof T]:Cache<T[K]>}:T; type ClassIR=Cache<Class>;function read(c:ClassIR):string {return c.name+":"+JSON.stringify(c);} class Probe {static run():string {return read({name:"C",methods:[{name:"m",body:[{e:"wrap",child:{e:"num",n:3}}]}]});}}`, "union.declarations")
+	gogenTSABAPOracle(t, `type Expr={e:"num";n:number}|{e:"wrap";child:Expr};interface Method {name:string;body:readonly Expr[];} interface Class {name:string;ctorParams?:readonly {name:string;type:Expr}[];methods:readonly Method[];} type Cache<T>=T extends readonly (infer V)[] ? readonly Cache<V>[] : T extends object ? {[K in keyof T]:Cache<T[K]>}:T; type ClassIR=Cache<Class>;function read(c:ClassIR):string {return c.name+":"+JSON.stringify(c);} class Probe {static run():string {return read({name:"C",methods:[{name:"m",body:[{e:"wrap",child:{e:"num",n:3}}]}]});}}`)
 }
 
 func TestGogenA9AliasKinds(t *testing.T) {
@@ -53,7 +53,7 @@ func TestGogenA9AliasKinds(t *testing.T) {
 }
 
 func TestGogenA9MappedRecursiveGraph(t *testing.T) {
-	gogenTSOracle(t, `type Raw={e:"field";base:Raw}|{e:"var";name:string};type RuntimeValue<T>=T extends Raw ? Expr : T extends readonly (infer V)[] ? readonly RuntimeValue<V>[] : T extends object ? Fields<T>:T;type Fields<T>={[K in keyof T]:RuntimeValue<T[K]>};type Expr=Fields<Raw>;type Cache<T>=T extends readonly (infer V)[] ? readonly Cache<V>[] : T extends object ? {[K in keyof T]:Cache<T[K]>}:T;interface Class {name:string;body:readonly Expr[];}type ClassIR=Cache<Class>;function read(c:ClassIR):string{return c.name+":"+JSON.stringify(c);}class Probe {static run():string{return read({name:"C",body:[{e:"field",base:{e:"var",name:"x"}}]});}}`, "union.declarations")
+	gogenTSABAPOracle(t, `type Raw={e:"field";base:Raw}|{e:"var";name:string};type RuntimeValue<T>=T extends Raw ? Expr : T extends readonly (infer V)[] ? readonly RuntimeValue<V>[] : T extends object ? Fields<T>:T;type Fields<T>={[K in keyof T]:RuntimeValue<T[K]>};type Expr=Fields<Raw>;type Cache<T>=T extends readonly (infer V)[] ? readonly Cache<V>[] : T extends object ? {[K in keyof T]:Cache<T[K]>}:T;interface Class {name:string;body:readonly Expr[];}type ClassIR=Cache<Class>;function read(c:ClassIR):string{return c.name+":"+JSON.stringify(c);}class Probe {static run():string{return read({name:"C",body:[{e:"field",base:{e:"var",name:"x"}}]});}}`)
 }
 
 func TestGogenA9InferredEmptyArray(t *testing.T) {
@@ -66,7 +66,7 @@ func TestGogenA9StructuralOrderAndIdentity(t *testing.T) {
 }
 
 func TestGogenA9MappedIntersection(t *testing.T) {
-	gogenTSOracle(t, `type Raw={e:"leaf";name:string}|{e:"call";args:readonly Raw[]};type Cache<T>=T extends {e:"call"} ? Omit<T,"args"> & {readonly args?:readonly Cache<Raw>[]} : T extends readonly (infer V)[] ? readonly Cache<V>[] : T extends object ? {[K in keyof T]:Cache<T[K]>}:T;interface Class {name:string;body:readonly Raw[];}type ClassIR=Cache<Class>;function read(c:ClassIR):string {return c.name+":"+JSON.stringify(c);}class Probe {static run():string{return read({name:"C",body:[{e:"call",args:[{e:"leaf",name:"x"}]}]});}}`, "union.declarations")
+	gogenTSABAPOracle(t, `type Raw={e:"leaf";name:string}|{e:"call";args:readonly Raw[]};type Cache<T>=T extends {e:"call"} ? Omit<T,"args"> & {readonly args?:readonly Cache<Raw>[]} : T extends readonly (infer V)[] ? readonly Cache<V>[] : T extends object ? {[K in keyof T]:Cache<T[K]>}:T;interface Class {name:string;body:readonly Raw[];}type ClassIR=Cache<Class>;function read(c:ClassIR):string {return c.name+":"+JSON.stringify(c);}class Probe {static run():string{return read({name:"C",body:[{e:"call",args:[{e:"leaf",name:"x"}]}]});}}`)
 }
 
 func TestGogenA9CrossFileMappedShape(t *testing.T) {
@@ -80,10 +80,8 @@ func TestGogenA9CrossFileMappedShape(t *testing.T) {
 	if got != want {
 		t.Fatalf("Go %q Node %q", got, want)
 	}
-	_, err := emitABAP(t, p)
-	if err == nil || !strings.Contains(err.Error(), "union.") || !strings.Contains(err.Error(), "types.ts:") {
-		t.Fatalf("expected located ABAP union refusal, got %v", err)
-	}
+	p = lowerStatementsProbe(t, map[string]string{"types.ts": types, "cache.ts": cache, "probe.ts": probe}, []string{"types.ts", "cache.ts", "probe.ts"})
+	storageABAPProbe(t, p, "probe.ts.Probe", strings.TrimSpace(want), "")
 }
 
 func TestGogenA9InferredCallable(t *testing.T) {
@@ -92,4 +90,13 @@ func TestGogenA9InferredCallable(t *testing.T) {
 
 func TestGogenA9NullAndUndefined(t *testing.T) {
 	gogenTSOracle(t, `class Probe {static run():string {const value={name:"n",value:null,optional:undefined};return Object.keys(value).join(",")+":"+("optional" in value)+":"+typeof value.value+":"+JSON.stringify(value);}}`, "")
+}
+
+// Union families whose operations all have ABAP emitters run on ABAP as
+// well; with ABAPITI_OSG_HOME the result is compared with Node on OSGo.
+func gogenTSABAPOracle(t *testing.T, source string) {
+	t.Helper()
+	gogenTSOracle(t, source, "")
+	p := lowerStatementsProbe(t, map[string]string{"probe.ts": source}, []string{"probe.ts"})
+	storageABAPProbe(t, p, "probe.ts.Probe", strings.TrimSpace(conversionOracle(t, source)), "")
 }
