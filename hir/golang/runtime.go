@@ -777,14 +777,14 @@ func (a *array[T]) join(sep optional[jsString]) jsString {
 	if sep.Has {
 		s = sep.Value
 	}
-	out := jsString("")
+	var b strings.Builder
 	for i, v := range a.Items {
 		if i > 0 {
-			out += s
+			b.WriteString(string(s))
 		}
-		out += primitiveString(v)
+		b.WriteString(string(primitiveString(v)))
 	}
-	return out
+	return jsString(b.String())
 }
 func primitiveString(v any) jsString {
 	switch x:=v.(type) {
