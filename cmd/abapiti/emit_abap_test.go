@@ -97,18 +97,18 @@ class Probe {static run():string {const x:ValueExpr={e:'num',value:7,type:{k:'nu
 		}
 	}
 	args := []string{"--tsconfig", filepath.Join(dir, "tsconfig.json")}
-	// Since car U1 union families emit (union.declarations is supported), so
-	// the strict policy no longer aborts on the ownerless declaration; the
-	// owning bodies with payload reads still trap whole under both policies.
+	// Union families emit (union.declarations is supported) and, since the
+	// payload-interface ABI, so do payload projections and common reads: no
+	// policy aborts on the declaration or traps the family bodies.
 	strict := newEmitABAPCmd()
 	strict.SilenceErrors, strict.SilenceUsage = true, true
 	strict.SetArgs(append(append([]string{}, args...), "-o", filepath.Join(dir, "strict"), "probe.ts"))
 	if err := strict.Execute(); err != nil {
-		t.Fatalf("a family program must emit under the strict policy since car U1, got %v", err)
+		t.Fatalf("a family program must emit under the strict policy, got %v", err)
 	}
 	strictSites, err := os.ReadFile(filepath.Join(dir, "strict", "evidence", "trap-sites.json"))
-	if err != nil || !strings.Contains(string(strictSites), `"Kind": "body"`) || !strings.Contains(string(strictSites), `"Method": "run"`) {
-		t.Fatalf("strict policy must still trap the owning bodies: %v\n%s", err, strictSites)
+	if err != nil || strings.Contains(string(strictSites), `"Method": "run"`) || strings.Contains(string(strictSites), `"Method": "wrap"`) {
+		t.Fatalf("strict policy must not trap the family bodies: %v\n%s", err, strictSites)
 	}
 	keep := newEmitABAPCmd()
 	keep.SilenceErrors, keep.SilenceUsage = true, true
@@ -117,12 +117,12 @@ class Probe {static run():string {const x:ValueExpr={e:'num',value:7,type:{k:'nu
 		t.Fatal(err)
 	}
 	rows, err := os.ReadFile(filepath.Join(dir, "keep", "evidence", "unattributable-refusals.json"))
-	if err != nil || strings.Contains(string(rows), "union.declarations") {
-		t.Fatalf("car U1 supports union.declarations, so keep-going must not record it: %v\n%s", err, rows)
+	if err != nil || strings.Contains(string(rows), "union.") {
+		t.Fatalf("union operations are supported, so keep-going must not record them: %v\n%s", err, rows)
 	}
 	sites, err := os.ReadFile(filepath.Join(dir, "keep", "evidence", "trap-sites.json"))
-	if err != nil || !strings.Contains(string(sites), `"Kind": "body"`) || !strings.Contains(string(sites), `"Method": "run"`) {
-		t.Fatalf("owning bodies must keep the whole-body trap policy: %v\n%s", err, sites)
+	if err != nil || strings.Contains(string(sites), `"Method": "run"`) {
+		t.Fatalf("keep-going must not trap the family bodies: %v\n%s", err, sites)
 	}
 	// The refused module callable's call site stays a conditional TDZ guard
 	// (fires only when the ready flag was never set), not an unconditional

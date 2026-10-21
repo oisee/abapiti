@@ -27,6 +27,18 @@ func (e *emitter) jsonSubsetType(t hir.Type) bool {
 		}
 		_, native := e.lspTokenJSONOrder(c)
 		return native || e.materialized[t.Name] || e.liveClasses[t.Name] || e.jsonOwnKeys && c != nil && c.Structural && c.Super == "" && jsonKeyNamesSafe(c)
+	case hir.UnionRef:
+		// A union reference is one of its family's payload objects.
+		u := e.p.Union(t.Name)
+		if u == nil {
+			return false
+		}
+		for _, a := range u.Alternatives {
+			if !e.jsonSubsetType(a.Payload) {
+				return false
+			}
+		}
+		return true
 	}
 	return false
 }

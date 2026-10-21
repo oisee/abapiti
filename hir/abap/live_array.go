@@ -241,7 +241,10 @@ func (b *body) arrayElement(n, row string, t hir.Type) {
 		b.line("ELSE.")
 		b.boxDynamic(n, row, hir.Ref(hir.RootObject))
 		b.line("ENDIF.")
-	} else if t.Kind == hir.ClassRef && b.e.liveClasses[t.Name] || t.Kind == hir.UnionRef {
+	} else if t.Kind == hir.UnionRef {
+		// Erased storage holds the payload object itself, or a foreign record.
+		b.unionFromObject(n, row, t)
+	} else if t.Kind == hir.ClassRef && b.e.liveClasses[t.Name] {
 		// An admitted structural layout may read a different native data layout.
 		// Rebox the original slot and use the checked live converter, not a nominal cast.
 		b.liveBox(d, row, hir.Ref(hir.RootObject))

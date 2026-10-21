@@ -79,9 +79,8 @@ var supportedOps = map[string]bool{
 	"number.ceil": true, "number.remainder2": true, "number.index": true, "number.fromI32": true, "number.toString": true,
 	"dynamic.of": true, "dynamic.isString": true, "dynamic.isFunction": true, "dynamic.asString": true, "dynamic.asRef": true,
 
-	// Structural families: boxed live records (union.go). Payload projection
-	// is refused per site, see SupportsRuntimeExpr.
-	"union.declarations": true, "union.check": true, "union.admit": true, "union.tag": true, "union.widen": true, "union.project": true,
+	// Structural families: payload objects behind one payload interface (union.go).
+	"union.declarations": true, "union.check": true, "union.admit": true, "union.tag": true, "union.widen": true, "union.project": true, "union.read": true,
 }
 
 // Operations without a reviewed ABAP implementation retain explicit refusals.
@@ -91,8 +90,6 @@ var unsupportedOps = map[string]bool{
 	"number.strictIsNaN": true, "regexp.matchAllNext": true,
 	"string.parseFloat": true,
 
-	// Common family reads need guarded payload views.
-	"union.read": true,
 	// Spreading a tagged iterable (Set | array) needs a dynamic iteration ABI.
 	"dynamic.spread": true,
 	// Number(boxed) needs the dynamic ToPrimitive ABI; ABAP refuses at the call.
@@ -103,15 +100,6 @@ var unsupportedOps = map[string]bool{
 
 // SupportsRuntimeOp is false for unreviewed or newly introduced operations.
 func SupportsRuntimeOp(op string) bool { return supportedOps[op] }
-
-// SupportsRuntimeExpr refines SupportsRuntimeOp for one site: a union
-// projection to a payload class still has no ABAP emitter.
-func SupportsRuntimeExpr(x *hir.Expr) bool {
-	if x.Op == "union.project" && x.Type.Kind != hir.UnionRef {
-		return false
-	}
-	return SupportsRuntimeOp(x.Op)
-}
 
 // RuntimeOps reports the complete catalogue partition in sorted order.
 func RuntimeOps() (supported, unsupported []string) {

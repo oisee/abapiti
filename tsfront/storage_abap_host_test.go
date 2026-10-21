@@ -29,7 +29,14 @@ func abapUnitProbe(t *testing.T, p *hir.Program, ownerName, want, actual, refuse
 	owner := names.Get(ownerName)
 	var unit strings.Builder
 	fmt.Fprintf(&unit, "CLASS ltcl_probe DEFINITION FOR TESTING DURATION SHORT RISK LEVEL HARMLESS.\nPRIVATE SECTION.\nMETHODS check FOR TESTING.\nENDCLASS.\nCLASS ltcl_probe IMPLEMENTATION.\nMETHOD check.\nDATA actual TYPE %s.\nDATA expected TYPE %s.\nDATA refused TYPE abap_bool.\n", actual, actual)
-	fmt.Fprintf(&unit, "expected = `%s`.\nactual = %s=>%s( ).\ncl_abap_unit_assert=>assert_equals( act = actual exp = expected ).\n", strings.ReplaceAll(want, "`", "``"), owner, names.Get("member.run"))
+	// Long expectations are joined from literal chunks: lines stay <= 255.
+	var chunks []string
+	for rest := want; rest != "" || len(chunks) == 0; {
+		n := min(len(rest), 120)
+		chunks = append(chunks, "`"+strings.ReplaceAll(rest[:n], "`", "``")+"`")
+		rest = rest[n:]
+	}
+	fmt.Fprintf(&unit, "expected = %s.\nactual = %s=>%s( ).\ncl_abap_unit_assert=>assert_equals( act = actual exp = expected ).\n", strings.Join(chunks, " &&\n"), owner, names.Get("member.run"))
 	if refusedMethod != "" {
 		exception := "view.refusal"
 		if len(refusalException) > 0 {

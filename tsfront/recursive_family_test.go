@@ -27,12 +27,7 @@ class Probe {
 	if len(p.Unions) != 1 || !p.Unions[0].Complete {
 		t.Fatal("missing completed family")
 	}
-	if _, err := emitABAP(t, p); err == nil || !strings.Contains(err.Error(), "union.") {
-		t.Fatalf("ABAP did not explicitly refuse recursive ABI: %v", err)
-	}
-	if files, _, err := emitABAPTestNamed(t, p, map[string]bool{}); err == nil || len(files) != 0 || !strings.Contains(err.Error(), "union.") {
-		t.Fatalf("test emitter accepted/trapped recursive ABI: %v", err)
-	}
+	abapUnitProbe(t, cloneProgram(t, p), "probe.ts.Probe", strings.TrimSpace(string(want)), "f", "")
 	if strings.Contains(hir.Dump(p), "trap ") {
 		t.Fatal("recursive body was trapped")
 	}
@@ -136,6 +131,7 @@ export class Probe {
 	if got != string(want) {
 		t.Fatalf("Go %q Node %q", got, want)
 	}
+	storageABAPProbe(t, cloneProgram(t, p), "probe.ts.Probe", strings.TrimSpace(string(want)), "")
 	permuted := append([]string(nil), declarations...)
 	for i, j := 0, len(permuted)-1; i < j; i, j = i+1, j-1 {
 		permuted[i], permuted[j] = permuted[j], permuted[i]
