@@ -39,6 +39,7 @@ type emitter struct {
 	names           *hir.Names
 	files           map[string]string
 	types           map[string]bool
+	reviewedOps     map[string]bool
 	err             error
 	refusals        *[]error
 	currentMethod   *hir.Method
@@ -201,13 +202,13 @@ func emitNamed(p *hir.Program, refusals *[]error, assertionOwners map[string]boo
 			e.arrayViews = true
 			mapViews = true
 		}
-		if x.Kind == hir.RuntimeOp && x.Op == "dynamic.keys" {
+		if x.Kind == hir.RuntimeOp && (x.Op == "dynamic.keys" || x.Op == "dynamic.values") {
 			e.ownKeysUsed = true
 		}
 		if x.Kind == hir.RuntimeOp && x.Op == "dynamic.delete" {
 			e.recordDelete = true
 		}
-		if x.Kind == hir.RuntimeOp && (x.Op == "dynamic.keys" || x.Op == "dynamic.arrayView" || x.Op == "dynamic.asRef" && x.Type.Kind == hir.Array || x.Op == "dynamic.asObject" || x.Op == "dynamic.classView" || x.Op == "dynamic.delete" || strings.HasPrefix(x.Op, "lsp.") || strings.HasPrefix(x.Op, "object.") && x.X != nil && x.X.Type.Name == hir.RootObject) {
+		if x.Kind == hir.RuntimeOp && (x.Op == "dynamic.keys" || x.Op == "dynamic.values" || x.Op == "dynamic.arrayView" || x.Op == "dynamic.asRef" && x.Type.Kind == hir.Array || x.Op == "dynamic.asObject" || x.Op == "dynamic.classView" || x.Op == "dynamic.delete" || strings.HasPrefix(x.Op, "lsp.") || strings.HasPrefix(x.Op, "object.") && x.X != nil && x.X.Type.Name == hir.RootObject) {
 			e.arrayViews = true
 		}
 		findStorage(x.X)
@@ -469,7 +470,7 @@ func (e *emitter) scanUsage() {
 			need = true
 			e.constructorGet = true
 		}
-		if x.Kind == hir.RuntimeOp && x.Op == "dynamic.keys" {
+		if x.Kind == hir.RuntimeOp && (x.Op == "dynamic.keys" || x.Op == "dynamic.values") {
 			e.ownKeysUsed = true
 		}
 		scanType(x.Type)
@@ -2176,11 +2177,13 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 	if b.bigintRuntime(x, n) {
 		return
 	}
-	if x.Op == "array.spread0" {
-		b.e.refuse(fmt.Errorf("node %d (%s): ABAP array spread with undefined values is unsupported", x.ID, x.Source))
+	if b.u3DynamicRuntime(x, n) {
 		return
 	}
-	if x.X != nil && x.X.Type.Kind == hir.OrderedSet && len(x.X.Type.Args) == 1 && (x.X.Type.Args[0].Kind == hir.Optional || x.X.Type.Args[0].Kind == hir.Dynamic) {
+	if b.u3CollectionRuntime(x, n) {
+		return
+	}
+	if x.Op != "set.iterationValues" && x.X != nil && x.X.Type.Kind == hir.OrderedSet && len(x.X.Type.Args) == 1 && (x.X.Type.Args[0].Kind == hir.Optional || x.X.Type.Args[0].Kind == hir.Dynamic) {
 		b.e.refuse(fmt.Errorf("node %d (%s): ABAP boxed Set requires value-based SameValueZero", x.ID, x.Source))
 		return
 	}
@@ -3065,6 +3068,10 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 	if x.Op == "map.delete" {
 		b.line("DELETE " + a + "->entries WHERE k = " + args[0] + ".")
 		b.line(n + " = xsdbool( sy-subrc = 0 ).")
+		return
+	}
+	if x.Op == "set.clear" && b.e.setIterationUsed() {
+		b.line(a + "->clear_iteration( ).")
 		return
 	}
 	if x.Op == "set.clear" || x.Op == "map.clear" {

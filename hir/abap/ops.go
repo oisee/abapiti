@@ -7,6 +7,16 @@ import (
 )
 
 var supportedOps = map[string]bool{
+
+	"dynamic.isMap":  true,
+	"dynamic.isSet":  true,
+	"dynamic.values": true,
+
+	"array.spread0":       true,
+	"collection.has":      true,
+	"collection.get":      true,
+	"set.iterationValues": true,
+
 	"regexp.clone": true, "regexp.flags": true,
 	"string.padEnd":     true,
 	"string.relativeAt": true,
@@ -71,22 +81,18 @@ var supportedOps = map[string]bool{
 
 // Operations without a reviewed ABAP implementation retain explicit refusals.
 var unsupportedOps = map[string]bool{
-	"collection.get": true, "collection.has": true, "container.readonlyClassView": true, "container.readonlyView": true,
-	"map.view": true, "set.view": true, "host.stderrWrite": true,
+	"host.getenv": true, "host.stderrWrite": true,
+	"container.readonlyClassView": true, "container.readonlyView": true,
+	"map.view": true, "set.view": true, "arrayLike.length": true,
+	"number.strictIsNaN": true, "regexp.matchAllNext": true,
+	"string.parseFloat": true,
 
-	"arrayLike.length":   true,
-	"number.strictIsNaN": true, "host.getenv": true, "dynamic.values": true,
-	"regexp.matchAllNext": true,
-	"string.parseFloat":   true,
-	"array.spread0":       true,
 	// Common family reads need guarded payload views.
 	"union.read": true,
 	// Spreading a tagged iterable (Set | array) needs a dynamic iteration ABI.
 	"dynamic.spread": true,
 	// Number(boxed) needs the dynamic ToPrimitive ABI; ABAP refuses at the call.
 	"dynamic.toNumber": true,
-	// JS Map/Set tests on a tagged value need the dynamic collection ABI.
-	"dynamic.isMap": true, "dynamic.isSet": true,
 	// JSON.stringify replacer callbacks need a per-property callback ABI.
 	"json.stringifyReplacer": true,
 }

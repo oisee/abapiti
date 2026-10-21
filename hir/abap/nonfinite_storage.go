@@ -343,7 +343,7 @@ func (a *numberStorage) expr(m *hir.Method, x *hir.Expr) bool {
 			}
 		case "number.abs":
 			a.retainParserStorage(m, x.X)
-		case "number.isInteger", "number.isSafeInteger", "number.isFinite":
+		case "number.isInteger", "number.isSafeInteger", "number.isFinite", "dynamic.values", "dynamic.isMap", "dynamic.isSet":
 			if x.X != nil && x.X.Kind == hir.RuntimeOp && x.X.Op == "dynamic.of" {
 				a.retainParserStorage(m, x.X.X)
 			}

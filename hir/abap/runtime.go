@@ -27,6 +27,7 @@ func (e *emitter) runtime(t hir.Type) {
 				s = liveArrayMethod(n, s)
 			}
 		}
+		s = e.setIterationMethod(t, n, s)
 		if t.Kind == hir.OrderedMap {
 			s = e.mapViewMethod(t, n, s)
 		}
@@ -142,6 +143,16 @@ func (e *emitter) runtime(t hir.Type) {
 		}
 		method("get", code+"ENDIF.\n")
 	case hir.OrderedMap, hir.OrderedSet:
+		probeDef, probeImpl := e.collectionProbeDefinition(t)
+		if probeDef != "" {
+			line(probeDef)
+			impl.WriteString(probeImpl)
+		}
+		iterationDef, iterationImpl := e.setIterationDefinition(t)
+		if iterationDef != "" {
+			line(iterationDef)
+			impl.WriteString(iterationImpl)
+		}
 		line(e.mapViewDefinition(t))
 		if t.Kind == hir.OrderedMap {
 			e.chaiMaps = append(e.chaiMaps, t)
