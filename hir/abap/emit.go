@@ -67,6 +67,10 @@ type emitter struct {
 	// constSets are static integer sets built from constants and only ever
 	// asked has() (owner.field -> members); has() becomes a comparison chain.
 	constSets map[string][]string
+
+	// unionPayloads and unionFamilies stay nil without structural families.
+	unionPayloads map[string]bool
+	unionFamilies map[string]map[string]bool
 }
 
 // Emit returns one source per global declaration, including all runtime dependencies.
@@ -160,7 +164,7 @@ func emitNamed(p *hir.Program, refusals *[]error, assertionOwners map[string]boo
 			return nil, nil, hir.Error{Node: node, Message: "ABAP cannot share storage for covariant readonly container views (" + op + ")"}
 		}
 	}
-	if errors := hir.CheckRuntimeOps(p, "ABAP", SupportsRuntimeOp); !keepGoing && (refusals == nil || len(p.Unions) > 0) && len(errors) > 0 {
+	if errors := hir.CheckRuntimeOps(p, "ABAP", SupportsRuntimeOp); !keepGoing && refusals == nil && len(errors) > 0 {
 		return nil, nil, errors[0]
 	}
 
@@ -277,6 +281,9 @@ func emitNamed(p *hir.Program, refusals *[]error, assertionOwners map[string]boo
 	for _, c := range p.Classes {
 		e.class(c)
 	}
+	if e.unionFamilies != nil {
+		e.unionFamilyClasses()
+	}
 	if e.configJSON {
 		e.configJSONRuntime()
 	}
@@ -351,7 +358,7 @@ func arrayStorage(t hir.Type) hir.Type {
 	return t
 }
 func (e *emitter) typ(t hir.Type) string {
-	t = arrayStorage(t)
+	t = arrayStorage(unionStorage(t))
 	switch t.Kind {
 	case hir.Bool:
 		return "abap_bool"
@@ -690,6 +697,7 @@ func (e *emitter) class(c *hir.Class) {
 	s += " CREATE PUBLIC.\nPUBLIC SECTION.\n"
 	b.WriteString(s)
 	e.liveClassDeclaration(&b, c)
+	e.unionLayoutDeclaration(&b, c)
 	if e.recordDelete && c.Super == "" {
 		fmt.Fprintf(&b, "DATA %s TYPE HASHED TABLE OF string WITH UNIQUE KEY table_line.\n", e.name("record.deleted"))
 	}
@@ -836,6 +844,7 @@ func (e *emitter) class(c *hir.Class) {
 		}
 	}
 	e.liveClassImplementation(&b, c)
+	e.unionLayoutImplementation(&b, c)
 	b.WriteString("ENDCLASS.\n")
 	out := b.String()
 	if e.codeUnits[c.Name] {
@@ -2112,6 +2121,14 @@ func tableIndex(x *hir.Expr) (string, bool) {
 }
 
 func (b *body) runtimeOp(x *hir.Expr, n string) {
+	if strings.HasPrefix(x.Op, "union.") {
+		b.unionOperation(x, n)
+		return
+	}
+	if unionKeyed(x) {
+		b.e.refuse(fmt.Errorf("node %d (%s): ABAP Map and Set keys over union references need record identity", x.ID, x.Source))
+		return
+	}
 	if base := hir.CheckedMapBaseOp(x.Op); base != x.Op {
 		copy := *x
 		copy.Op = base
@@ -3283,7 +3300,7 @@ func wrap(src string) (string, error) {
 // boxDynamic preserves identity and absence instead of boxing the ABI wrapper
 // itself. Objects already represented as graph nodes flow through unchanged.
 func (b *body) boxDynamic(n, a string, t hir.Type) {
-	if t.Kind == hir.Dynamic {
+	if t.Kind == hir.Dynamic || t.Kind == hir.UnionRef {
 		b.line(n + " = " + a + ".")
 		return
 	}

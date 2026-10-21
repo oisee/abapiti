@@ -8,7 +8,7 @@ import (
 )
 
 func (e *emitter) runtime(t hir.Type) {
-	t = arrayStorage(t)
+	t = arrayStorage(unionStorage(t))
 	id := "runtime." + t.String()
 	if e.types[id] {
 		return

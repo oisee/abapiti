@@ -96,12 +96,18 @@ class Probe {static run():string {const x:ValueExpr={e:'num',value:7,type:{k:'nu
 		}
 	}
 	args := []string{"--tsconfig", filepath.Join(dir, "tsconfig.json")}
+	// Since car U1 union families emit (union.declarations is supported), so
+	// the strict policy no longer aborts on the ownerless declaration; the
+	// owning bodies with payload reads still trap whole under both policies.
 	strict := newEmitABAPCmd()
 	strict.SilenceErrors, strict.SilenceUsage = true, true
 	strict.SetArgs(append(append([]string{}, args...), "-o", filepath.Join(dir, "strict"), "probe.ts"))
-	err := strict.Execute()
-	if err == nil || !strings.Contains(err.Error(), "unattributable ABAP test refusal") || !strings.Contains(err.Error(), "union.declarations") {
-		t.Fatalf("strict policy must abort on the ownerless union declaration, got %v", err)
+	if err := strict.Execute(); err != nil {
+		t.Fatalf("a family program must emit under the strict policy since car U1, got %v", err)
+	}
+	strictSites, err := os.ReadFile(filepath.Join(dir, "strict", "evidence", "trap-sites.json"))
+	if err != nil || !strings.Contains(string(strictSites), `"Kind": "body"`) || !strings.Contains(string(strictSites), `"Method": "run"`) {
+		t.Fatalf("strict policy must still trap the owning bodies: %v\n%s", err, strictSites)
 	}
 	keep := newEmitABAPCmd()
 	keep.SilenceErrors, keep.SilenceUsage = true, true
@@ -110,8 +116,8 @@ class Probe {static run():string {const x:ValueExpr={e:'num',value:7,type:{k:'nu
 		t.Fatal(err)
 	}
 	rows, err := os.ReadFile(filepath.Join(dir, "keep", "evidence", "unattributable-refusals.json"))
-	if err != nil || !strings.Contains(string(rows), `"operation": "union.declarations"`) || !strings.Contains(string(rows), `"node": `) {
-		t.Fatalf("unattributable-refusals.json lacks the union declaration: %v\n%s", err, rows)
+	if err != nil || strings.Contains(string(rows), "union.declarations") {
+		t.Fatalf("car U1 supports union.declarations, so keep-going must not record it: %v\n%s", err, rows)
 	}
 	sites, err := os.ReadFile(filepath.Join(dir, "keep", "evidence", "trap-sites.json"))
 	if err != nil || !strings.Contains(string(sites), `"Kind": "body"`) || !strings.Contains(string(sites), `"Method": "run"`) {

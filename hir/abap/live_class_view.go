@@ -232,6 +232,10 @@ func (b *body) liveUnbox(n, d string, t hir.Type) {
 		b.line(n + " = " + d + ".")
 		return
 	}
+	if t.Kind == hir.UnionRef {
+		b.line(n + " = " + e.unionFamily(t.Name, "") + "=>check( " + d + " ).")
+		return
+	}
 	switch t.Kind {
 	case hir.String:
 		b.line(n + " = " + d + "->as_string( ).")

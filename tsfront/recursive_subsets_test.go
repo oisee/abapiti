@@ -45,12 +45,7 @@ static run():number{const x:TypedExpr={e:'pair',type:{k:'array',item:{k:'num'}},
 			if strings.Contains(hir.Dump(p), "trap ") {
 				t.Fatal("trapped body")
 			}
-			if _, err := emitABAP(t, p); err == nil {
-				t.Fatal("ABAP accepted union ABI")
-			}
-			if files, _, err := emitABAPTestNamed(t, p, map[string]bool{}); err == nil || len(files) != 0 {
-				t.Fatal("ABAP test emission did not refuse before body traps", err)
-			}
+			abapFamilyOracle(t, p, string(want))
 			suffix := ""
 			if strings.Contains(tc.source, "run():string") {
 				suffix = ".String()"

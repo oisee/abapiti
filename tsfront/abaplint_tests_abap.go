@@ -3,7 +3,6 @@ package tsfront
 import (
 	"fmt"
 	"math"
-	"reflect"
 	"regexp"
 	"sort"
 	"strconv"
@@ -114,7 +113,7 @@ func measureABAPTestGap(lowering *RegistryLowering, keepGoing bool) ABAPTestGap 
 					gap.NonfiniteLiteralSites++
 				}
 			}
-			if x.Kind == hir.RuntimeOp && !abap.SupportsRuntimeOp(x.Op) {
+			if x.Kind == hir.RuntimeOp && !abap.SupportsRuntimeExpr(x) {
 				add(x.Op, fmt.Sprintf("%s.%s:%d:%d (%s)", c.Name, m.Name, x.ID, ordinal, x.Source))
 			}
 		})
@@ -185,7 +184,7 @@ func trapABAPTestRefusals(lowering *RegistryLowering, keepGoing bool) ([]Unattri
 	testMethods(lowering.Prog, func(_ *hir.Class, m *hir.Method) {
 		messages := []string{}
 		visitTestBody(m.Body, func(x *hir.Expr) {
-			if x.Kind == hir.RuntimeOp && !abap.SupportsRuntimeOp(x.Op) {
+			if x.Kind == hir.RuntimeOp && !abap.SupportsRuntimeExpr(x) {
 				messages = append(messages, fmt.Sprintf("node %d (%s): runtime operation %s has no ABAP emitter", x.ID, x.Source, x.Op))
 			}
 		})
@@ -199,17 +198,15 @@ func trapABAPTestRefusals(lowering *RegistryLowering, keepGoing bool) ([]Unattri
 		unattributable = append(unattributable, UnattributableRefusal{Node: node.ID, Location: node.Source, Operation: operation, Message: message})
 	}
 	if keepGoing {
-		// Tagged union families have no ABAP ABI. References erase to dynamic
-		// storage so signatures, fields and locals stay emittable; real union
-		// traffic still traps, because every union.* operation refuses in its
-		// owning body and those bodies were replaced above. The union
-		// declarations themselves emit nothing and are omitted below.
-		eraseUnionRefs(lowering.Prog)
+		// Tagged union families emit through the car U1 ABI (the emitter
+		// itself stores union references as dynamic), so nothing is erased
+		// here; union.read and payload projection still trap their owning
+		// bodies above.
 		// Ownerless catalogue operations: with every owning body already
 		// trapped, whatever UsedRuntimeOps still reports lives outside the
 		// test bodies (union declarations, interface signatures). Interfaces
-		// emit signatures only, and union families emit nothing, so omission
-		// keeps the ABAP syntactically complete.
+		// emit signatures only, so omission keeps the ABAP syntactically
+		// complete.
 		owned := map[int]bool{}
 		testMethods(lowering.Prog, func(_ *hir.Class, m *hir.Method) {
 			for id := range bodyIDs(m.Body) {
@@ -315,54 +312,4 @@ func unattributableRefusal(err error) (UnattributableRefusal, bool) {
 	}
 	id, _ := strconv.Atoi(match[1])
 	return UnattributableRefusal{Node: id, Location: match[2], Operation: refusalOperation(message), Message: message}, true
-}
-
-// eraseUnionRefs rewrites every type mentioning a tagged union to dynamic
-// storage, except the union declarations themselves (verification keeps them).
-// Signatures, fields and locals of erased types stay emittable; the values
-// they carry are boxed dynamic, and every operation that discriminates them
-// (union.*) refuses in its owning body, so no union traffic runs silently.
-func eraseUnionRefs(p *hir.Program) {
-	var visit func(v reflect.Value)
-	visit = func(v reflect.Value) {
-		if !v.IsValid() {
-			return
-		}
-		switch v.Kind() {
-		case reflect.Pointer, reflect.Interface:
-			if !v.IsNil() {
-				visit(v.Elem())
-			}
-		case reflect.Slice:
-			for i := 0; i < v.Len(); i++ {
-				visit(v.Index(i))
-			}
-		case reflect.Struct:
-			if v.Type() == unionRefHostType {
-				if t := v.Interface().(hir.Type); containsUnionRef(t) && v.CanSet() {
-					v.Set(reflect.ValueOf(hir.T(hir.Dynamic)))
-				}
-				return
-			}
-			for i := 0; i < v.NumField(); i++ {
-				visit(v.Field(i))
-			}
-		}
-	}
-	visit(reflect.ValueOf(p.Classes))
-	visit(reflect.ValueOf(p.Interfaces))
-}
-
-var unionRefHostType = reflect.TypeOf(hir.Type{})
-
-func containsUnionRef(t hir.Type) bool {
-	if t.Kind == hir.UnionRef {
-		return true
-	}
-	for _, a := range t.Args {
-		if containsUnionRef(a) {
-			return true
-		}
-	}
-	return false
 }
