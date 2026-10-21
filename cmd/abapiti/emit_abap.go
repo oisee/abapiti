@@ -17,7 +17,8 @@ import (
 )
 
 // emit-abap is the ABAP counterpart of emit-go for self-hosting measurements:
-// the same lowering, then the TS-HA refusal policy (whole owning bodies trap).
+// the same lowering, then the TS-HA refusal policy (whole owning bodies trap;
+// a module initializer traps at its first refused top-level statement).
 func newEmitABAPCmd() *cobra.Command {
 	cmd := &cobra.Command{Use: "emit-abap --tsconfig FILE [flags] file...", Short: "Lower a TypeScript project and emit ABAP classes with located refusal traps", Args: cobra.MinimumNArgs(1), RunE: runEmitABAP}
 	f := cmd.Flags()
@@ -27,7 +28,7 @@ func newEmitABAPCmd() *cobra.Command {
 	f.String("overrides", "none", "Source-pinned overrides: none or registry")
 	f.String("reachability", "", "Generic workload coverage manifest; unexecuted bodies become traps")
 	f.String("initialize", "", "JSON array of source files; emits ZCL_ABAPITI_MAIN=>RUN calling their module initializers in this order")
-	f.Bool("keep-going", false, "Measurement mode: record type/declaration-level refusals in evidence/unattributable-refusals.json, omit the unemittable declaration and finish emission; body refusals still trap whole owning bodies")
+	f.Bool("keep-going", false, "Measurement mode: record type/declaration-level refusals in evidence/unattributable-refusals.json, omit the unemittable declaration and finish emission; body refusals still trap whole owning bodies (module initializers from the first refused statement)")
 	return cmd
 }
 func init() { rootCmd.AddCommand(newEmitABAPCmd()) }

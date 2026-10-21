@@ -18,7 +18,8 @@ real conditional, but only owner/call-site execution for a compiler-inserted
 check whose branch has no Node counterpart. K counts the guards with hits.
 
 --abap (step 4b, implies --list-traps) emits ABAP with `emit-abap --keep-going` into
-<out-dir>/abap instead of Go: TS-HA refusals trap whole owning bodies, ownerless
+<out-dir>/abap instead of Go: TS-HA refusals trap whole owning bodies (a module
+initializer traps at its first refused top-level statement), ownerless
 type/declaration refusals are recorded (evidence/unattributable-refusals.json) and
 omitted so emission finishes, and the reached list covers the body traps together with
 the lowering traps (`step4b-traps: ...; guards: K reached-owner; unattributable: U`);

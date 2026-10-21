@@ -85,7 +85,8 @@ func MeasureABAPTestGapKeepGoing(lowering *RegistryLowering) ABAPTestGap {
 // UnattributableRefusal is an ABAP refusal with no owning body to trap:
 // type- or declaration-level sites such as union.declarations. Measurement
 // records them; the unemittable declaration is omitted when the emitter
-// writes nothing for it, and owning bodies keep the whole-body trap policy.
+// writes nothing for it, and owning bodies keep the whole-body trap policy
+// (module initializers: from the first refused top-level statement, trapBody).
 type UnattributableRefusal struct {
 	Node      int    `json:"node"`
 	Location  string `json:"location"`
@@ -154,7 +155,9 @@ func measureABAPTestGap(lowering *RegistryLowering, keepGoing bool) ABAPTestGap 
 }
 
 // TrapABAPTestRefusals preserves signatures and refuses complete owning bodies,
-// exactly as the Go test harness does. Structural errors cannot be hidden.
+// exactly as the Go test harness does; module initializers trap from their
+// first refused top-level statement on (trapBody). Structural errors cannot
+// be hidden.
 func TrapABAPTestRefusals(lowering *RegistryLowering) error {
 	_, err := trapABAPTestRefusals(lowering, false)
 	return err
@@ -164,7 +167,7 @@ func TrapABAPTestRefusals(lowering *RegistryLowering) error {
 // owning body (type or declaration level) are recorded and the unemittable
 // declaration omitted — safe exactly when the emitter writes no ABAP for it,
 // as for union families — so emission finishes and lists every refusal.
-// Body-level refusals keep the TS-HA whole-owning-body policy.
+// Body-level refusals keep the TS-HA whole-owning-body policy (trapBody).
 func TrapABAPTestRefusalsKeepGoing(lowering *RegistryLowering) ([]UnattributableRefusal, error) {
 	return trapABAPTestRefusals(lowering, true)
 }
@@ -182,15 +185,25 @@ func trapABAPTestRefusals(lowering *RegistryLowering, keepGoing bool) ([]Unattri
 	// In particular ID-zero array.has and number.ceil sites must not escape
 	// merely because an old switch arm happens to print some ABAP for them.
 	testMethods(lowering.Prog, func(_ *hir.Class, m *hir.Method) {
-		messages := []string{}
-		visitTestBody(m.Body, func(x *hir.Expr) {
-			if x.Kind == hir.RuntimeOp && !abap.SupportsRuntimeExpr(x) {
-				messages = append(messages, fmt.Sprintf("node %d (%s): runtime operation %s has no ABAP emitter", x.ID, x.Source, x.Op))
+		var refusals []bodyRefusal
+		visit := func(s *hir.Stmt, statement int) {
+			visitTestBody(s, func(x *hir.Expr) {
+				if x.Kind == hir.RuntimeOp && !abap.SupportsRuntimeExpr(x) {
+					refusals = append(refusals, bodyRefusal{x.ID, statement, fmt.Sprintf("node %d (%s): runtime operation %s has no ABAP emitter", x.ID, x.Source, x.Op)})
+				}
+			})
+		}
+		// Synthetic ID-zero operations are located by their top-level
+		// statement directly, so they too trap only from that statement on.
+		if moduleInitializer(m) {
+			for i, s := range m.Body.List {
+				visit(s, i)
 			}
-		})
-		if len(messages) > 0 {
-			sort.Strings(messages)
-			m.Body = failureBody(m.Node, strings.Join(messages, "; "))
+		} else {
+			visit(m.Body, -1)
+		}
+		if len(refusals) > 0 {
+			trapBody(m, refusals)
 		}
 	})
 	var unattributable []UnattributableRefusal
@@ -233,11 +246,15 @@ func trapABAPTestRefusals(lowering *RegistryLowering, keepGoing bool) ([]Unattri
 			return unattributable, nil
 		}
 		ids := map[int]string{}
-		owners := map[string][]string{}
+		owners := map[string][]bodyRefusal{}
 		key := func(m *hir.Method) string { return fmt.Sprintf("%s:%d:%s:%s", m.SiteOwner, m.ID, m.Name, m.Source) }
 		for _, err := range errors {
 			if r, ok := err.(abap.Refusal); ok && r.Method != nil {
-				owners[key(r.Method)] = append(owners[key(r.Method)], r.Error())
+				id := r.Node.ID
+				if match := abapNodeError.FindStringSubmatch(r.Error()); id == 0 && match != nil {
+					id, _ = strconv.Atoi(match[1])
+				}
+				owners[key(r.Method)] = append(owners[key(r.Method)], bodyRefusal{id, -1, r.Error()})
 				continue
 			}
 			match := abapNodeError.FindStringSubmatch(err.Error())
@@ -253,15 +270,14 @@ func trapABAPTestRefusals(lowering *RegistryLowering, keepGoing bool) ([]Unattri
 		n := 0
 		testMethods(lowering.Prog, func(_ *hir.Class, m *hir.Method) {
 			body := bodyIDs(m.Body)
-			messages := append([]string{}, owners[key(m)]...)
+			refusals := append([]bodyRefusal{}, owners[key(m)]...)
 			for id, message := range ids {
 				if body[id] {
-					messages = append(messages, message)
+					refusals = append(refusals, bodyRefusal{id, -1, message})
 				}
 			}
-			if len(messages) > 0 {
-				sort.Strings(messages)
-				m.Body = failureBody(m.Node, strings.Join(messages, "; "))
+			if len(refusals) > 0 {
+				trapBody(m, refusals)
 				n++
 			}
 		})
@@ -312,4 +328,79 @@ func unattributableRefusal(err error) (UnattributableRefusal, bool) {
 	}
 	id, _ := strconv.Atoi(match[1])
 	return UnattributableRefusal{Node: id, Location: match[2], Operation: refusalOperation(message), Message: message}, true
+}
+
+// bodyRefusal is one located refusal inside an owning body: node ID 0 is
+// unknown; statement is the module initializer's top-level statement index
+// when the caller already knows it, else -1.
+type bodyRefusal struct {
+	id, statement int
+	message       string
+}
+
+// trapBody replaces a refused owning body by a located trap. A module
+// initializer instead keeps the top-level statements before its first refused
+// statement and traps there: initialization proceeds exactly as far as
+// JavaScript would if that statement threw. The unreachable rest is dropped,
+// and the failure is rethrown on every later access (hir.Method.InitFailure),
+// so no reader ever sees the partially initialized module state.
+func trapBody(m *hir.Method, refusals []bodyRefusal) {
+	if first, ok := firstRefusedStatement(m, refusals); ok {
+		list := m.Body.List
+		messages := []string{}
+		statement := bodyIDs(list[first])
+		for _, r := range refusals {
+			if r.statement == first || r.statement < 0 && statement[r.id] {
+				messages = append(messages, r.message)
+			}
+		}
+		sort.Strings(messages)
+		kept := append(append([]*hir.Stmt{}, list[:first]...), failureBody(list[first].Node, strings.Join(messages, "; ")).List...)
+		m.Body = &hir.Stmt{Node: m.Body.Node, Kind: hir.Block, List: kept}
+		m.InitFailure = true
+		return
+	}
+	messages := []string{}
+	for _, r := range refusals {
+		messages = append(messages, r.message)
+	}
+	sort.Strings(messages)
+	m.Body = failureBody(m.Node, strings.Join(messages, "; "))
+}
+
+// firstRefusedStatement locates the earliest top-level statement of a module
+// initializer that contains a refusal; false when any refusal is not inside
+// a top-level statement (or the method is no module initializer).
+func firstRefusedStatement(m *hir.Method, refusals []bodyRefusal) (int, bool) {
+	if !moduleInitializer(m) {
+		return 0, false
+	}
+	statements := make([]map[int]bool, len(m.Body.List))
+	for i, s := range m.Body.List {
+		statements[i] = bodyIDs(s)
+	}
+	first := len(statements)
+	for _, r := range refusals {
+		if r.statement >= 0 {
+			first = min(first, r.statement)
+			continue
+		}
+		found := false
+		for i, ids := range statements {
+			if r.id != 0 && ids[r.id] {
+				first, found = min(first, i), true
+				break
+			}
+		}
+		if !found {
+			return 0, false
+		}
+	}
+	return first, true
+}
+
+// moduleInitializer: a static initializer whose top-level statements run in
+// order, a module's or a class's static fields (both are class_constructor).
+func moduleInitializer(m *hir.Method) bool {
+	return m.Static && m.Name == "class_constructor" && m.Body != nil && m.Body.Kind == hir.Block && !isFailureBody(m.Body)
 }

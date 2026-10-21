@@ -181,6 +181,10 @@ type Method struct {
 	Static, Virtual, Abstract bool
 	Internal                  bool // private or unexported TS callable
 	Body                      *Stmt
+	// InitFailure marks a module initializer that a target truncated at a
+	// located trap: a failed run is rethrown on every later access, as a
+	// JavaScript module evaluation error is, so partial state stays unseen.
+	InitFailure bool `json:",omitempty"`
 }
 
 // Tagged nodes make traversal and serialization explicit. X/Y/Z are operands,

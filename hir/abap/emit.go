@@ -58,6 +58,12 @@ type emitter struct {
 	// codeUnits lists the classes whose bodies read UTF-16 code units through
 	// a converter they create once and keep in a private CLASS-DATA.
 	codeUnits map[string]bool
+	// initChunks names, per class, the chunk methods its module initializer
+	// was split into (init_chunks.go); none when the body fits one method.
+	initChunks map[string][]string
+	// initFailures lists the classes whose truncated module initializer
+	// records its failure for rethrow (hir.Method.InitFailure).
+	initFailures map[string]bool
 
 	// staticConsts are static fields emitted as CONSTANTS (owner.field ->
 	// ABAP literal); staticInit marks classes whose initializer still has
@@ -847,6 +853,17 @@ func (e *emitter) class(c *hir.Class) {
 	e.unionLayoutImplementation(&b, c)
 	b.WriteString("ENDCLASS.\n")
 	out := b.String()
+	if len(e.initChunks[c.Name]) > 0 || e.initFailures[c.Name] {
+		declaration := "CLASS-METHODS " + e.name("builtin.initialize."+c.Name) + ".\n"
+		extra := ""
+		if e.initFailures[c.Name] {
+			extra += "CLASS-DATA " + e.name("builtin.initFailure."+c.Name) + " TYPE REF TO cx_root.\n"
+		}
+		for _, chunk := range e.initChunks[c.Name] {
+			extra += "CLASS-METHODS " + chunk + ".\n"
+		}
+		out = strings.Replace(out, declaration, declaration+extra, 1)
+	}
 	if e.codeUnits[c.Name] {
 		out = strings.Replace(out, "PRIVATE SECTION.\nENDCLASS.\n", "PRIVATE SECTION.\nCLASS-DATA "+e.name("builtin.codeUnit."+c.Name)+" TYPE REF TO cl_abap_conv_out_ce.\nENDCLASS.\n", 1)
 	}
@@ -891,7 +908,15 @@ func (e *emitter) body(c *hir.Class, m *hir.Method, name string) string {
 		b.line("IF " + flag + " = abap_true.")
 		b.line("RETURN.")
 		b.line("ENDIF.")
+		if m.InitFailure {
+			b.line("IF " + e.name("builtin.initFailure."+c.Name) + " IS BOUND.")
+			b.line("RAISE EXCEPTION " + e.name("builtin.initFailure."+c.Name) + ".")
+			b.line("ENDIF.")
+		}
 		b.line(flag + " = abap_true.")
+		if m.InitFailure {
+			b.line("TRY.")
+		}
 	} else if m.Static || m.Name == "constructor" && !e.liveClasses[c.Name] {
 		b.initialize(c.Name)
 	}
@@ -918,6 +943,16 @@ func (e *emitter) body(c *hir.Class, m *hir.Method, name string) string {
 			}
 		}
 		body = kept
+		if chunks := e.initializerChunks(c, m, body); chunks != nil {
+			for _, chunk := range e.initChunks[c.Name] {
+				b.line(chunk + "( ).")
+			}
+			b.initFailure(c, m)
+			return "METHOD " + name + ".\n" + b.constantDeclarations() + foldTempInits(b.code.String()) + "ENDMETHOD.\n" + strings.Join(chunks, "")
+		}
+		b.stmt(body)
+		b.initFailure(c, m)
+		return "METHOD " + name + ".\n" + b.constantDeclarations() + foldTempInits(b.code.String()) + "ENDMETHOD.\n"
 	}
 	b.stmt(body)
 	return "METHOD " + name + ".\n" + b.constantDeclarations() + foldTempInits(b.code.String()) + "ENDMETHOD.\n"

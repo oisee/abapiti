@@ -4,7 +4,8 @@
 // Writes OUT/osg-refusals.json (frontend diagnostics, missing objects, stubs).
 // With --build it also emits Go and runs `go build` (empty main) into OUT/go;
 // --main makes main call ZCL_ABAPITI_MAIN=>RUN (emit-abap --initialize) and
-// report an ABAP exception or Go panic with its host location, exit 3.
+// report an ABAP exception or Go panic with its host location and the
+// exception's string attributes (a located trap's source_location), exit 3.
 // Input assembly and build flags come from osg-harness-input.mjs, shared with
 // tools/abaplint-tests-osg.mjs so the two cannot drift.
 // Usage: selfhost-step4b-osg.mjs [--build [--main]] ABAP-SRC OUT OSG
@@ -30,7 +31,7 @@ const {folders, skip} = await osgInputFolders({tool, home: osg, fixture: input})
 const {objects} = osgFixtureObjects(input);
 const timing = {};
 const entryMain = `package main
-import("fmt";"os";"runtime";"strings";"osg/gogen/abap")
+import("fmt";"os";"reflect";"regexp";"runtime";"strings";"osg/gogen/abap")
 func hostLocation() string {
  pcs:=make([]uintptr,256);n:=runtime.Callers(3,pcs)
  frames:=runtime.CallersFrames(pcs[:n])
@@ -39,8 +40,33 @@ func hostLocation() string {
   if !more {return "unknown host location"}
  }
 }
+var located=regexp.MustCompile("(?i)source.?location|text|msg")
+// exceptionAttributes lists the raised object's non-empty string attributes
+// (own and inherited): a located trap carries its source location there.
+func exceptionAttributes(x any) string {
+ r,ok:=abap.AsRaised(x)
+ if !ok {return ""}
+ var parts []string
+ var walk func(v reflect.Value,depth int)
+ walk=func(v reflect.Value,depth int){
+  for (v.Kind()==reflect.Pointer||v.Kind()==reflect.Interface)&&!v.IsNil() {v=v.Elem()}
+  if v.Kind()!=reflect.Struct||depth>8 {return}
+  for i:=0;i<v.NumField();i++ {
+   f,fv:=v.Type().Field(i),v.Field(i)
+   if f.Anonymous {walk(fv,depth+1);continue}
+   s:=""
+   if fv.Kind()==reflect.String {s=fv.String()} else if located.MatchString(f.Name)&&fv.CanInterface() {s=fmt.Sprint(fv.Interface())}
+   if strings.TrimSpace(s)!="" {parts=append(parts,f.Name+"="+s)}
+  }
+ }
+ walk(reflect.ValueOf(r.Obj),0)
+ return strings.Join(parts,"; ")
+}
 func main(){
- defer func(){if x:=recover();x!=nil {fmt.Fprintf(os.Stderr,"step4b: run failed: %s (at %s)\\n",strings.SplitN(fmt.Sprint(x),"\\n",2)[0],hostLocation());os.Exit(3)}}()
+ defer func(){if x:=recover();x!=nil {
+  fmt.Fprintf(os.Stderr,"step4b: run failed: %s (at %s)\\n",strings.SplitN(fmt.Sprint(x),"\\n",2)[0],hostLocation())
+  if a:=exceptionAttributes(x);a!="" {fmt.Fprintf(os.Stderr,"step4b: exception: %s\\n",a)}
+  os.Exit(3)}}()
  ZCL_ABAPITI_MAIN_RUN(&abap.Session{})
 }
 `;
