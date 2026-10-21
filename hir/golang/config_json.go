@@ -205,7 +205,9 @@ func stringifyConfig(v any) jsString {w:=&configJSONWriter{active:map[any]bool{}
 func (v optional[T]) configJSONOptional() (any,bool) {return v.Value,v.Has}
 func (a *array[T]) configJSON(w *configJSONWriter) jsString {
  if a==nil {return str("null")};w.enter(a);defer w.leave(a)
- out:=str("[");for i:=range a.Items {if i>0 {out+=str(",")};s,ok:=w.value(a.get(int32(i)));if !ok {s=str("null")};out+=s};return out+str("]")
+ b:=make([]byte,0,2*len(a.Items)+2);b=append(b,'[',0)
+ for i:=range a.Items {if i>0 {b=append(b,',',0)};s,ok:=w.value(a.get(int32(i)));if !ok {s=str("null")};b=append(b,s...)}
+ return jsString(append(b,']',0))
 }
 func (m *orderedMap[K,V]) configJSON(w *configJSONWriter) jsString {
  if m==nil {return str("null")};w.enter(m);defer w.leave(m)
@@ -217,7 +219,7 @@ func (w *configJSONWriter) object(entries []entry[jsString,any]) jsString {
  indexed:=[]entry[jsString,any]{};rest:=[]entry[jsString,any]{}
  for _,e:=range entries {if _,ok:=jsonIndex(e.Key);ok {indexed=append(indexed,e)}else{rest=append(rest,e)}}
  for i:=1;i<len(indexed);i++ {for j:=i;j>0;j-- {a,_:=jsonIndex(indexed[j-1].Key);b,_:=jsonIndex(indexed[j].Key);if a<=b {break};indexed[j-1],indexed[j]=indexed[j],indexed[j-1]}}
- out:=str("{");comma:=false;for _,e:=range append(indexed,rest...) {s,ok:=w.value(e.Value);if !ok {continue};if comma {out+=str(",")};comma=true;out+=jsonQuote(e.Key)+str(":")+s};return out+str("}")
+ b:=make([]byte,0,2*len(entries)+2);b=append(b,'{',0);comma:=false;for _,e:=range append(indexed,rest...) {s,ok:=w.value(e.Value);if !ok {continue};if comma {b=append(b,',',0)};comma=true;b=append(b,jsonQuote(e.Key)...);b=append(b,':',0);b=append(b,s...)};return jsString(append(b,'}',0))
 }
 func (w *configJSONWriter) value(v any) (jsString,bool) {
  if o,ok:=v.(interface{configJSONOptional()(any,bool)});ok {value,has:=o.configJSONOptional();if !has {return "",false};return w.value(value)}
@@ -243,13 +245,13 @@ func jsonNumber(n float64) jsString {
  return str(s)
 }
 func jsonQuote(s jsString) jsString {
- out:=str("\"");hex:="0123456789abcdef"
+ hex:="0123456789abcdef";b:=make([]byte,0,2*s.length()+2);b=append(b,'"',0)
  for i:=int32(0);i<s.length();i++ {c:=s.charCodeAt(i)
-  switch c {case 34:out+=str("\\\"");case 92:out+=str("\\\\");case 8:out+=str("\\b");case 9:out+=str("\\t");case 10:out+=str("\\n");case 12:out+=str("\\f");case 13:out+=str("\\r");default:
+  switch c {case 34:b=append(b,'\\',0,'"',0);case 92:b=append(b,'\\',0,'\\',0);case 8:b=append(b,'\\',0,'b',0);case 9:b=append(b,'\\',0,'t',0);case 10:b=append(b,'\\',0,'n',0);case 12:b=append(b,'\\',0,'f',0);case 13:b=append(b,'\\',0,'r',0);default:
    lone:=c>=0xd800&&c<=0xdfff
-   if c>=0xd800&&c<=0xdbff&&i+1<s.length() {d:=s.charCodeAt(i+1);if d>=0xdc00&&d<=0xdfff {out+=unit(c)+unit(d);i++;continue}}
-   if c<32||lone {out+=str("\\u"+string([]byte{hex[(c>>12)&15],hex[(c>>8)&15],hex[(c>>4)&15],hex[c&15]}))}else{out+=unit(c)}
+   if c>=0xd800&&c<=0xdbff&&i+1<s.length() {d:=s.charCodeAt(i+1);if d>=0xdc00&&d<=0xdfff {b=append(b,byte(c),byte(c>>8),byte(d),byte(d>>8));i++;continue}}
+   if c<32||lone {b=append(b,'\\',0,'u',0,hex[(c>>12)&15],0,hex[(c>>8)&15],0,hex[(c>>4)&15],0,hex[c&15],0)}else{b=append(b,byte(c),byte(c>>8))}
   }
- };return out+str("\"")
+ };return jsString(append(b,'"',0))
 }
 `
