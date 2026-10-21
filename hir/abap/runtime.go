@@ -300,6 +300,7 @@ func (e *emitter) support() {
 	}
 	if e.regexpUsed {
 		e.regexpRuntime()
+		e.regexpCloneRuntime()
 	}
 	if e.matchUsed || e.jsRegexpUsed {
 		// Match metadata is absent from ordinary array runtimes.

@@ -2974,6 +2974,12 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 			b.line("ENDIF.")
 		}
 		return
+	case "regexp.flags":
+		b.line(n + " = " + a + "->flags.")
+		return
+	case "regexp.clone":
+		b.line(n + " = " + a + "->clone( ).")
+		return
 	case "regexp.source":
 		b.line(n + " = " + a + "->source.")
 		return
