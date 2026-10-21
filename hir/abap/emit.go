@@ -2150,6 +2150,9 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 		return
 	}
 
+	if b.u3StringRuntime(x, n) {
+		return
+	}
 	if b.u3NumberRuntime(x, n) {
 		return
 	}

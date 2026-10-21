@@ -337,6 +337,10 @@ func (a *numberStorage) expr(m *hir.Method, x *hir.Expr) bool {
 	}
 	if x.Kind == hir.RuntimeOp {
 		switch x.Op {
+		case "string.relativeAt", "string.padEnd":
+			if len(x.Args) > 0 {
+				a.retainParserStorage(m, x.Args[0])
+			}
 		case "number.abs":
 			a.retainParserStorage(m, x.X)
 		case "number.isInteger", "number.isSafeInteger", "number.isFinite":
