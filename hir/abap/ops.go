@@ -7,6 +7,7 @@ import (
 )
 
 var supportedOps = map[string]bool{
+	"regexp.clone": true, "regexp.flags": true,
 	"string.padEnd":     true,
 	"string.relativeAt": true,
 	"string.codePoints": true,
@@ -75,9 +76,9 @@ var unsupportedOps = map[string]bool{
 
 	"arrayLike.length":   true,
 	"number.strictIsNaN": true, "host.getenv": true, "dynamic.values": true,
-	"regexp.clone": true, "regexp.flags": true, "regexp.matchAllNext": true,
-	"string.parseFloat": true,
-	"array.spread0":     true,
+	"regexp.matchAllNext": true,
+	"string.parseFloat":   true,
+	"array.spread0":       true,
 	// Common family reads need guarded payload views.
 	"union.read": true,
 	// Spreading a tagged iterable (Set | array) needs a dynamic iteration ABI.
