@@ -305,6 +305,7 @@ func emitNamed(p *hir.Program, refusals *[]error, assertionOwners map[string]boo
 	if castTrace {
 		e.traceCasts()
 	}
+	e.resolveNativeDeleteDeclarations()
 	for file, src := range e.files {
 		out, err := Format(src)
 		if err != nil {

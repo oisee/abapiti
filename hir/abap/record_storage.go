@@ -209,13 +209,30 @@ func (e *emitter) nativeDeleteInterface(testPart bool) string {
 
 func (e *emitter) nativeDeleteDeclaration(out *strings.Builder, c *hir.Class) {
 	iface := e.nativeDeleteInterface(e.testPackages && testDeclaration(c))
-	for base := e.classBy(c.Super); base != nil; base = e.classBy(base.Super) {
-		if !e.testPackages || testDeclaration(base) == testDeclaration(c) {
-			fmt.Fprintf(out, "METHODS %s~delete_key REDEFINITION.\n", iface)
-			return
+	fmt.Fprintf(out, "INTERFACES %s.\n", iface)
+}
+
+// Resolve inheritance only after runtime emission has replaced classes such as
+// builtin.Error. A HIR ancestor alone does not prove that the emitted class
+// implements the interface used by this partition's IS INSTANCE OF dispatcher.
+func (e *emitter) resolveNativeDeleteDeclarations() {
+	if !e.recordDelete {
+		return
+	}
+	for _, c := range e.p.Classes {
+		iface := e.nativeDeleteInterface(e.testPackages && testDeclaration(c))
+		declaration := "INTERFACES " + iface + ".\n"
+		file := e.name(c.Name) + ".clas.abap"
+		if !strings.Contains(e.files[file], declaration) {
+			continue
+		}
+		for base := e.classBy(c.Super); base != nil; base = e.classBy(base.Super) {
+			if strings.Contains(e.files[e.name(base.Name)+".clas.abap"], declaration) {
+				e.files[file] = strings.Replace(e.files[file], declaration, "METHODS "+iface+"~delete_key REDEFINITION.\n", 1)
+				break
+			}
 		}
 	}
-	fmt.Fprintf(out, "INTERFACES %s.\n", iface)
 }
 
 func (e *emitter) nativeDeleteImplementation(out *strings.Builder, c *hir.Class) {
