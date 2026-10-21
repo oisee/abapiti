@@ -45,7 +45,7 @@ func TestGogenA8IndexWriteRefusal(t *testing.T) {
 }
 
 func TestGogenA8FamilyLiteralRoundTrip(t *testing.T) {
-	gogenTSOracle(t, `type Literal=string|number|{readonly [k:string]:Literal|undefined}; type Expr={e:"num",value:number}|{e:"wrap",child:Expr}; interface Holder {value?:Expr|Literal;} function describe(e:Expr):string {return e.e==="num" ? "n"+e.value : "w"+describe(e.child);} function pack(e:Expr):Holder {return {value:e};} class Probe {static run():string {const e:Expr={e:"wrap",child:{e:"num",value:4}};const h=pack(e);const v=h.value;return describe(e)+":"+JSON.stringify(v)+":"+typeof v+":"+(v!==undefined && typeof v==="object" && "e" in v);}}`, "union.")
+	gogenABAPFamilyOracle(t, `type Literal=string|number|{readonly [k:string]:Literal|undefined}; type Expr={e:"num",value:number}|{e:"wrap",child:Expr}; interface Holder {value?:Expr|Literal;} function describe(e:Expr):string {return e.e==="num" ? "n"+e.value : "w"+describe(e.child);} function pack(e:Expr):Holder {return {value:e};} class Probe {static run():string {const e:Expr={e:"wrap",child:{e:"num",value:4}};const h=pack(e);const v=h.value;return describe(e)+":"+JSON.stringify(v)+":"+typeof v+":"+(v!==undefined && typeof v==="object" && "e" in v);}}`)
 }
 
 func TestGogenA8IndexNumberAndEvaluation(t *testing.T) {

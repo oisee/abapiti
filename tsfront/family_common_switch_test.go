@@ -76,9 +76,7 @@ func TestFamilyCommonFieldAndSwitchNodeOracle(t *testing.T) {
 	if got != string(want) {
 		t.Fatalf("Go %q\nNode %q", got, want)
 	}
-	if _, err := emitABAP(t, p); err == nil || !strings.Contains(err.Error(), "union.") {
-		t.Fatalf("ABAP did not explicitly refuse the recursive family ABI: %v", err)
-	}
+	abapFamilyOracle(t, cloneProgram(t, p), string(want))
 }
 
 // A clause that reassigns its subject loses the checker's narrowing, so the

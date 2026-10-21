@@ -472,6 +472,9 @@ ENDMETHOD.
 				}
 			}
 			line("result = %s.\nleave( p0 ).", call(hir.T(hir.Dynamic), "graph"))
+		case hir.UnionRef:
+			// A union reference is the boxed original record.
+			line("result = %s.", call(hir.T(hir.Dynamic), "p0"))
 		case hir.Dynamic:
 			line("DATA text TYPE string.\nDATA key TYPE string.\nDATA comma TYPE string.\nDATA child TYPE REF TO %s.\nDATA row TYPE %s=>entry.", dyn, dyn)
 			line("TYPES: BEGIN OF indexed_entry, idx TYPE p LENGTH 8 DECIMALS 0, row TYPE %s=>entry, END OF indexed_entry.", dyn)

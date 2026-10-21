@@ -87,7 +87,7 @@ func MeasureABAPTestGap(lowering *RegistryLowering) ABAPTestGap {
 					gap.NonfiniteLiteralSites++
 				}
 			}
-			if x.Kind == hir.RuntimeOp && !abap.SupportsRuntimeExpr(x) {
+			if x.Kind == hir.RuntimeOp && !abap.SupportsRuntimeOp(x.Op) {
 				add(x.Op, fmt.Sprintf("%s.%s:%d:%d (%s)", c.Name, m.Name, x.ID, ordinal, x.Source))
 			}
 		})
@@ -137,7 +137,7 @@ func TrapABAPTestRefusals(lowering *RegistryLowering) error {
 	testMethods(lowering.Prog, func(_ *hir.Class, m *hir.Method) {
 		messages := []string{}
 		visitTestBody(m.Body, func(x *hir.Expr) {
-			if x.Kind == hir.RuntimeOp && !abap.SupportsRuntimeExpr(x) {
+			if x.Kind == hir.RuntimeOp && !abap.SupportsRuntimeOp(x.Op) {
 				messages = append(messages, fmt.Sprintf("node %d (%s): runtime operation %s has no ABAP emitter", x.ID, x.Source, x.Op))
 			}
 		})

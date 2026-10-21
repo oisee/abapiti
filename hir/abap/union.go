@@ -101,6 +101,27 @@ func (e *emitter) unionRuntime() string {
 	return name
 }
 
+// unionPayloadGuard re-validates a payload on every getter, like Go: a
+// retained view refuses once its record's tag changes through an alias.
+// Boxing a view yields its source, so views check the original record.
+func (b *body) unionPayloadGuard(c *hir.Class) {
+	e := b.e
+	if !e.unionPayload(c) {
+		return
+	}
+	for _, u := range e.p.Unions {
+		for _, a := range u.Alternatives {
+			if a.Payload.Name != c.Name {
+				continue
+			}
+			boxed := b.temp(hir.T(hir.Dynamic))
+			b.line(boxed + " = " + e.unionRuntime() + "=>box( me ).")
+			b.line(boxed + " = " + e.unionCheck(u.Name, a.ID) + "( " + boxed + " ).")
+			return
+		}
+	}
+}
+
 func unionFieldType(t hir.Type) hir.Type {
 	if t.Kind == hir.Optional {
 		return t.Args[0]
@@ -178,7 +199,7 @@ func (e *emitter) unionLayoutImplementation(out *strings.Builder, c *hir.Class) 
 }
 
 // unionFamily registers a use of family; alternative names a checked
-// admission (or, from car U2 on, a projection) that needs its own method.
+// admission, projection or payload guard that needs its own method.
 func (e *emitter) unionFamily(family, alternative string) string {
 	if e.unionFamilies == nil {
 		e.unionFamilies = map[string]map[string]bool{}
@@ -249,8 +270,9 @@ func (e *emitter) unionFamilyClass(u *hir.UnionDecl, used map[string]bool) {
 	e.files[name+".clas.abap"] = def.String() + "CLASS " + name + " IMPLEMENTATION.\n" + impl.String() + "ENDCLASS.\n"
 }
 
-// unionOperation emits the car U1 operations. Payload projection and common
-// field reads need guarded payload views (car U2) and refuse at their site.
+// unionOperation mirrors the Go ABI: every operation validates the live
+// record, a payload projection views the checked record, and a common field
+// read unboxes the checked record's slot.
 func (b *body) unionOperation(x *hir.Expr, n string) {
 	e := b.e
 	if n == "" {
@@ -273,7 +295,17 @@ func (b *body) unionOperation(x *hir.Expr, n string) {
 		b.line(tag + " = " + checked + "->get( " + abapString(x.Name) + " ).")
 		b.line(n + " = " + tag + "->as_string( ).")
 	case x.Op == "union.project":
-		e.refuse(fmt.Errorf("node %d (%s): unsupported ABAP runtime op union.project to payload %s (guarded payload views are not implemented)", x.ID, x.Source, x.Type))
+		a := b.expr(x.X)
+		checked := b.temp(hir.T(hir.Dynamic))
+		b.line(checked + " = " + e.unionCheck(x.Owner, x.Name) + "( " + a + " ).")
+		b.liveView(&hir.Expr{Type: x.Type}, n, checked)
+	case x.Op == "union.read":
+		a := b.expr(x.X)
+		checked := b.temp(hir.T(hir.Dynamic))
+		b.line(checked + " = " + e.unionFamily(x.X.Type.Name, "") + "=>check( " + a + " ).")
+		value := b.temp(hir.T(hir.Dynamic))
+		b.line(value + " = " + checked + "->get( " + abapString(x.Name) + " ).")
+		b.liveUnbox(n, value, x.Type)
 	default:
 		e.refuse(fmt.Errorf("node %d (%s): unsupported ABAP runtime op %s", x.ID, x.Source, x.Op))
 	}

@@ -310,6 +310,7 @@ func (e *emitter) liveClassImplementation(out *strings.Builder, c *hir.Class) {
 		source := "me->" + e.name("view.source")
 		guard := "me->" + e.name("view.guardSlot")
 		b.line("IF " + guard + " IS BOUND.\n" + guard + "->check( " + source + " ).\nENDIF.")
+		b.unionPayloadGuard(c)
 		b.line("IF " + source + " IS BOUND.")
 		d := b.temp(hir.T(hir.Dynamic))
 		b.line(d + " = " + source + "->get( `" + strings.ReplaceAll(f.Name, "`", "``") + "` ).")

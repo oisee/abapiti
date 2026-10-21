@@ -2,7 +2,6 @@ package tsfront
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"os/exec"
 	"regexp"
@@ -137,7 +136,8 @@ func TestRecursiveFamilyTagABAPOracle(t *testing.T) {
 	if layouts != 3 {
 		t.Fatalf("layout methods: %d", layouts)
 	}
-	// Alternative checks exist only for admitted alternatives.
+	// Alternative checks exist only for admitted alternatives and for the
+	// payload guard, which uses the payload's first family, as on Go.
 	alternative := func(family string, tag string) string {
 		for _, u := range p.Unions {
 			if u.Name != family {
@@ -160,7 +160,7 @@ func TestRecursiveFamilyTagABAPOracle(t *testing.T) {
 	has := func(class, method string) bool {
 		return regexp.MustCompile(`(?m)^\s*METHOD ` + method + `\.$`).MatchString(files[class+".clas.abap"])
 	}
-	if !has(expr, "check") || !has(expr, alternative("probe.ts.Expr", "num")) || !has(expr, alternative("probe.ts.Expr", "add")) || has(expr, alternative("probe.ts.Expr", "neg")) {
+	if !has(expr, "check") || !has(expr, alternative("probe.ts.Expr", "num")) || !has(expr, alternative("probe.ts.Expr", "add")) || !has(expr, alternative("probe.ts.Expr", "neg")) {
 		t.Fatal("Expr family class: wrong check methods\n" + files[expr+".clas.abap"])
 	}
 	if !has(bin, "check") || !has(bin, alternative(subset, "neg")) || has(bin, alternative(subset, "add")) {
@@ -171,42 +171,74 @@ func TestRecursiveFamilyTagABAPOracle(t *testing.T) {
 	storageABAPProbe(t, cloneProgram(t, p), "probe.ts.Probe", strings.TrimSpace(string(want)), "wrong", "cx_sy_range_out_of_bounds")
 }
 
-// Payload projection and common reads keep located refusals until car U2:
-// every refusal names its owning body, and the supported operations of the
-// same program are not refused.
-func TestRecursiveFamilyABAPRefusalsLocated(t *testing.T) {
-	source := `type Tree = {k:'leaf';value:number} | {k:'branch';left:Tree;right:Tree;line:number} | {k:'deep';left:Tree;line:number};
+// Car U2: payload projection and common field reads (including optional
+// and union-typed reads) run on ABAP, and the audit holds no union refusal.
+func TestRecursiveFamilyProjectionReadABAPOracle(t *testing.T) {
+	source := `type Tree = {k:'leaf';value:number;note?:string} | {k:'branch';left:Tree;right:Tree;line:number;note?:string} | {k:'deep';left:Tree;line:number};
 class Probe {
  static total(x:Tree):number {if(x.k==='leaf') return x.value; return Probe.total(x.left);}
  static line(x:Tree):number {if(x.k==='leaf') return 0; return x.line;}
- static run():number {const t:Tree={k:'branch',left:{k:'leaf',value:2},right:{k:'leaf',value:3},line:1};return Probe.total(t)+Probe.line(t);}
+ static first(x:Tree):string {if(x.k==='leaf') return 'leaf'; return x.left.k;}
+ static note(x:Tree):string {if(x.k==='deep') return 'deep'; return x.note===undefined?'none':x.note;}
+ static run():string {const t:Tree={k:'branch',left:{k:'leaf',value:2,note:'n'},right:{k:'leaf',value:3},line:1};const d:Tree=JSON.parse('{"k":"deep","left":{"k":"leaf","value":5},"line":4}');
+  return Probe.total(t)+':'+Probe.line(t)+':'+Probe.first(t)+':'+Probe.note(t)+':'+Probe.note(t.left)+':'+Probe.total(d)+':'+Probe.line(d)+':'+Probe.first(d)+':'+Probe.note(d);}
 }`
+	want, err := exec.Command("node", "--disable-warning=ExperimentalWarning", "-e", `eval(require("node:module").stripTypeScriptTypes(process.argv[1])+"\nconsole.log(Probe.run())")`, source).CombinedOutput()
+	if err != nil {
+		t.Fatal(err, string(want))
+	}
 	p := lowerStatementsProbe(t, map[string]string{"probe.ts": source}, []string{"probe.ts"})
+	ops := map[string]bool{}
+	for _, c := range p.Classes {
+		for _, m := range c.Methods {
+			visitTestBody(m.Body, func(x *hir.Expr) {
+				if x.Kind == hir.RuntimeOp && x.Op == "union.project" && x.Type.Kind == hir.ClassRef {
+					ops["project"] = true
+				}
+				if x.Kind == hir.RuntimeOp && x.Op == "union.read" {
+					ops[x.Op+":"+string(x.Type.Kind)] = true
+				}
+			})
+		}
+	}
+	if !ops["project"] || !ops["union.read:number"] || !ops["union.read:unionref"] {
+		t.Fatalf("probe lost its projection or read sites: %v", ops)
+	}
+	if got := runGoHIR(t, cloneProgram(t, p), fmt.Sprintf("fmt.Println(%s().String())", goEntry("probe.ts.Probe", "run"))); got != string(want) {
+		t.Fatalf("Go %q Node %q", got, want)
+	}
 	hir.AssignSiteIDs(p)
-	if _, err := emitABAP(t, cloneProgram(t, p)); err == nil || !strings.Contains(err.Error(), "union.") {
-		t.Fatalf("ABAP did not refuse payload projection or read: %v", err)
-	}
-	refusals := abap.Audit(p)
-	seen := map[string]bool{}
-	for _, err := range refusals {
-		var r abap.Refusal
-		if !errors.As(err, &r) || r.Method == nil || r.Node.ID == 0 {
-			t.Fatalf("unattributable refusal: %v", err)
+	for _, err := range abap.Audit(cloneProgram(t, p)) {
+		if strings.Contains(err.Error(), "union.") {
+			t.Fatalf("union refusal: %v", err)
 		}
-		for _, op := range []string{"union.project", "union.read", "union.admit", "union.tag", "union.check", "union.widen", "union.declarations"} {
-			if strings.Contains(err.Error(), op) {
-				seen[op] = true
+	}
+	storageABAPProbe(t, p, "probe.ts.Probe", strings.TrimSpace(string(want)), "")
+}
+
+// Checkpoint 4 (live tag-proof lifetime): a retained payload view must refuse
+// after its tag changes through an untyped alias, on ABAP as on Go.
+func TestRecursiveFamilyRetainedViewABAPRefusal(t *testing.T) {
+	for _, tag := range []string{"wrong", "branch"} {
+		t.Run(tag, func(t *testing.T) {
+			source := `type Tree={k:'leaf';value:number}|{k:'branch';left:Tree;right:Tree};
+class Probe {static total(t:Tree):number{if(t.k==='leaf')return t.value;return Probe.total(t.left)+Probe.total(t.right);}
+static run():number{const leaf:Tree={k:'leaf',value:7};const cached=leaf;return cached.value+Probe.total(leaf);}
+static wrong():number{const leaf:Tree={k:'leaf',value:7};const cached=leaf;const erased:any=leaf;erased.k='TAG';return cached.value;}}`
+			source = strings.Replace(source, "'TAG'", "'"+tag+"'", 1)
+			p := lowerStatementsProbe(t, map[string]string{"probe.ts": source}, []string{"probe.ts"})
+			got := runGoHIR(t, cloneProgram(t, p), fmt.Sprintf(`fmt.Println(%s());defer func(){if r:=recover();r!=nil{if _,ok:=r.(rangeFault);!ok{panic(r)};fmt.Println("rejected")}}();fmt.Println(%s())`, goEntry("probe.ts.Probe", "run"), goEntry("probe.ts.Probe", "wrong")))
+			if got != "14\nrejected\n" {
+				t.Fatalf("Go: %q", got)
 			}
-		}
-	}
-	if !seen["union.project"] || seen["union.admit"] || seen["union.tag"] || seen["union.check"] || seen["union.widen"] || seen["union.declarations"] {
-		t.Fatalf("refusals: %v", refusals)
+			abapUnitProbe(t, p, "probe.ts.Probe", "14", "f", "wrong", "cx_sy_range_out_of_bounds")
+		})
 	}
 }
 
-// abapFamilyOracle runs a family program on ABAP when every runtime site has
-// an ABAP emitter (compared with Node on OSGo under ABAPITI_OSG_HOME);
-// otherwise both emitters must refuse before writing any output.
+// abapFamilyOracle runs a family program on ABAP when it emits (compared with
+// Node on OSGo under ABAPITI_OSG_HOME). An unsupported runtime operation must
+// refuse before any output; any other emitter refusal must name its site.
 func abapFamilyOracle(t *testing.T, p *hir.Program, want string) {
 	t.Helper()
 	supported, actual := true, "string"
@@ -216,14 +248,15 @@ func abapFamilyOracle(t *testing.T, p *hir.Program, want string) {
 				actual = "f"
 			}
 			visitTestBody(m.Body, func(x *hir.Expr) {
-				if x.Kind == hir.RuntimeOp && !abap.SupportsRuntimeExpr(x) {
+				if x.Kind == hir.RuntimeOp && !abap.SupportsRuntimeOp(x.Op) {
 					supported = false
 				}
 			})
 		}
 	}
+	_, err := emitABAP(t, cloneProgram(t, p))
 	if !supported {
-		if _, err := emitABAP(t, cloneProgram(t, p)); err == nil {
+		if err == nil {
 			t.Fatal("ABAP accepted an unsupported union operation")
 		}
 		if files, _, err := emitABAPTestNamed(t, cloneProgram(t, p), map[string]bool{}); err == nil || len(files) != 0 {
@@ -231,5 +264,19 @@ func abapFamilyOracle(t *testing.T, p *hir.Program, want string) {
 		}
 		return
 	}
+	if err != nil {
+		if !strings.Contains(err.Error(), "probe.ts:") {
+			t.Fatalf("unlocated ABAP refusal: %v", err)
+		}
+		return
+	}
 	abapUnitProbe(t, cloneProgram(t, p), "probe.ts.Probe", strings.TrimSpace(want), actual, "")
+}
+
+// gogenABAPFamilyOracle is gogenTSOracle for family programs that also run on
+// ABAP (OSGo under ABAPITI_OSG_HOME), equal to Node.
+func gogenABAPFamilyOracle(t *testing.T, source string) {
+	t.Helper()
+	gogenTSOracle(t, source, "")
+	abapFamilyOracle(t, lowerStatementsProbe(t, map[string]string{"probe.ts": source}, []string{"probe.ts"}), conversionOracle(t, source))
 }

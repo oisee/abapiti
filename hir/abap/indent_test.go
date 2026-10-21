@@ -109,3 +109,24 @@ func TestIndentStatementBoundaries(t *testing.T) {
 		t.Fatalf("got:\n%s", got)
 	}
 }
+
+// Deep nesting may leave no room for a long literal; the line keeps its
+// tokens and drops only the cosmetic indentation.
+func TestWrapDropsIndentationForLongLiteral(t *testing.T) {
+	literal := "RAISE EXCEPTION TYPE zcx_refusal EXPORTING reason = `" + strings.Repeat("x", 120) + "`."
+	got, err := wrap(strings.Repeat(" ", 180) + literal + "\n")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, line := range strings.Split(strings.TrimSuffix(got, "\n"), "\n") {
+		if len(line) > 255 {
+			t.Fatalf("long line %q", line)
+		}
+	}
+	if strings.Join(strings.Fields(got), " ") != strings.Join(strings.Fields(literal), " ") {
+		t.Fatalf("tokens changed: %q", got)
+	}
+	if _, err := wrap("`" + strings.Repeat("x", 300) + "`\n"); err == nil {
+		t.Fatal("unbreakable literal accepted")
+	}
+}
