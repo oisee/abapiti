@@ -16,6 +16,10 @@ import (
 
 func externProject(t *testing.T, source, host string) (*RegistryLowering, []ExternModule, string) {
 	t.Helper()
+	return externProjectABAP(t, source, host, "")
+}
+func externProjectABAP(t *testing.T, source, host, abapClass string) (*RegistryLowering, []ExternModule, string) {
+	t.Helper()
 	dir := t.TempDir()
 	for n, s := range map[string]string{"tsconfig.json": `{"compilerOptions":{"target":"es2022","module":"commonjs","strict":true},"files":["probe.ts","host.ts"]}`, "probe.ts": source, "host.ts": host} {
 		if err := os.WriteFile(filepath.Join(dir, n), []byte(s), 0600); err != nil {
@@ -28,7 +32,7 @@ func externProject(t *testing.T, source, host string) (*RegistryLowering, []Exte
 	}
 	config := struct {
 		Modules []ExternModule `json:"modules"`
-	}{[]ExternModule{{File: "host.ts", GoImport: "github.com/oisee/abapiti/extern/hostio", GoDir: root}}}
+	}{[]ExternModule{{File: "host.ts", GoImport: "github.com/oisee/abapiti/extern/hostio", GoDir: root, ABAPClass: abapClass}}}
 	raw, _ := json.Marshal(config)
 	file := filepath.Join(dir, "externs.json")
 	if err = os.WriteFile(file, raw, 0600); err != nil {

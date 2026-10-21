@@ -6,8 +6,10 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 
 	"github.com/oisee/abapiti/abapsize"
+	"github.com/oisee/abapiti/hir"
 	"github.com/oisee/abapiti/hir/abap"
 	"github.com/oisee/abapiti/tsfront"
 	"github.com/oisee/abapiti/tsfront/overrides"
@@ -24,6 +26,7 @@ func newEmitABAPCmd() *cobra.Command {
 	f.StringP("output", "o", "out/abap", "Generated ABAP directory")
 	f.String("overrides", "none", "Source-pinned overrides: none or registry")
 	f.String("reachability", "", "Generic workload coverage manifest; unexecuted bodies become traps")
+	f.String("initialize", "", "JSON array of source files; emits ZCL_ABAPITI_MAIN=>RUN calling their module initializers in this order")
 	return cmd
 }
 func init() { rootCmd.AddCommand(newEmitABAPCmd()) }
@@ -34,6 +37,12 @@ func runEmitABAP(cmd *cobra.Command, args []string) error {
 	config, err := filepath.Abs(config)
 	if err != nil {
 		return err
+	}
+	var order []string
+	if path, _ := f.GetString("initialize"); path != "" {
+		if order, err = readInitialization(path, args); err != nil {
+			return err
+		}
 	}
 	externFile, _ := f.GetString("externs")
 	modules, err := tsfront.ReadExterns(externFile)
@@ -98,6 +107,19 @@ func runEmitABAP(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
+	if order != nil {
+		if files[abapMainClass+".clas.abap"], err = abapMain(r.Prog, order, names); err != nil {
+			return err
+		}
+		var entries map[string]abap.SourceEntry
+		if err := json.Unmarshal(sourceMap, &entries); err != nil {
+			return err
+		}
+		entries[strings.ToUpper(abapMainClass)] = abap.SourceEntry{ID: "generated." + strings.ToUpper(abapMainClass), Kind: "runtime", Source: "cmd/abapiti/emit_abap.go"}
+		if sourceMap, err = json.MarshalIndent(entries, "", " "); err != nil {
+			return err
+		}
+	}
 	if err := writeSources(filepath.Join(out, "src"), files); err != nil {
 		return err
 	}
@@ -118,4 +140,21 @@ func runEmitABAP(cmd *cobra.Command, args []string) error {
 	}
 	fmt.Fprintf(cmd.OutOrStdout(), "emit-abap: %d files, %d lines, %d bytes, %d lines over 255\n", len(files), lines, bytes, len(report.LongLines))
 	return nil
+}
+
+const abapMainClass = "zcl_abapiti_main"
+
+// abapMain is the program entry: ABAP class constructors run lazily, so RUN
+// initializes every module explicitly, in the given dependency order (the
+// TS-HA runner's order, without test registration).
+func abapMain(p *hir.Program, order []string, names *hir.Names) (string, error) {
+	modules := map[string]*hir.Class{}
+	for _, c := range p.Classes {
+		modules[c.Name] = c
+	}
+	var body strings.Builder
+	for _, a := range tsfront.ModuleInitializations(modules, order, false) {
+		fmt.Fprintf(&body, "%s=>%s( ).\n", names.Get(a.Class), names.Get(a.Name))
+	}
+	return abap.Format("CLASS " + abapMainClass + " DEFINITION PUBLIC FINAL CREATE PUBLIC.\nPUBLIC SECTION.\nCLASS-METHODS run.\nENDCLASS.\nCLASS " + abapMainClass + " IMPLEMENTATION.\nMETHOD run.\n" + body.String() + "ENDMETHOD.\nENDCLASS.\n")
 }

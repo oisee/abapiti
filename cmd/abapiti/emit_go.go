@@ -115,33 +115,19 @@ func runEmitGo(cmd *cobra.Command, args []string) error {
 		}
 	}
 	if path, _ := f.GetString("initialize"); path != "" {
-		data, err := os.ReadFile(path)
+		order, err := readInitialization(path, args)
 		if err != nil {
 			return err
-		}
-		var order []string
-		if err := json.Unmarshal(data, &order); err != nil {
-			return err
-		}
-		selected := map[string]bool{}
-		for _, file := range args {
-			selected[filepath.ToSlash(filepath.Clean(file))] = true
 		}
 		modules := map[string]bool{}
 		for _, c := range r.Prog.Classes {
 			modules[c.Name] = true
 		}
 		var init strings.Builder
-		seen := map[string]bool{}
 		for _, file := range order {
-			file = filepath.ToSlash(filepath.Clean(file))
-			if !selected[file] {
-				return fmt.Errorf("initialization file %q outside selected closure", file)
-			}
-			if modules[file+".module"] && !seen[file] {
+			if modules[file+".module"] {
 				fmt.Fprintf(&init, "%s();", hir.NewNames().Get("init."+file+".module"))
 			}
-			seen[file] = true
 		}
 		call = init.String() + call
 	}
@@ -165,4 +151,33 @@ func runEmitGo(cmd *cobra.Command, args []string) error {
 		}
 	}
 	return nil
+}
+
+// readInitialization reads an --initialize order: source files of the
+// selected closure, cleaned to slash form, each once, in first-seen order.
+func readInitialization(path string, args []string) ([]string, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	var order []string
+	if err := json.Unmarshal(data, &order); err != nil {
+		return nil, err
+	}
+	selected := map[string]bool{}
+	for _, file := range args {
+		selected[filepath.ToSlash(filepath.Clean(file))] = true
+	}
+	out, seen := []string{}, map[string]bool{}
+	for _, file := range order {
+		file = filepath.ToSlash(filepath.Clean(file))
+		if !selected[file] {
+			return nil, fmt.Errorf("initialization file %q outside selected closure", file)
+		}
+		if !seen[file] {
+			out = append(out, file)
+		}
+		seen[file] = true
+	}
+	return out, nil
 }

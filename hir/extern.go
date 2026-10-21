@@ -8,6 +8,10 @@ type ExternSignature struct {
 	Params []Type
 	Rest   bool
 	Spread bool
+	// ABAPClass names the host class of an ABAP-bound extern module; the ABAP
+	// emitter calls its static methods with ParamNames as formal parameters.
+	ABAPClass  string   `json:",omitempty"`
+	ParamNames []string `json:",omitempty"`
 }
 
 func ExternType(t Type, result bool) bool {
@@ -28,6 +32,10 @@ func (v *verifier) externCall(e *Expr, check func(*Expr) Type) {
 	s := e.Extern
 	if s == nil || e.Owner == "" || e.Name == "" || !v.externType(e.Type, true) {
 		v.fail(e.Node, "invalid extern call signature")
+		return
+	}
+	if s.ABAPClass != "" && len(s.ParamNames) != len(s.Params) {
+		v.fail(e.Node, "invalid extern ABAP binding")
 		return
 	}
 	if s.Spread && (!s.Rest || len(e.Args) == 0) {

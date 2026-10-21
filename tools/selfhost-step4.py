@@ -13,7 +13,10 @@ replay of the reference, and prints `step4-traps: N reached (A/G unknown) M unre
 
 --abap (step 4b, implies --list-traps) emits ABAP with `emit-abap` into <out-dir>/abap
 instead of Go: TS-HA refusals trap whole owning bodies, and the reached list covers
-them together with the lowering traps (`step4b-traps: ...`).
+them together with the lowering traps (`step4b-traps: ...`). The reference run
+then also writes <out-dir>/fs-snapshot.json (tools/fs-snapshot-recorder.mjs), both
+extern modules bind to ZCL_ABAPITI_HOSTIO, `--initialize` adds ZCL_ABAPITI_MAIN, and
+the host class is copied into <out-dir>/abap/src (docs/extern-modules.md).
 
 Environment: STEP4_NO_SYSTEMD=1 (or no systemd-run on PATH) runs steps directly under the
 caller's memory cap; GOCACHE defaults to <out-dir>/go-build when unset.
@@ -380,8 +383,12 @@ def main(args):
             inputs_path.write_bytes(inputs)
         # The reference executes the original driver, with coverage from that
         # exact execution. Validate before adapting any source.
+        # --abap also records the host observations ZCL_ABAPITI_HOSTIO replays
+        # (directory listings, environment, git HEAD) in this same run.
+        snapshot = {'FS_SNAPSHOT_OUT': str(out / 'fs-snapshot.json'), 'FS_SNAPSHOT_STDOUT': str(actual)} if abap else {}
+        recorder = ['--import', (REPO / 'tools/fs-snapshot-recorder.mjs').as_uri()] if abap else []
         with ref.open('wb') as f:
-            heavy(['node', driver], 'reference', stdout=f, extra={'NODE_V8_COVERAGE': str(out / 'v8')})
+            heavy(['node', *recorder, driver], 'reference', stdout=f, extra={'NODE_V8_COVERAGE': str(out / 'v8'), **snapshot})
         if digest(ref) == EMPTY_SHA256:
             raise RuntimeError('Node reference is empty; see reference.log')
         if inputs is not None:
@@ -433,6 +440,11 @@ def main(args):
         externs = {'modules': [
             {'file': 'tools/gogen/host-io.ts', 'goImport': hostio_import, 'goDir': str(REPO / 'extern/hostio')},
             {'file': str(host_ts.relative_to(osg)), 'goImport': host_import, 'goDir': str(host)}]}
+        if abap:
+            # The reference ABAP host also implements the driver's readText/writeStdout.
+            for module in externs['modules']:
+                module['abapClass'] = 'ZCL_ABAPITI_HOSTIO'
+
         extern_path = out / 'externs.json'
         extern_path.write_text(json.dumps(externs, indent=2) + '\n')
         # The driver's only edits are host IO. Keep all other unsupported sites
@@ -440,7 +452,9 @@ def main(args):
         if abap:
             heavy([binary, 'emit-abap', '--tsconfig', config_path, '--externs', extern_path,
                    '--overrides', 'registry', '--reachability', out / 'reach.json',
+                   '--initialize', out / 'initialization.json',
                    '-o', out / 'abap', *lists], 'emit')
+            shutil.copy(REPO / 'extern/hostio/abap/zcl_abapiti_hostio.clas.abap', out / 'abap/src')
         else:
             heavy([binary, 'emit-go', '--tsconfig', config_path, '--externs', extern_path,
                    '--overrides', 'registry', '--trap-on-failure', '--reachability', out / 'reach.json',

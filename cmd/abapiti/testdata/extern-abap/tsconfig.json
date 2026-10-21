@@ -1,0 +1,1 @@
+{"compilerOptions":{"target":"es2022","module":"nodenext","strict":true,"allowImportingTsExtensions":true,"noEmit":true,"types":[]},"files":["state.ts","main.ts","host.ts"]}

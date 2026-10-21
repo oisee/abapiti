@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"unicode"
 	"unicode/utf8"
@@ -18,6 +19,9 @@ type ExternModule struct {
 	File     string `json:"file"`
 	GoImport string `json:"goImport"`
 	GoDir    string `json:"goDir,omitempty"`
+	// ABAPClass binds the module to static methods of a global ABAP class.
+	// Without it, ABAP emission refuses calls into the module.
+	ABAPClass string `json:"abapClass,omitempty"`
 }
 
 func ReadExterns(file string) ([]ExternModule, error) {
@@ -36,13 +40,15 @@ func ReadExterns(file string) ([]ExternModule, error) {
 	}
 	seen := map[string]bool{}
 	for _, m := range config.Modules {
-		if m.File == "" || filepath.IsAbs(m.File) || m.GoImport == "" || strings.ContainsAny(m.GoImport, "\"\n\r\t ") || seen[filepath.Clean(m.File)] {
+		if m.File == "" || filepath.IsAbs(m.File) || m.GoImport == "" || strings.ContainsAny(m.GoImport, "\"\n\r\t ") || seen[filepath.Clean(m.File)] || m.ABAPClass != "" && !abapClassName.MatchString(m.ABAPClass) {
 			return nil, fmt.Errorf("invalid or duplicate extern module %q", m.File)
 		}
 		seen[filepath.Clean(m.File)] = true
 	}
 	return config.Modules, nil
 }
+
+var abapClassName = regexp.MustCompile(`^[A-Za-z][A-Za-z0-9_]{0,29}$`)
 
 func ExternGoMod(module string, modules []ExternModule, configDir string) string {
 	s := "module " + module + "\n\ngo 1.26.0\n"
@@ -80,6 +86,9 @@ func (l *lowerer) prepareExterns(files []string, modules []ExternModule) ([]stri
 				continue
 			}
 			sig := &hir.ExternSignature{}
+			if m.ABAPClass != "" {
+				sig.ABAPClass = strings.ToLower(m.ABAPClass)
+			}
 			valid := n.Name() != nil && n.Type() != nil && n.AsFunctionDeclaration().TypeParameters == nil
 			if n.Type() != nil {
 				valid = l.externType(n.Type(), true) && valid
@@ -92,6 +101,13 @@ func (l *lowerer) prepareExterns(files []string, modules []ExternModule) ([]stri
 				}
 				t := l.mapTypeNode(p.Type())
 				sig.Params = append(sig.Params, t)
+				if sig.ABAPClass != "" {
+					if p.Name() == nil || p.Name().Kind != ast.KindIdentifier {
+						valid = false
+						continue
+					}
+					sig.ParamNames = append(sig.ParamNames, p.Name().Text())
+				}
 				if rest {
 					sig.Rest = true
 					if i != len(n.Parameters())-1 || t.Kind != hir.Array || t.Args[0].Kind != hir.String {

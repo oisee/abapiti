@@ -1070,8 +1070,7 @@ func (b *body) expr(x *hir.Expr) string {
 		defer func() { e.currentNode = old }()
 	}
 	if x.Kind == hir.ExternCall {
-		e.refuse(hir.Error{Node: x.Node, Message: "extern module call " + x.Name + " is Go-only"})
-		return ""
+		return b.externCall(x)
 	}
 	if t.Kind == hir.Void && x.Kind == hir.PromiseAwait {
 		b.awaitPromise(x, "")

@@ -197,10 +197,11 @@ class Step4Test(unittest.TestCase):
         main = TOOL['main']
         source = "import {readFileSync} from 'node:fs';\nconst inputs=JSON.parse(readFileSync(new URL('./step4-inputs.json', import.meta.url), 'utf8'));\nprocess.stdout.write(emitGo(program));\n"
         lib = 'function a() { if (x) { y(); } }\nfunction b() { z(); }\nfunction c() {}\n'
-        for custom in [False, True]:
-            with tempfile.TemporaryDirectory() as directory:
+        for custom, abap in [(False, False), (True, False), (False, True)]:
+            with self.subTest(custom=custom, abap=abap), tempfile.TemporaryDirectory() as directory:
                 root = Path(directory)
                 osg, out = root / 'osg', root / 'out'
+                target = 'abap' if abap else 'go'
                 driver = osg / '.local/step4/step4-driver.mjs'
                 driver.parent.mkdir(parents=True)
                 driver.write_text(source)
@@ -226,6 +227,11 @@ class Step4Test(unittest.TestCase):
                     if custom:
                         self.assertEqual(inputs_path.read_bytes(), custom_path.read_bytes())
                     if name == 'reference':
+                        recorded = '--import' in command and kwargs['env'].get('FS_SNAPSHOT_OUT') == str(out / 'fs-snapshot.json')
+                        self.assertEqual(recorded, abap)
+                        if abap:
+                            self.assertEqual(command[command.index('--import') + 1], (TOOL['REPO'] / 'tools/fs-snapshot-recorder.mjs').as_uri())
+                            self.assertEqual(kwargs['env']['FS_SNAPSHOT_STDOUT'], str(out / 'gogen.go'))
                         kwargs['stdout'].write(b'package main\n')
                         v8 = Path(kwargs['env']['NODE_V8_COVERAGE'])
                         v8.mkdir()
@@ -242,8 +248,14 @@ class Step4Test(unittest.TestCase):
                         (out / 'reach.json').write_text(json.dumps({'spans': []}))
                     elif name == 'emit':
                         self.assertEqual(driver.read_text(), TOOL['adapt_driver'](source))
-                        (out / 'go/evidence').mkdir(parents=True)
-                        (out / 'go/evidence/trap-sites.json').write_text(json.dumps(sites))
+                        self.assertIn('emit-abap' if abap else 'emit-go', command)
+                        self.assertIn('--initialize', command)
+                        modules = json.loads((out / 'externs.json').read_text())['modules']
+                        self.assertEqual([m.get('abapClass') for m in modules], ['ZCL_ABAPITI_HOSTIO'] * 2 if abap else [None, None])
+                        (out / target / 'evidence').mkdir(parents=True)
+                        (out / target / 'evidence/trap-sites.json').write_text(json.dumps(sites))
+                        if abap:
+                            (out / 'abap/src').mkdir()
                     elif name == 'order':
                         self.assertEqual(driver.read_text(), source)
                         breakpoints = json.loads(Path(command[-4]).read_text())
@@ -257,12 +269,14 @@ class Step4Test(unittest.TestCase):
                 capture = io.StringIO()
                 with patch.dict(TOOL['os'].environ, {'STEP4_NO_SYSTEMD': '1'}), patch.object(TOOL['subprocess'], 'run', side_effect=fake_run), patch.object(TOOL['shutil'], 'disk_usage', return_value=SimpleNamespace(free=100 * 1024**3)), contextlib.redirect_stdout(capture), contextlib.redirect_stderr(io.StringIO()):
                     args = ['--inputs', str(custom_path)] if custom else []
+                    args += ['--abap'] if abap else []
                     status = main([*args, '--list-traps', str(root / 'abapiti'), str(osg), str(root / 'lint'), str(root / 'transpiler'), str(out)])
                 self.assertEqual(status, 0)
                 self.assertEqual(driver.read_text(), source)
                 prefix = 'step4-reference: sha256=' + hashlib.sha256(b'package main\n').hexdigest() + '\n' if custom else ''
                 self.assertFalse(inputs_path.exists())
-                self.assertEqual(capture.getvalue(), prefix + 'step4-traps: 2 reached (1/0 unknown) 1 unreached\n')
+                self.assertEqual(capture.getvalue(), prefix + ('step4b-traps:' if abap else 'step4-traps:') + ' 2 reached (1/0 unknown) 1 unreached\n')
+                self.assertEqual((out / 'abap/src/zcl_abapiti_hostio.clas.abap').exists(), abap)
                 rows = [line.split('\t') for line in (out / 'reached-traps.tsv').read_text().splitlines()[1:]]
                 self.assertEqual([(r[0], r[2], r[3]) for r in rows], [('tools/lib.mjs:2:1', '1', 'root'), ('tools/lib.mjs:3:1', '4', 'root')])
                 self.assertEqual(len((out / 'reached-guards.tsv').read_text().splitlines()), 2)

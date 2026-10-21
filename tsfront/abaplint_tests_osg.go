@@ -105,25 +105,8 @@ func emitAbaplintTestsOSG(dir string, lowering *RegistryLowering, client func(*h
 	// borrowed test modules. Local checkpoint indices restart at one per shard.
 	runtime := modules["runtime/mocha.ts.TestRuntime"]
 	addOrder := func(order []string) {
-		for _, file := range order {
-			c := modules[file+".module"]
-			if c == nil {
-				continue
-			}
-			actions := []string{}
-			for _, m := range c.Methods {
-				if m.Static && m.Name == "class_constructor" {
-					actions = append(actions, n("builtin.initialize."+c.Name))
-				}
-			}
-			for _, m := range c.Methods {
-				if isTestInitialization(m) {
-					actions = append(actions, n("member."+m.Name))
-				}
-			}
-			for _, action := range actions {
-				addAction(c.Name, file, action)
-			}
+		for _, a := range ModuleInitializations(modules, order, true) {
+			addAction(a.Class, a.File, n(a.Name))
 		}
 		// Force the runtime initializer even when a closure did not otherwise use it.
 		for _, m := range runtime.Methods {
@@ -193,6 +176,40 @@ func emitAbaplintTestsOSG(dir string, lowering *RegistryLowering, client func(*h
 	}
 	files["names.json"] = string(sourceMap)
 	return files, nil
+}
+
+// ModuleInitialization is one explicit initializer call: ABAP class
+// constructors are lazy, so module state is initialized in manifest order.
+type ModuleInitialization struct {
+	File, Class string
+	// Name is the hir.Names key of the static method to call on Class.
+	Name string
+}
+
+// ModuleInitializations lists, per file in order, the module's static
+// initializer and (with tests) its test-registration initializers.
+func ModuleInitializations(modules map[string]*hir.Class, order []string, tests bool) []ModuleInitialization {
+	var out []ModuleInitialization
+	for _, file := range order {
+		c := modules[file+".module"]
+		if c == nil {
+			continue
+		}
+		for _, m := range c.Methods {
+			if m.Static && m.Name == "class_constructor" {
+				out = append(out, ModuleInitialization{File: file, Class: c.Name, Name: "builtin.initialize." + c.Name})
+			}
+		}
+		if !tests {
+			continue
+		}
+		for _, m := range c.Methods {
+			if isTestInitialization(m) {
+				out = append(out, ModuleInitialization{File: file, Class: c.Name, Name: "member." + m.Name})
+			}
+		}
+	}
+	return out
 }
 
 func abapTestLiteral(s string) string { return "`" + strings.ReplaceAll(s, "`", "``") + "`" }
