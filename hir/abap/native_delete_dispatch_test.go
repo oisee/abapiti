@@ -1,7 +1,10 @@
 package abap
 
 import (
+	"encoding/json"
 	"fmt"
+	"os"
+	"os/exec"
 	"regexp"
 	"strings"
 	"testing"
@@ -44,7 +47,32 @@ func deleteUnindent(source string) string {
 }
 
 func TestNativeDeleteVirtualMatchesLegacy(t *testing.T) {
-	p := deleteDispatchProgram()
+	testNativeDeleteVirtualMatchesLegacy(t, deleteDispatchProgram())
+}
+
+func TestNativeDeleteVirtualRuntimeAncestor(t *testing.T) {
+	for _, fields := range []bool{false, true} {
+		for _, leaf := range []bool{false, true} {
+			t.Run(fmt.Sprintf("fields_%t/leaf_%t", fields, leaf), func(t *testing.T) {
+				p := deleteDispatchProgram()
+				p.Classes[0] = &hir.Class{Name: "builtin.Error"}
+				if fields {
+					p.Classes[0].Fields = []hir.Field{{Name: "message", Type: str}}
+				}
+				p.Classes[1].Super = "builtin.Error"
+				// A reference activates the runtime replacement of builtin.Error.
+				p.Classes[3].Methods[0].Params = append(p.Classes[3].Methods[0].Params, hir.Param{Name: "error", Type: hir.Ref("builtin.Error")})
+				if !leaf {
+					p.Classes = append(p.Classes[:2], p.Classes[3])
+				}
+				testNativeDeleteVirtualMatchesLegacy(t, p)
+			})
+		}
+	}
+}
+
+func testNativeDeleteVirtualMatchesLegacy(t *testing.T, p *hir.Program) {
+	t.Helper()
 	files, names, err := emitABAPNamed(t, p)
 	if err != nil {
 		t.Fatal(err)
@@ -54,6 +82,12 @@ func TestNativeDeleteVirtualMatchesLegacy(t *testing.T) {
 	legacyCode := files[legacy+".clas.abap"]
 	iface := names.Get("runtime.nativeDeletable")
 	for i, c := range e.classesByDepth() {
+		if c.Name == "builtin.Error" {
+			if strings.Contains(files[names.Get(c.Name)+".clas.abap"], iface) {
+				t.Fatal("runtime ancestor unexpectedly implements delete interface")
+			}
+			continue
+		}
 		start := strings.Index(legacyCode, "native"+fmt.Sprint(i)+" ?= p0.\n")
 		if start < 0 {
 			t.Fatal("missing legacy arm", c.Name)
@@ -70,7 +104,7 @@ func TestNativeDeleteVirtualMatchesLegacy(t *testing.T) {
 			t.Fatalf("%s differs from legacy arm\nwant:\n%s\ngot:\n%s", c.Name, expected, got)
 		}
 		decl := "INTERFACES " + iface + "."
-		if c.Super != "" {
+		if c.Super != "" && c.Super != "builtin.Error" {
 			decl = "METHODS " + iface + "~delete_key REDEFINITION."
 		}
 		if !strings.Contains(files[names.Get(c.Name)+".clas.abap"], decl) {
@@ -81,10 +115,13 @@ func TestNativeDeleteVirtualMatchesLegacy(t *testing.T) {
 	var unit strings.Builder
 	unit.WriteString("CLASS ltcl_delete DEFINITION FOR TESTING DURATION SHORT RISK LEVEL HARMLESS.\nPRIVATE SECTION.\nMETHODS check FOR TESTING.\nENDCLASS.\nCLASS ltcl_delete IMPLEMENTATION.\nMETHOD check.\nDATA a TYPE REF TO object.\nDATA b TYPE REF TO object.\nDATA new_result TYPE abap_bool.\nDATA old_result TYPE abap_bool.\nDATA new_refused TYPE abap_bool.\nDATA old_refused TYPE abap_bool.\n")
 	for ci, c := range p.Classes {
+		if c.Name == "builtin.Error" {
+			continue
+		}
 		n := fmt.Sprintf("c%d", ci)
 		typ := names.Get(c.Name)
 		fmt.Fprintf(&unit, "DATA new_%s TYPE REF TO %s.\nDATA old_%s TYPE REF TO %s.\n", n, typ, n, typ)
-		for _, key := range []string{"baseOptional", "middleOptional", "leafDynamic", "baseRequired", "middleRequired", "leafRequired", "toString", "__proto__", "absent", "staticOnly"} {
+		for _, key := range []string{"baseOptional", "middleOptional", "leafDynamic", "baseRequired", "middleRequired", "leafRequired", "toString", "__proto__", "absent", "staticOnly", "message"} {
 			fmt.Fprintf(&unit, "CREATE OBJECT new_%s.\nCREATE OBJECT old_%s.\na = new_%s.\nb = old_%s.\n", n, n, n, n)
 			var optional []string
 			for base := c; base != nil; base = e.classBy(base.Super) {
@@ -122,6 +159,7 @@ func TestNativeDeleteVirtualMatchesLegacy(t *testing.T) {
 	if issues := abapfixture.KernelViolations(files); len(issues) != 0 {
 		t.Fatal(issues)
 	}
+	nativeDeleteSyntaxFixture(t, files)
 	storageHostFixture(t, files, owner)
 	t.Logf("hierarchy fixture: legacy run %d lines, virtual run %d lines", strings.Count(deleteMethod(legacyCode, "run"), "\n")+1, strings.Count(deleteMethod(files[run+".clas.abap"], "run"), "\n")+1)
 }
@@ -182,7 +220,24 @@ func TestNativeDeleteVirtualUsageGate(t *testing.T) {
 }
 
 func TestNativeDeleteVirtualTestPackages(t *testing.T) {
+	for _, runtimeRoot := range []bool{false, true} {
+		t.Run(fmt.Sprintf("runtimeRoot_%t", runtimeRoot), func(t *testing.T) {
+			testNativeDeleteVirtualTestPackages(t, runtimeRoot)
+		})
+	}
+}
+
+func testNativeDeleteVirtualTestPackages(t *testing.T, runtimeRoot bool) {
 	p := deleteDispatchProgram()
+	if runtimeRoot {
+		p.Classes = append(p.Classes, &hir.Class{Name: "builtin.Error", Fields: []hir.Field{{Name: "message", Type: str}}})
+		p.Classes = append(p.Classes,
+			&hir.Class{Name: "test/RuntimeMiddle", Super: "builtin.Error", Fields: []hir.Field{{Name: "runtimeOptional", Type: hir.T(hir.Optional, str)}}},
+			&hir.Class{Name: "test/RuntimeLeaf", Super: "test/RuntimeMiddle", Fields: []hir.Field{{Name: "runtimeDynamic", Type: hir.T(hir.Dynamic)}}},
+		)
+		p.Classes[0].Super = "builtin.Error"
+		p.Classes[3].Methods[0].Params = append(p.Classes[3].Methods[0].Params, hir.Param{Name: "error", Type: hir.Ref("builtin.Error")})
+	}
 	p.Classes[1].Name = "test/DeleteMiddle"
 	p.Classes[2].Name = "test/DeleteLeaf"
 	p.Classes[2].Super = p.Classes[1].Name
@@ -196,6 +251,9 @@ func TestNativeDeleteVirtualTestPackages(t *testing.T) {
 	}
 	coreInterface := names.Get("runtime.nativeDeletable")
 	for _, c := range p.Classes {
+		if c.Name == "builtin.Error" {
+			continue
+		}
 		iface := coreInterface
 		if testDeclaration(c) {
 			iface = "zif_lnt_test_delete"
@@ -205,7 +263,7 @@ func TestNativeDeleteVirtualTestPackages(t *testing.T) {
 			t.Fatal("missing partition implementation", c.Name)
 		}
 		decl := "INTERFACES " + iface + "."
-		if c.Name == "test/DeleteLeaf" {
+		if c.Name == "test/DeleteLeaf" || c.Name == "test/RuntimeLeaf" {
 			decl = "METHODS " + iface + "~delete_key REDEFINITION."
 		}
 		if !strings.Contains(source, decl) {
@@ -244,6 +302,23 @@ func TestNativeDeleteVirtualTestPackages(t *testing.T) {
 	for _, receiver := range []string{"current", "core"} {
 		fmt.Fprintf(&unit, "CLEAR new_handled.\nCLEAR old_handled.\nzcl_lnt_test_delete=>run( EXPORTING p0 = %s key = `middleOptional` IMPORTING handled = new_handled result = new_result ).\n%s=>run( EXPORTING p0 = %s key = `middleOptional` IMPORTING handled = old_handled result = old_result ).\ncl_abap_unit_assert=>assert_equals( exp = old_handled act = new_handled ).\ncl_abap_unit_assert=>assert_equals( exp = old_result act = new_result ).\n", receiver, legacyTest, strings.ReplaceAll(receiver, "current", "previous"))
 	}
+	if runtimeRoot {
+		unit.WriteString("DATA new_refused_runtime TYPE abap_bool.\nDATA old_refused_runtime TYPE abap_bool.\n")
+		for _, class := range []string{"test/RuntimeMiddle", "test/RuntimeLeaf"} {
+			n := names.Get(class)
+			fmt.Fprintf(&unit, "DATA current_%s TYPE REF TO %s.\nDATA previous_%s TYPE REF TO %s.\nCREATE OBJECT current_%s.\nCREATE OBJECT previous_%s.\n", strings.TrimPrefix(class, "test/"), n, strings.TrimPrefix(class, "test/"), n, strings.TrimPrefix(class, "test/"), strings.TrimPrefix(class, "test/"))
+			receiver := "current_" + strings.TrimPrefix(class, "test/")
+			previous := "previous_" + strings.TrimPrefix(class, "test/")
+			for _, key := range []string{"runtimeOptional", "runtimeDynamic", "message", "absent"} {
+				unit.WriteString("CLEAR new_refused_runtime.\nCLEAR old_refused_runtime.\n")
+				for _, v := range []struct{ prefix, receiver, runtime string }{{"new", receiver, "zcl_lnt_test_delete"}, {"old", previous, legacyTest}} {
+					fmt.Fprintf(&unit, "TRY.\n%s=>run( EXPORTING p0 = %s key = `%s` IMPORTING handled = %s_handled result = %s_result ).\nCATCH %s.\n%s_refused_runtime = abap_true.\nENDTRY.\n", v.runtime, v.receiver, key, v.prefix, v.prefix, names.Get("view.refusal"), v.prefix)
+				}
+				unit.WriteString("cl_abap_unit_assert=>assert_equals( exp = old_refused_runtime act = new_refused_runtime ).\ncl_abap_unit_assert=>assert_equals( exp = old_result act = new_result ).\n")
+				fmt.Fprintf(&unit, "cl_abap_unit_assert=>assert_equals( exp = %s->%s act = %s->%s ).\n", previous, mask, receiver, mask)
+			}
+		}
+	}
 	unit.WriteString("DATA new_refused TYPE abap_bool.\nDATA old_refused TYPE abap_bool.\nCLEAR new_handled.\nCLEAR old_handled.\n")
 	for _, v := range []struct{ prefix, receiver, runtime string }{{"new", "current", "zcl_lnt_test_delete"}, {"old", "previous", legacyTest}} {
 		fmt.Fprintf(&unit, "TRY.\n%s=>run( EXPORTING p0 = %s key = `baseRequired` IMPORTING handled = %s_handled result = %s_result ).\nCATCH %s.\n%s_refused = abap_true.\nENDTRY.\n", v.runtime, v.receiver, v.prefix, v.prefix, names.Get("view.refusal"), v.prefix)
@@ -251,5 +326,56 @@ func TestNativeDeleteVirtualTestPackages(t *testing.T) {
 	unit.WriteString("cl_abap_unit_assert=>assert_true( new_refused ).\ncl_abap_unit_assert=>assert_equals( exp = old_refused act = new_refused ).\ncl_abap_unit_assert=>assert_equals( exp = old_handled act = new_handled ).\n")
 	fmt.Fprintf(&unit, "cl_abap_unit_assert=>assert_false( xsdbool( current->%s IS BOUND ) ).\ncl_abap_unit_assert=>assert_equals( exp = previous->%s act = current->%s ).\n%s=>extension = NEW zcl_lnt_test_extension( ).\ncl_abap_unit_assert=>assert_true( %s=>run( p0 = current key = `absent` ) ).\nCLEAR %s=>extension.\nENDMETHOD.\nENDCLASS.\n", optional, mask, mask, factory, core, factory)
 	files[owner+".clas.testclasses.abap"] = unit.String()
+	nativeDeleteSyntaxFixture(t, files)
 	storageHostFixture(t, files, owner)
+}
+
+// Use the same abaplint syntax rules and library dependencies as OSG, but
+// check every emitted class: gogen can otherwise omit a broken unused class.
+func nativeDeleteSyntaxFixture(t *testing.T, files map[string]string) {
+	t.Helper()
+	osg := os.Getenv("ABAPITI_OSG_HOME")
+	if osg == "" {
+		return // Like storageHostFixture, external frontend checks are opt-in.
+	}
+	const script = `
+const {createRequire} = require("node:module");
+const {readFileSync, readdirSync} = require("node:fs");
+const {join} = require("node:path");
+const osg = process.argv[1];
+const lint = createRequire(join(osg, "package.json"))("@abaplint/core");
+const config = lint.Config.getDefault().get();
+config.syntax = {...config.syntax, version: "v758", errorNamespace: "."};
+config.rules = {check_syntax: true, parser_error: true};
+const reg = new lint.Registry(new lint.Config(JSON.stringify(config)));
+for (const [name, source] of Object.entries(JSON.parse(readFileSync(0, "utf8")))) {
+  reg.addFile(new lint.MemoryFile(name, source));
+}
+function dependencies(dir) {
+  for (const entry of readdirSync(dir, {withFileTypes: true})) {
+    const path = join(dir, entry.name);
+    if (entry.isDirectory()) dependencies(path);
+    else if (/\.(abap|xml)$/.test(entry.name) && !entry.name.includes("testclasses")) {
+      reg.addDependency(new lint.MemoryFile(path, readFileSync(path, "utf8")));
+    }
+  }
+}
+dependencies(join(process.env.OSD_LIB_OPEN_ABAP_CORE || join(osg, ".local/lars/open-abap-core"), "src"));
+reg.parse();
+const issues = reg.findIssues();
+for (const issue of issues) console.error(issue.getFilename() + ": " + issue.getMessage());
+
+process.exitCode = issues.length ? 1 : 0;
+`
+	input, err := json.Marshal(files)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cmd := exec.Command("node", "-e", script, osg)
+	cmd.Stdin = strings.NewReader(string(input))
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("abaplint syntax: %v\n%s", err, out)
+	}
+	t.Logf("abaplint syntax: %d files, 0 issues", len(files))
 }
