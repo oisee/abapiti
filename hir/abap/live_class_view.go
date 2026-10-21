@@ -50,8 +50,8 @@ ENDCLASS.
 `
 	// Native structural shapes expose their existing slots through the same graph API.
 	text := e.files[d+".clas.abap"]
-	text = strings.Replace(text, "METHOD get.\n", "METHOD get.\nIF tag = tag_ref.\nDATA adapter TYPE REF TO "+storage+".\nTRY.\nadapter ?= oval.\nCATCH cx_sy_move_cast_error.\nRAISE EXCEPTION TYPE "+trap+" EXPORTING reason = `live_class_view.go: dynamic.get: reference does not implement view storage`.\nENDTRY.\nresult = adapter->get( p0 ).\nRETURN.\nENDIF.\n", 1)
-	text = strings.Replace(text, "METHOD put.\n", "METHOD put.\nIF tag = tag_ref.\nDATA adapter TYPE REF TO "+storage+".\nTRY.\nadapter ?= oval.\nCATCH cx_sy_move_cast_error.\nRAISE EXCEPTION TYPE "+trap+" EXPORTING reason = `live_class_view.go: dynamic.put: reference does not implement view storage`.\nENDTRY.\nadapter->put( p0 = p0 p1 = p1 ).\nRETURN.\nENDIF.\n", 1)
+	text = strings.Replace(text, "METHOD get.\n", "METHOD get.\nIF tag = tag_ref.\nDATA adapter TYPE REF TO "+storage+".\n"+castOrRaise("adapter", "oval", storage, "RAISE EXCEPTION TYPE "+trap+" EXPORTING reason = `live_class_view.go: dynamic.get: reference does not implement view storage`.")+"\nresult = adapter->get( p0 ).\nRETURN.\nENDIF.\n", 1)
+	text = strings.Replace(text, "METHOD put.\n", "METHOD put.\nIF tag = tag_ref.\nDATA adapter TYPE REF TO "+storage+".\n"+castOrRaise("adapter", "oval", storage, "RAISE EXCEPTION TYPE "+trap+" EXPORTING reason = `live_class_view.go: dynamic.put: reference does not implement view storage`.")+"\nadapter->put( p0 = p0 p1 = p1 ).\nRETURN.\nENDIF.\n", 1)
 	e.files[d+".clas.abap"] = text
 	e.recordGraphRuntime()
 }
@@ -409,7 +409,7 @@ func (b *body) liveView(x *hir.Expr, n, a string, fresh ...bool) {
 	// Native success remains identity-preserving even for behaviour-bearing classes.
 	b.line("IF " + a + " IS BOUND AND " + a + "->tag <> " + d + "=>tag_null.")
 	if len(fresh) == 0 || !fresh[0] {
-		b.line("IF " + a + "->tag = " + d + "=>tag_ref.\nTRY.\n" + n + " ?= " + a + "->oval.\nCATCH cx_sy_move_cast_error.\nENDTRY.\nENDIF.")
+		b.line("IF " + a + "->tag = " + d + "=>tag_ref.\n" + clearedCastProbe(n, a+"->oval", e.name(x.Type.Name)) + "\nENDIF.")
 	}
 	b.line("IF " + n + " IS NOT BOUND.")
 	if !hir.DataClassView(e.p, x.Type.Name) {
@@ -427,7 +427,7 @@ func (b *body) liveView(x *hir.Expr, n, a string, fresh ...bool) {
 		b.line("IF " + allowed + ".")
 		adapter := b.rawTemp("REF TO " + e.name("view.storage"))
 		b.line("IF " + a + "->tag <> " + d + "=>tag_ref.\nRAISE EXCEPTION TYPE " + trap + " EXPORTING reason = `live_class_view.go: liveView: source is neither object graph nor reference`.\nENDIF.")
-		b.line("TRY.\n" + adapter + " ?= " + a + "->oval.\nCATCH cx_sy_move_cast_error.\nRAISE EXCEPTION TYPE " + trap + " EXPORTING reason = `live_class_view.go: liveView: reference does not implement view storage`.\nENDTRY.\nIF " + adapter + "->structural( ) <> abap_true.\nRAISE EXCEPTION TYPE " + trap + " EXPORTING reason = `live_class_view.go: liveView: reference storage is not structural`.\nENDIF.\nENDIF.")
+		b.line(castOrRaise(adapter, a+"->oval", e.name("view.storage"), "RAISE EXCEPTION TYPE "+trap+" EXPORTING reason = `live_class_view.go: liveView: reference does not implement view storage`.") + "\nIF " + adapter + "->structural( ) <> abap_true.\nRAISE EXCEPTION TYPE " + trap + " EXPORTING reason = `live_class_view.go: liveView: reference storage is not structural`.\nENDIF.\nENDIF.")
 		args := []string{"view_source = " + a}
 		c := e.classBy(x.Type.Name)
 		if c.Ctor != nil {
@@ -454,10 +454,8 @@ func (b *body) liveBox(n, a string, t hir.Type) {
 	raw := b.rawTemp("REF TO object")
 	b.line("CLEAR " + adapter + ".")
 	b.line(raw + " = " + a + ".")
-	// Keep the probe parseable in v702 dependencies: an unrecognized IF
-	// IS INSTANCE OF prevents resolution of the entire live array class.
-	b.line("TRY.\n" + n + " ?= " + raw + ".\nCATCH cx_sy_move_cast_error.\nENDTRY.\nIF " + n + " IS NOT BOUND.")
-	b.line("TRY.\n" + adapter + " ?= " + a + ".\nCATCH cx_sy_move_cast_error.\nENDTRY.")
+	b.line(castProbe(n, raw, e.name("runtime.dynamic")) + "\nIF " + n + " IS NOT BOUND.")
+	b.line(clearedCastProbe(adapter, raw, e.name("view.storage")))
 	b.line("IF " + adapter + " IS BOUND.\n" + n + " = " + adapter + "->source( ).\nENDIF.")
 	b.line("IF " + n + " IS NOT BOUND.\nCREATE OBJECT " + n + ".\n" + n + "->tag = " + e.name("runtime.dynamic") + "=>tag_ref.\n" + n + "->oval = " + a + ".\nENDIF.\nENDIF.")
 }

@@ -137,10 +137,9 @@ func (e *emitter) regexpJSSubclass() {
 	text = strings.Replace(text, "PUBLIC SECTION.", "PUBLIC SECTION.\nCLASS-METHODS exec_legacy IMPORTING p0 TYPE REF TO "+base+" p1 TYPE string RETURNING VALUE(result) TYPE "+arr+".\n", 1)
 	text = strings.TrimSuffix(text, "ENDCLASS.\n") + `METHOD exec_legacy.
 DATA js TYPE REF TO ` + name + `.
-TRY.
+IF p0 IS INSTANCE OF ` + name + `.
   js ?= p0.
-CATCH cx_sy_move_cast_error.
-ENDTRY.
+ENDIF.
 IF js IS NOT BOUND.
   CREATE OBJECT js EXPORTING pattern = p0->source flags = p0->flags checked = abap_true.
 ENDIF.

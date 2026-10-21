@@ -51,7 +51,7 @@ func (e *emitter) structuralUnionProjection(t hir.Type, member string) string {
 	b := &body{e: e, m: &hir.Method{Result: result}, locals: map[string]string{}}
 	b.line("IF p0 IS NOT BOUND.\nRAISE EXCEPTION TYPE " + refusal + " EXPORTING reason = `structural union requires a record`.\nENDIF.")
 	adapter := b.rawTemp("REF TO " + e.name("view.storage"))
-	b.line("IF p0->tag <> " + d + "=>tag_object.\nIF p0->tag <> " + d + "=>tag_ref.\nRAISE EXCEPTION TYPE " + refusal + " EXPORTING reason = `structural union requires object storage`.\nENDIF.\nTRY.\n" + adapter + " ?= p0->oval.\nCATCH cx_sy_move_cast_error.\nRAISE EXCEPTION TYPE " + refusal + " EXPORTING reason = `structural union refuses nominal storage`.\nENDTRY.\nIF " + adapter + "->structural( ) <> abap_true.\nRAISE EXCEPTION TYPE " + refusal + " EXPORTING reason = `structural union refuses nominal storage`.\nENDIF.\nENDIF.")
+	b.line("IF p0->tag <> " + d + "=>tag_object.\nIF p0->tag <> " + d + "=>tag_ref.\nRAISE EXCEPTION TYPE " + refusal + " EXPORTING reason = `structural union requires object storage`.\nENDIF.\n" + castOrRaise(adapter, "p0->oval", e.name("view.storage"), "RAISE EXCEPTION TYPE "+refusal+" EXPORTING reason = `structural union refuses nominal storage`.") + "\nIF " + adapter + "->structural( ) <> abap_true.\nRAISE EXCEPTION TYPE " + refusal + " EXPORTING reason = `structural union refuses nominal storage`.\nENDIF.\nENDIF.")
 	for _, m := range members {
 		valid := b.temp(hir.T(hir.Bool))
 		b.line(valid + " = abap_true.")
@@ -63,7 +63,7 @@ func (e *emitter) structuralUnionProjection(t hir.Type, member string) string {
 			b.line("result = p0.\nRETURN.\nENDIF.")
 		} else {
 			native := b.temp(m.Type)
-			b.line("IF p0->tag = " + d + "=>tag_ref.\nTRY.\n" + native + " ?= p0->oval.\nCATCH cx_sy_move_cast_error.\nENDTRY.\nIF " + native + " IS BOUND.\nresult = " + native + ".\nRETURN.\nENDIF.\nENDIF.")
+			b.line("IF p0->tag = " + d + "=>tag_ref.\n" + castProbe(native, "p0->oval", refClass(e.typ(m.Type))) + "\nIF " + native + " IS BOUND.\nresult = " + native + ".\nRETURN.\nENDIF.\nENDIF.")
 			row := b.temp(m.Type)
 			if e.liveClasses[m.Type.Name] {
 				b.liveView(&hir.Expr{Type: m.Type}, row, "p0")
@@ -150,8 +150,7 @@ func (b *body) structuralField(valid, adapter string, f hir.StructuralField) {
 		case hir.Array:
 			e.isArrayUsed = true
 			array := b.temp(hir.T(hir.Bool))
-			mark := b.rawTemp("REF TO " + e.name("runtime.arraymark"))
-			b.line(array + " = abap_false.\nIF " + v + "->tag = " + d + "tag_array.\n" + array + " = abap_true.\nELSEIF " + v + "->tag = " + d + "tag_ref AND " + v + "->oval IS BOUND.\nTRY.\n" + mark + " ?= " + v + "->oval.\n" + array + " = abap_true.\nCATCH cx_sy_move_cast_error.\nENDTRY.\nENDIF.")
+			b.line(array + " = abap_false.\nIF " + v + "->tag = " + d + "tag_array.\n" + array + " = abap_true.\nELSEIF " + v + "->tag = " + d + "tag_ref AND " + v + "->oval IS INSTANCE OF " + e.name("runtime.arraymark") + ".\n" + array + " = abap_true.\nENDIF.")
 			condition = array + " = abap_true"
 		}
 		if condition != "" {

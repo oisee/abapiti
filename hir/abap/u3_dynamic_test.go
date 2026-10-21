@@ -10,7 +10,7 @@ func TestU3DynamicCollectionBrands(t *testing.T) {
 	m := hir.T(hir.OrderedMap, str, str)
 	s := hir.T(hir.OrderedSet, str)
 	src := u3Emit(t, rt("dynamic.isMap", rt("dynamic.of", rt("map.markJS", newObj(m), m), dyn), boolean), rt("dynamic.isSet", rt("dynamic.of", newObj(s), dyn), boolean), rt("dynamic.isMap", rt("dynamic.of", newObj(m), dyn), boolean), rt("dynamic.isSet", rt("dynamic.null", lit(0), dyn), boolean))
-	u3Want(t, src, "->kind( ) = 1", "->kind( ) = 2", "IF js_map = abap_true.\nresult = 1.", "result = 2.", "CATCH cx_sy_move_cast_error.")
+	u3Want(t, src, "->kind( ) = 1", "->kind( ) = 2", "IF js_map = abap_true.\nresult = 1.", "result = 2.", "->oval IS INSTANCE OF ")
 }
 func TestU3DynamicValues(t *testing.T) {
 	dyn := hir.T(hir.Dynamic)

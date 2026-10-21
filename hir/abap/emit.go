@@ -1644,17 +1644,7 @@ func (b *body) expr(x *hir.Expr) string {
 			break
 		}
 		if e.isInterface(x.Owner) {
-			// A checked cast decides interface membership on every runtime
-			// (OSG-JS IS INSTANCE OF ignores interfaces: inbox 039).
-			probe := b.rawTemp("REF TO " + e.name(x.Owner))
-			b.line(n + " = abap_false.")
-			b.line("IF " + a + " IS BOUND.")
-			b.line("TRY.")
-			b.line(probe + " ?= " + a + ".")
-			b.line(n + " = abap_true.")
-			b.line("CATCH cx_sy_move_cast_error.")
-			b.line("ENDTRY.")
-			b.line("ENDIF.")
+			b.line(n + " = xsdbool( " + a + " IS BOUND AND " + a + " IS INSTANCE OF " + e.name(x.Owner) + " ).")
 			break
 		}
 		b.line(n + " = xsdbool( " + a + " IS BOUND AND " + a + " IS INSTANCE OF " + e.name(x.Owner) + " ).")
@@ -2643,11 +2633,8 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 			v := b.rawTemp("REF TO " + b.e.name(c.Name))
 			b.line("IF ( " + args[1] + " IS NOT BOUND OR " + args[1] + "->has = abap_false ) AND " + args[0] + " IS BOUND.")
 			b.line("IF " + args[0] + "->tag = " + b.e.name("runtime.dynamic") + "=>tag_ref.")
-			b.line("TRY.")
-			b.line(v + " ?= " + args[0] + "->oval.")
-			b.line("CATCH cx_sy_move_cast_error.")
 			b.line("CLEAR " + v + ".")
-			b.line("ENDTRY.")
+			b.line(clearedCastProbe(v, args[0]+"->oval", b.e.name(c.Name)))
 			b.line("IF " + v + " IS BOUND.")
 			if b.e.materialized[c.Name] {
 				b.line("IF " + v + "->" + b.e.name("builtin.materializedSource") + " IS NOT BOUND.")
@@ -2803,7 +2790,7 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 			ref := b.rawTemp("REF TO " + b.e.name("runtime.described"))
 			trap := b.e.classRefusal()
 			b.line("IF " + a + " IS NOT BOUND.\nRAISE EXCEPTION TYPE " + trap + ".\nENDIF.")
-			b.line("TRY.\n" + ref + " ?= " + a + ".\nCATCH cx_sy_move_cast_error.\nRAISE EXCEPTION TYPE " + trap + ".\nENDTRY.")
+			b.line(castOrRaise(ref, a, b.e.name("runtime.described"), "RAISE EXCEPTION TYPE "+trap+"."))
 			b.line(n + " = " + ref + "->" + b.e.name("builtin.nativeConstructor") + "( ).")
 		} else {
 			b.line(n + " = " + a + "->" + b.e.name("builtin.classOf") + "( ).")
@@ -2926,13 +2913,8 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 		b.e.isArrayUsed = true
 		b.line("IF " + a + "->tag = " + b.e.name("runtime.dynamic") + "=>tag_array.")
 		b.line(n + " = abap_true.")
-		b.line("ELSEIF " + a + "->tag = " + b.e.name("runtime.dynamic") + "=>tag_ref AND " + a + "->oval IS BOUND.")
-		mark := b.rawTemp("REF TO " + b.e.name("runtime.arraymark"))
-		b.line("TRY.")
-		b.line(mark + " ?= " + a + "->oval.")
+		b.line("ELSEIF " + a + "->tag = " + b.e.name("runtime.dynamic") + "=>tag_ref AND " + a + "->oval IS INSTANCE OF " + b.e.name("runtime.arraymark") + ".")
 		b.line(n + " = abap_true.")
-		b.line("CATCH cx_sy_move_cast_error.")
-		b.line("ENDTRY.")
 		b.line("ENDIF.")
 		b.line("ENDIF.")
 		return
@@ -2995,9 +2977,9 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 			// A boxed map<string, any> bag stands for the narrower record too.
 			bagType := hir.T(hir.OrderedMap, hir.T(hir.String), hir.T(hir.Dynamic))
 			bag := b.temp(bagType)
-			b.line("TRY.")
+			b.line("IF " + target + " IS NOT BOUND OR " + target + " IS INSTANCE OF " + refClass(b.e.typ(x.Type)) + ".")
 			b.line(n + " ?= " + target + ".")
-			b.line("CATCH cx_sy_move_cast_error.")
+			b.line("ELSE.")
 			b.line(bag + " ?= " + target + ".")
 			b.line("CREATE OBJECT " + n + ".")
 			b.serial++
@@ -3007,7 +2989,7 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 			b.line(box + " = " + row + "-v.")
 			b.line(n + "->set( p0 = " + row + "-k p1 = " + b.unbox(box, x.Type.Args[1]) + " ).")
 			b.line("ENDLOOP.")
-			b.line("ENDTRY.")
+			b.line("ENDIF.")
 		} else if target != n {
 			b.line(n + " ?= " + target + ".")
 		}

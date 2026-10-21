@@ -248,12 +248,16 @@ func TestConfigJSONFixtures(t *testing.T) {
 			t.Fatal(err)
 		}
 		if i == 0 {
-			// dependencies activates live array casts. The v702 config gate
-			// loads the array as a dependency: IS INSTANCE OF in an IF there
-			// destroys its parse structure and hides even dense/items/missing.
+			// dependencies activates live array casts; they probe with IS
+			// INSTANCE OF, never with a TRY around ?=.
 			array := files[names.Get("runtime."+hir.T(hir.Array, hir.Ref(hir.RootObject)).String())+".clas.abap"]
-			if !strings.Contains(array, "INTERFACES "+names.Get("view.storage")+".") || !strings.Contains(array, "CATCH cx_sy_move_cast_error.") || strings.Contains(array, "IS INSTANCE OF") {
-				t.Fatal("live reference-array runtime must remain resolvable by the config JSON v702 gate")
+			if !strings.Contains(array, "INTERFACES "+names.Get("view.storage")+".") || !strings.Contains(array, " IS INSTANCE OF "+names.Get("view.storage")+".") {
+				t.Fatal("live reference-array runtime must box through the view storage probe")
+			}
+		}
+		for name, src := range files {
+			if strings.Contains(src, "CATCH cx_sy_move_cast_error") {
+				t.Fatalf("%s: cast probe with a TRY", name)
 			}
 		}
 		// Cases have overlapping generated identities, so give each a separate directory.

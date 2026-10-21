@@ -38,7 +38,7 @@ func TestJSONSubsetEnablesDescriptorInterfaceBeforeClasses(t *testing.T) {
 	}
 }
 
-func TestLiveBoxUsesCheckedDynamicCast(t *testing.T) {
+func TestLiveBoxProbesWithoutTry(t *testing.T) {
 	d := hir.T(hir.Dynamic)
 	array := hir.T(hir.Array, hir.Ref(hir.RootObject))
 	view := rt("dynamic.asRef", local("input", d), array)
@@ -46,9 +46,10 @@ func TestLiveBoxUsesCheckedDynamicCast(t *testing.T) {
 	m.Static, m.Params = true, []hir.Param{{Name: "input", Type: d}}
 	files, names := abiSource(t, &hir.Program{Classes: []*hir.Class{{Name: "LiveBoxProbe", Methods: []*hir.Method{m}}}})
 	src := files[names.Get("runtime."+array.String())+".clas.abap"]
-	requireABI(t, src, "TRY.", "CATCH cx_sy_move_cast_error.")
-	if strings.Contains(src, "IS INSTANCE OF "+names.Get("runtime.dynamic")) {
-		t.Fatal("live-box type test prevents the config JSON v702 dependency from parsing", src)
+	// An initial source still clears the box target, as the cast did.
+	requireABI(t, src, " IS NOT BOUND OR ", " IS INSTANCE OF "+names.Get("runtime.dynamic")+".", " IS INSTANCE OF "+names.Get("view.storage")+".")
+	if strings.Contains(src, "cx_sy_move_cast_error") {
+		t.Fatal("live box probes with a TRY", src)
 	}
 }
 
@@ -59,7 +60,7 @@ func TestOptionalRootClassOfUsesCheckedDescriptor(t *testing.T) {
 	m.Params = []hir.Param{{Name: "input", Type: root}}
 	files, names := abiSource(t, &hir.Program{Classes: []*hir.Class{{Name: "Caller", Methods: []*hir.Method{m}}}})
 	src := files[names.Get("Caller")+".clas.abap"]
-	requireABI(t, src, "IS BOUND.", " ?= ", "CATCH cx_sy_move_cast_error.")
+	requireABI(t, src, "IS BOUND.", " ?= ", "IS NOT INSTANCE OF "+names.Get("runtime.described")+".")
 	// Optional root storage is still erased: only the checked interface view
 	// may receive the native-constructor method call (absence remains absent).
 	if strings.Count(src, "->"+names.Get("builtin.nativeConstructor")+"( )") != 2 {

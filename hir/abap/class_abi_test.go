@@ -81,7 +81,7 @@ func TestRootClassOfABAP(t *testing.T) {
 	}
 	files, names := abiSource(t, p)
 	src := files[names.Get("Native")+".clas.abap"]
-	requireABI(t, src, "IS NOT BOUND.", "CATCH cx_sy_move_cast_error.", "->"+names.Get("builtin.nativeConstructor")+"( )", "IF result IS NOT BOUND.")
+	requireABI(t, src, "IS NOT BOUND.", "IS NOT INSTANCE OF "+names.Get("runtime.described")+".", "->"+names.Get("builtin.nativeConstructor")+"( )", "IF result IS NOT BOUND.")
 	requireABI(t, files[names.Get("Child")+".clas.abap"], names.Get("builtin.nativeConstructor")+" REDEFINITION.", names.Get("builtin.classOf")+" REDEFINITION.")
 	record := files[names.Get("Record")+".clas.abap"]
 	requireABI(t, record, "METHOD "+names.Get("builtin.nativeConstructor")+".\nRAISE EXCEPTION TYPE "+names.Get("class.refusal"))

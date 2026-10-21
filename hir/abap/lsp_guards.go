@@ -65,13 +65,8 @@ ENDIF.
 v = p0->get( 'edits' ).
 IF v IS BOUND.
 result = xsdbool( v->tag = $D=>tag_array ).
-IF v->tag = $D=>tag_ref.
-DATA marker TYPE REF TO $A.
-TRY.
-marker ?= v->oval.
+IF v->tag = $D=>tag_ref AND ( v->oval IS NOT BOUND OR v->oval IS INSTANCE OF $A ).
 result = abap_true.
-CATCH cx_sy_move_cast_error.
-ENDTRY.
 ENDIF.
 ENDIF.
 ENDMETHOD.
