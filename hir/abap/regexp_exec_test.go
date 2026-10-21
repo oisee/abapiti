@@ -22,10 +22,15 @@ func TestRegExpExecRuntime(t *testing.T) {
 	for _, s := range files {
 		text += s
 	}
-	for _, want := range []string{"METHOD exec.", "DATA last_index TYPE i.", "READ TABLE groups INDEX 1", "last_index = hit-offset + hit-length", "last_index = 0", "match_missing", "match_groups", "result->match_index = hit-offset"} {
+	for _, want := range []string{"METHOD exec.", "DATA last_index TYPE i.", "READ TABLE groups INDEX 1", "last_index = hit-offset + hit-length", "last_index = 0", "match_missing", "result->match_index = hit-offset"} {
 		if !strings.Contains(text, want) {
 			t.Errorf("missing %s", want)
 		}
+	}
+	// Without a Dynamic in the program nothing reads named groups, and the
+	// dynamic box they would fill is not emitted.
+	if strings.Contains(text, "match_groups") || strings.Contains(text, "named_value") {
+		t.Error("named-group materialization needs the dynamic runtime, which this program does not include")
 	}
 	for _, forbidden := range []string{"RESULTS DATA(", "INTO DATA(hit)", "INTO DATA(group)"} {
 		if strings.Contains(text, forbidden) {
@@ -48,7 +53,10 @@ func TestRegExpExecNamedGroupsLayout(t *testing.T) {
 	result := hir.T(hir.Optional, hir.T(hir.Array, str))
 	pattern := &hir.Expr{Kind: hir.New, Type: hir.T(hir.RegExp), Args: []*hir.Expr{hir.L(str, "(a)(?<x>b)"), hir.L(str, "")}}
 	m := method("exec", result, ret(rt("regexp.exec", pattern, result, hir.L(str, "ab"))))
-	p := &hir.Program{Classes: []*hir.Class{{Name: "Probe", Methods: []*hir.Method{m}}}}
+	arr := hir.T(hir.Array, str)
+	groups := method("groups", hir.T(hir.Dynamic), ret(rt("array.matchGroups", local("hit", arr), hir.T(hir.Dynamic))))
+	groups.Params = []hir.Param{{Name: "hit", Type: arr}}
+	p := &hir.Program{Classes: []*hir.Class{{Name: "Probe", Methods: []*hir.Method{m, groups}}}}
 	if errs := hir.Verify(p); len(errs) > 0 {
 		t.Fatal(errs)
 	}
@@ -68,6 +76,9 @@ func TestRegExpExecNamedGroupsLayout(t *testing.T) {
 	end := strings.Index(js[start:], "ENDMETHOD.\n") + start
 	if named := strings.Index(js, "IF group_names IS NOT INITIAL."); start < 0 || named < start || named > end {
 		t.Error("named groups must be materialized inside METHOD exec")
+	}
+	if !strings.Contains(files[names.Get("runtime."+arr.String())+".clas.abap"], "DATA match_groups TYPE REF TO "+names.Get("runtime.dynamic")+".") || files[names.Get("runtime.dynamic")+".clas.abap"] == "" {
+		t.Error("a program reading named groups must carry match_groups and the dynamic runtime")
 	}
 	if strings.Contains(js, "named_row-index = sy-tabix") || !strings.Contains(js, "named_row-index = group_count.") {
 		t.Error("named groups must take their capture-group number")

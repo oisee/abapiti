@@ -308,7 +308,9 @@ func (e *emitter) support() {
 		e.files[file] = strings.Replace(e.files[file], "PUBLIC SECTION.", "PUBLIC SECTION.\nDATA match_index TYPE i.\nDATA match_has_index TYPE abap_bool.", 1)
 		if e.jsRegexpUsed {
 			e.files[file] = strings.Replace(e.files[file], "PUBLIC SECTION.", "PUBLIC SECTION.\nDATA match_missing TYPE HASHED TABLE OF i WITH UNIQUE KEY table_line.", 1)
-			e.files[file] = strings.Replace(e.files[file], "PUBLIC SECTION.", "PUBLIC SECTION.\nDATA match_groups TYPE REF TO "+e.name("runtime.dynamic")+".", 1)
+			if e.dynamicUsed {
+				e.files[file] = strings.Replace(e.files[file], "PUBLIC SECTION.", "PUBLIC SECTION.\nDATA match_groups TYPE REF TO "+e.name("runtime.dynamic")+".", 1)
+			}
 			e.files[file] = strings.Replace(e.files[file], "METHOD get.\n", "METHOD get.\nREAD TABLE match_missing WITH TABLE KEY table_line = p0 TRANSPORTING NO FIELDS.\nIF sy-subrc = 0.\nRETURN.\nENDIF.\n", 1)
 		}
 	}
