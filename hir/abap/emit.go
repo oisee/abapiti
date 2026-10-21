@@ -77,20 +77,20 @@ func Emit(p *hir.Program) (map[string]string, error) {
 
 // EmitNamed additionally returns the name table used for emitted identities.
 func EmitNamed(p *hir.Program) (map[string]string, *hir.Names, error) {
-	return emitNamed(p, nil, nil, false)
+	return emitNamed(p, nil, nil, false, false)
 }
 
 // EmitTestNamed marks only explicitly identified assertion throws. The marker
 // extends the original payload wrapper, preserving source catch semantics.
 func EmitTestNamed(p *hir.Program, assertionOwners map[string]bool) (map[string]string, *hir.Names, error) {
-	return emitNamed(p, nil, assertionOwners, false)
+	return emitNamed(p, nil, assertionOwners, false, false)
 }
 
 // EmitTestPackageNamed separates global runtime dispatch for test declarations
 // behind a registered extension. Ordinary (hashed or readable) OSG emission is
 // unchanged; only the two-package full build opts into this ABI.
 func EmitTestPackageNamed(p *hir.Program, assertionOwners map[string]bool) (map[string]string, *hir.Names, error) {
-	return emitNamed(p, nil, assertionOwners, true)
+	return emitNamed(p, nil, assertionOwners, true, false)
 }
 
 // Audit runs the same emitter, collecting every refusal instead of retaining
@@ -98,11 +98,32 @@ func EmitTestPackageNamed(p *hir.Program, assertionOwners map[string]bool) (map[
 // Like EmitNamed, it applies the target's HIR passes in place.
 func Audit(p *hir.Program) []error {
 	refusals := []error{}
-	_, _, err := emitNamed(p, &refusals, nil, false)
+	_, _, err := emitNamed(p, &refusals, nil, false, false)
 	if err != nil && len(refusals) == 0 {
 		refusals = append(refusals, err)
 	}
 	return refusals
+}
+
+// AuditKeepGoing is Audit without the pre-emission catalogue gate for
+// ownerless operations: union.declarations has no owning body to trap, so a
+// measurement records it upstream and omits the union family (the emitter
+// writes no ABAP for it) instead of aborting before any refusal is collected.
+// Per-site refusals are unchanged.
+func AuditKeepGoing(p *hir.Program) []error {
+	refusals := []error{}
+	_, _, err := emitNamed(p, &refusals, nil, false, true)
+	if err != nil && len(refusals) == 0 {
+		refusals = append(refusals, err)
+	}
+	return refusals
+}
+
+// EmitNamedKeepGoing emits after the caller trapped every owning body, so the
+// catalogue gate would only re-report ownerless operations (union families),
+// which have no ABAP output and are omitted.
+func EmitNamedKeepGoing(p *hir.Program) (map[string]string, *hir.Names, error) {
+	return emitNamed(p, nil, nil, false, true)
 }
 
 // Refusal carries the owning body even for synthetic ID-zero operands.
@@ -130,7 +151,7 @@ func (e *emitter) refuse(err error) {
 	}
 }
 
-func emitNamed(p *hir.Program, refusals *[]error, assertionOwners map[string]bool, testPackages bool) (map[string]string, *hir.Names, error) {
+func emitNamed(p *hir.Program, refusals *[]error, assertionOwners map[string]bool, testPackages, keepGoing bool) (map[string]string, *hir.Names, error) {
 	if errors := hir.Verify(p); len(errors) > 0 {
 		return nil, nil, errors[0]
 	}
@@ -139,7 +160,7 @@ func emitNamed(p *hir.Program, refusals *[]error, assertionOwners map[string]boo
 			return nil, nil, hir.Error{Node: node, Message: "ABAP cannot share storage for covariant readonly container views (" + op + ")"}
 		}
 	}
-	if errors := hir.CheckRuntimeOps(p, "ABAP", SupportsRuntimeOp); (refusals == nil || len(p.Unions) > 0) && len(errors) > 0 {
+	if errors := hir.CheckRuntimeOps(p, "ABAP", SupportsRuntimeOp); !keepGoing && (refusals == nil || len(p.Unions) > 0) && len(errors) > 0 {
 		return nil, nil, errors[0]
 	}
 

@@ -3,6 +3,7 @@ package tsfront
 import (
 	"fmt"
 	"math"
+	"reflect"
 	"regexp"
 	"sort"
 	"strconv"
@@ -67,7 +68,33 @@ func testMethods(p *hir.Program, f func(*hir.Class, *hir.Method)) {
 
 var abapNodeError = regexp.MustCompile(`^node ([0-9]+)(?: \([^\n]*?\))?: `)
 
+var abapOperation = regexp.MustCompile(`runtime operation ([A-Za-z0-9_.]+)`)
+
+var abapNodeLocated = regexp.MustCompile(`^node ([0-9]+) \(([^\n]*?)\): `)
+
 func MeasureABAPTestGap(lowering *RegistryLowering) ABAPTestGap {
+	return measureABAPTestGap(lowering, false)
+}
+
+// MeasureABAPTestGapKeepGoing audits with the ownerless-operation gate open:
+// the Refusals inventory then survives union families and lists every
+// located emitter refusal instead of the first catalogue error.
+func MeasureABAPTestGapKeepGoing(lowering *RegistryLowering) ABAPTestGap {
+	return measureABAPTestGap(lowering, true)
+}
+
+// UnattributableRefusal is an ABAP refusal with no owning body to trap:
+// type- or declaration-level sites such as union.declarations. Measurement
+// records them; the unemittable declaration is omitted when the emitter
+// writes nothing for it, and owning bodies keep the whole-body trap policy.
+type UnattributableRefusal struct {
+	Node      int    `json:"node"`
+	Location  string `json:"location"`
+	Operation string `json:"operation"`
+	Message   string `json:"message"`
+}
+
+func measureABAPTestGap(lowering *RegistryLowering, keepGoing bool) ABAPTestGap {
 	hir.AssignSiteIDs(lowering.Prog)
 	gap := ABAPTestGap{Files: len(lowering.Files), Runtime: []ABAPGapRow{}, Refusals: []ABAPGapRow{}}
 	_, gap.UnsupportedCatalogue = abap.RuntimeOps()
@@ -111,7 +138,7 @@ func MeasureABAPTestGap(lowering *RegistryLowering) ABAPTestGap {
 	}
 	gap.Runtime = rows()
 	sites = map[string]map[string]bool{}
-	for _, err := range abap.Audit(lowering.Prog) {
+	for _, err := range audit(lowering, keepGoing) {
 		message := err.Error()
 		// Runtime-operation sites already have their exact pre-pass inventory.
 		if strings.Contains(message, "unsupported ABAP runtime op ") {
@@ -130,6 +157,27 @@ func MeasureABAPTestGap(lowering *RegistryLowering) ABAPTestGap {
 // TrapABAPTestRefusals preserves signatures and refuses complete owning bodies,
 // exactly as the Go test harness does. Structural errors cannot be hidden.
 func TrapABAPTestRefusals(lowering *RegistryLowering) error {
+	_, err := trapABAPTestRefusals(lowering, false)
+	return err
+}
+
+// TrapABAPTestRefusalsKeepGoing is the measurement variant: refusals with no
+// owning body (type or declaration level) are recorded and the unemittable
+// declaration omitted — safe exactly when the emitter writes no ABAP for it,
+// as for union families — so emission finishes and lists every refusal.
+// Body-level refusals keep the TS-HA whole-owning-body policy.
+func TrapABAPTestRefusalsKeepGoing(lowering *RegistryLowering) ([]UnattributableRefusal, error) {
+	return trapABAPTestRefusals(lowering, true)
+}
+
+func audit(lowering *RegistryLowering, keepGoing bool) []error {
+	if keepGoing {
+		return abap.AuditKeepGoing(lowering.Prog)
+	}
+	return abap.Audit(lowering.Prog)
+}
+
+func trapABAPTestRefusals(lowering *RegistryLowering, keepGoing bool) ([]UnattributableRefusal, error) {
 	hir.AssignSiteIDs(lowering.Prog)
 	// The catalogue gate is stricter than individual emitter switch arms.
 	// In particular ID-zero array.has and number.ceil sites must not escape
@@ -146,10 +194,46 @@ func TrapABAPTestRefusals(lowering *RegistryLowering) error {
 			m.Body = failureBody(m.Node, strings.Join(messages, "; "))
 		}
 	})
+	var unattributable []UnattributableRefusal
+	record := func(node hir.Node, operation, message string) {
+		unattributable = append(unattributable, UnattributableRefusal{Node: node.ID, Location: node.Source, Operation: operation, Message: message})
+	}
+	if keepGoing {
+		// Tagged union families have no ABAP ABI. References erase to dynamic
+		// storage so signatures, fields and locals stay emittable; real union
+		// traffic still traps, because every union.* operation refuses in its
+		// owning body and those bodies were replaced above. The union
+		// declarations themselves emit nothing and are omitted below.
+		eraseUnionRefs(lowering.Prog)
+		// Ownerless catalogue operations: with every owning body already
+		// trapped, whatever UsedRuntimeOps still reports lives outside the
+		// test bodies (union declarations, interface signatures). Interfaces
+		// emit signatures only, and union families emit nothing, so omission
+		// keeps the ABAP syntactically complete.
+		owned := map[int]bool{}
+		testMethods(lowering.Prog, func(_ *hir.Class, m *hir.Method) {
+			for id := range bodyIDs(m.Body) {
+				owned[id] = true
+			}
+		})
+		ops := []string{}
+		used := hir.UsedRuntimeOps(lowering.Prog)
+		for op := range used {
+			if !abap.SupportsRuntimeOp(op) {
+				ops = append(ops, op)
+			}
+		}
+		sort.Strings(ops)
+		for _, op := range ops {
+			if node := used[op]; !owned[node.ID] {
+				record(node, op, fmt.Sprintf("node %d (%s): runtime operation %s has no emitter for selected target ABAP", node.ID, node.Source, op))
+			}
+		}
+	}
 	for round := 0; round < 20; round++ {
-		errors := abap.Audit(lowering.Prog)
+		errors := audit(lowering, keepGoing)
 		if len(errors) == 0 {
-			return nil
+			return unattributable, nil
 		}
 		ids := map[int]string{}
 		owners := map[string][]string{}
@@ -161,11 +245,11 @@ func TrapABAPTestRefusals(lowering *RegistryLowering) error {
 			}
 			match := abapNodeError.FindStringSubmatch(err.Error())
 			if match == nil {
-				return fmt.Errorf("structural ABAP test refusal: %w", err)
+				return unattributable, fmt.Errorf("structural ABAP test refusal: %w", err)
 			}
 			id, _ := strconv.Atoi(match[1])
 			if id == 0 {
-				return err
+				return unattributable, err
 			}
 			ids[id] = err.Error()
 		}
@@ -185,9 +269,100 @@ func TrapABAPTestRefusals(lowering *RegistryLowering) error {
 			}
 		})
 		if n == 0 {
-			return fmt.Errorf("unattributable ABAP test refusal: %s", errors[0])
+			if !keepGoing {
+				return unattributable, fmt.Errorf("unattributable ABAP test refusal: %s", errors[0])
+			}
+			// Nothing more is attributable: remaining located errors have no
+			// owning body. Record them; emission may still refuse them, which
+			// then names the next blocking construct precisely.
+			seen := map[string]bool{}
+			for _, row := range unattributable {
+				seen[fmt.Sprintf("%d\x00%s", row.Node, row.Message)] = true
+			}
+			for _, err := range errors {
+				row, ok := unattributableRefusal(err)
+				if !ok {
+					continue
+				}
+				if k := fmt.Sprintf("%d\x00%s", row.Node, row.Message); !seen[k] {
+					seen[k] = true
+					unattributable = append(unattributable, row)
+				}
+			}
+			return unattributable, nil
 		}
 		(&lowerer{out: lowering.Prog}).repairFailedBodies()
 	}
-	return fmt.Errorf("ABAP test refusal trapping did not converge")
+	return unattributable, fmt.Errorf("ABAP test refusal trapping did not converge")
+}
+
+// refusalOperation extracts the runtime operation a located refusal names, if
+// any, so unattributable rows can be grouped by operation.
+func refusalOperation(message string) string {
+	if match := abapOperation.FindStringSubmatch(message); match != nil {
+		return match[1]
+	}
+	return ""
+}
+
+// unattributableRefusal parses a located "node N (source): ..." refusal into a
+// recordable row; false when the error carries no location.
+func unattributableRefusal(err error) (UnattributableRefusal, bool) {
+	message := err.Error()
+	match := abapNodeLocated.FindStringSubmatch(message)
+	if match == nil {
+		return UnattributableRefusal{}, false
+	}
+	id, _ := strconv.Atoi(match[1])
+	return UnattributableRefusal{Node: id, Location: match[2], Operation: refusalOperation(message), Message: message}, true
+}
+
+// eraseUnionRefs rewrites every type mentioning a tagged union to dynamic
+// storage, except the union declarations themselves (verification keeps them).
+// Signatures, fields and locals of erased types stay emittable; the values
+// they carry are boxed dynamic, and every operation that discriminates them
+// (union.*) refuses in its owning body, so no union traffic runs silently.
+func eraseUnionRefs(p *hir.Program) {
+	var visit func(v reflect.Value)
+	visit = func(v reflect.Value) {
+		if !v.IsValid() {
+			return
+		}
+		switch v.Kind() {
+		case reflect.Pointer, reflect.Interface:
+			if !v.IsNil() {
+				visit(v.Elem())
+			}
+		case reflect.Slice:
+			for i := 0; i < v.Len(); i++ {
+				visit(v.Index(i))
+			}
+		case reflect.Struct:
+			if v.Type() == unionRefHostType {
+				if t := v.Interface().(hir.Type); containsUnionRef(t) && v.CanSet() {
+					v.Set(reflect.ValueOf(hir.T(hir.Dynamic)))
+				}
+				return
+			}
+			for i := 0; i < v.NumField(); i++ {
+				visit(v.Field(i))
+			}
+		}
+	}
+	visit(reflect.ValueOf(p.Classes))
+	visit(reflect.ValueOf(p.Interfaces))
+}
+
+var unionRefHostType = reflect.TypeOf(hir.Type{})
+
+func containsUnionRef(t hir.Type) bool {
+	if t.Kind == hir.UnionRef {
+		return true
+	}
+	for _, a := range t.Args {
+		if containsUnionRef(a) {
+			return true
+		}
+	}
+	return false
 }
