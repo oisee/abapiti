@@ -72,30 +72,35 @@ func (r *jsRegExp) exec(s jsString) *array[jsString] {
  if start>s.length(){if stateful{r.LastIndex=0};return nil}
  unicodeMode:=r.Flags.indexOf(str("u"))>=0
  var text strings.Builder
- offsets:=map[int]int32{}
- cursor:=0
+ text.Grow(int(s.length()))
+ // offsets[b] is the UTF-16 index of the code point starting at byte b.
+ offsets:=make([]int32,0,s.length()+1)
+ cursor,base:=0,0
  for pos:=int32(0);pos<s.length();pos++ {
-  offsets[text.Len()]=pos
+  at:=pos
   unit:=rune(s.charCodeAt(pos))
   if unicodeMode&&unit>=0xd800&&unit<=0xdbff&&pos+1<s.length(){low:=rune(s.charCodeAt(pos+1));if low>=0xdc00&&low<=0xdfff{unit=utf16.DecodeRune(unit,low);if pos<start&&start==pos+1{start=pos};pos++}}
-  if pos<start{cursor++}
+  if pos<start{cursor++;base=text.Len()}
   text.WriteRune(unit)
+  for len(offsets)<text.Len(){offsets=append(offsets,at)}
  }
- offsets[text.Len()]=s.length()
+ offsets=append(offsets,s.length())
  input:=text.String()
  if r.denied!=nil&&r.denied.MatchString(input){if stateful{r.LastIndex=0};return nil}
  re:=r.compiled
  wrapped:=start>0||r.Flags.indexOf(str("y"))>=0
+ searchInput:=input;byteBase:=0
  if wrapped {
-  // RE2 bounds counted repetitions at 1000. Concatenated fixed blocks
-  // retain anchors against the original input without that cursor limit.
-  prefix:="";for count:=cursor;count>0;{n:=min(count,1000);prefix+="(?s:.{"+strconv.Itoa(n)+"})";count-=n}
-  scan:="(?s:.*?)";if r.Flags.indexOf(str("y"))>=0{scan=""}
-  re=regexp.MustCompile("\\A"+prefix+scan+"("+re.String()+")")
+  // Keep the one code point before the cursor for word boundaries; the
+  // mandatory prefix unit stops start anchors at the sliced boundary, so
+  // the wrapped program is independent of the cursor and is compiled once.
+  prefix:=""
+  if cursor>0{byteBase=base;searchInput=input[base:];prefix="(?s:.)"}
+  re=wrappedRegExp(re,prefix,r.Flags.indexOf(str("y"))>=0)
  }
- m:=re.FindStringSubmatchIndex(input)
+ m:=re.FindStringSubmatchIndex(searchInput)
  if m==nil{if stateful{r.LastIndex=0};return nil}
- if wrapped{m=m[2:]}
+ if wrapped{m=m[2:];for i:=range m{if m[i]>=0{m[i]+=byteBase}}}
  if r.labelGuard{m=m[2:]}
  if r.Source==str("^(-?)0+(?=\\d)"){m[1]--;m=m[:len(m)-2]}
  out:=&array[jsString]{HasMatchIndex:true,MatchIndex:offsets[m[0]]}
