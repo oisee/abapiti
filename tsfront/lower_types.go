@@ -23,6 +23,12 @@ import (
 
 // mapTypeNode maps a declared type annotation to a HIR type.
 func (l *lowerer) mapTypeNode(n *ast.Node) hir.Type {
+	if !l.unprunedFeatures {
+		return l.mapTypeNodeRaw(n)
+	}
+	return l.rememberContainer(l.ck.GetTypeFromTypeNode(n), l.mapTypeNodeRaw(n))
+}
+func (l *lowerer) mapTypeNodeRaw(n *ast.Node) hir.Type {
 	if len(l.containerParams) > 0 {
 		return l.mapCheckerType(n, l.ck.GetTypeFromTypeNode(n))
 	}
@@ -184,9 +190,9 @@ func (l *lowerer) mapTypeReference(n *ast.Node) hir.Type {
 	case "ReadonlySet":
 		return hir.T(hir.OrderedSet, arg(0))
 	case "Map":
-		return hir.T(hir.OrderedMap, arg(0), arg(1))
+		return jsMapType(arg(0), arg(1))
 	case "ReadonlyMap":
-		return hir.T(hir.OrderedMap, arg(0), arg(1))
+		return jsMapType(arg(0), arg(1))
 	case "Array", "ReadonlyArray":
 		return hir.T(hir.Array, arg(0))
 	case "Readonly":
@@ -228,6 +234,12 @@ func (l *lowerer) mapTypeReference(n *ast.Node) hir.Type {
 	if len(targs) > 0 {
 		// Generic instantiations erase to the declaration's constraint.
 		l.diagf(n, "note-generic-erased", "type arguments of %s are erased", name)
+	}
+	if mapped, ok := l.mapInterfaceType(n, l.ck.GetTypeFromTypeNode(n)); ok {
+		return mapped
+	}
+	if mapped, ok := l.optionalSlotIntersection(l.ck.GetTypeFromTypeNode(n)); ok {
+		return mapped
 	}
 	if c := l.classOf(sym); c != nil {
 		return hir.Ref(c.Name)
@@ -422,7 +434,10 @@ func (l *lowerer) isMatchArrayType(t *checker.Type) bool {
 // mapCheckerType maps the checker type of an expression (or an inferred
 // declaration type) to a HIR type. Narrowed literal types collapse to their
 // base; `T | undefined` becomes Optional<T>.
-func (l *lowerer) mapCheckerType(n *ast.Node, t *checker.Type) (mapped hir.Type) {
+func (l *lowerer) mapCheckerType(n *ast.Node, t *checker.Type) hir.Type {
+	return l.rememberContainer(t, l.mapCheckerTypeRaw(n, t))
+}
+func (l *lowerer) mapCheckerTypeRaw(n *ast.Node, t *checker.Type) (mapped hir.Type) {
 	t = l.specializedType(t)
 	if cached, ok := l.gogenCachedType(t); ok {
 		return cached
@@ -436,6 +451,15 @@ func (l *lowerer) mapCheckerType(n *ast.Node, t *checker.Type) (mapped hir.Type)
 		return hir.T(hir.Void)
 	}
 	if mapped, ok := l.gogenValueType(t); ok {
+		return mapped
+	}
+	if mapped, ok := l.arrayInterfaceType(n, t); ok {
+		return mapped
+	}
+	if mapped, ok := l.mapInterfaceType(n, t); ok {
+		return mapped
+	}
+	if mapped, ok := l.optionalSlotIntersection(t); ok {
 		return mapped
 	}
 	if mapped, ok := l.recursiveFamilyType(n, t); ok {
@@ -453,6 +477,11 @@ func (l *lowerer) mapCheckerType(n *ast.Node, t *checker.Type) (mapped hir.Type)
 	}
 	l.mappingTypes[t] = true
 	defer delete(l.mappingTypes, t)
+	if picked, ok := l.pickedMethodsSource(n, t); ok && l.slotInterfaceRef(picked) {
+		// Pick<ArtifactObject, "getType" | "getName"> holds the same
+		// objects as the slot interface; not a structural copy.
+		return picked
+	}
 	if mapped, ok := l.gogenCheckerType(n, t); ok {
 		return mapped
 	}
@@ -460,19 +489,8 @@ func (l *lowerer) mapCheckerType(n *ast.Node, t *checker.Type) (mapped hir.Type)
 		return mapped
 	}
 	if t.IsUnion() {
-		// Unlike arbitrary mixed null unions, a match array has a nullable
-		// reference ABI; no tagged Dynamic payload is needed.
-		matchArray, onlyMatch := false, true
-		for _, part := range t.AsUnionOrIntersectionType().Types() {
-			if part.Symbol() != nil && (part.Symbol().Name == "RegExpMatchArray" || part.Symbol().Name == "RegExpExecArray") && l.librarySymbol(part.Symbol()) {
-				matchArray = true
-			} else if part.Flags()&(checker.TypeFlagsNull|checker.TypeFlagsUndefined) == 0 {
-				onlyMatch = false
-			}
-		}
-		if matchArray && onlyMatch {
-			return hir.T(hir.Optional, hir.T(hir.Array, hir.T(hir.String)))
-		}
+		// Match-array null unions use the ordinary tagged-null mapping below;
+		// Optional alone only represents undefined, including during boxing.
 		if l.unprunedFeatures && len(l.familyShapes) > 0 {
 			// `F | undefined` for a published family F: its members map back
 			// to F (as family layouts do), not to separate payload classes.
@@ -692,7 +710,7 @@ func (l *lowerer) mapCheckerType(n *ast.Node, t *checker.Type) (mapped hir.Type)
 				case t.Symbol() != nil && (t.Symbol().Name == "Set" || t.Symbol().Name == "ReadonlySet"):
 					return hir.T(hir.OrderedSet, args...)
 				case t.Symbol() != nil && (t.Symbol().Name == "Map" || t.Symbol().Name == "ReadonlyMap"):
-					return hir.T(hir.OrderedMap, args...)
+					return jsMapType(args[0], args[1])
 				default:
 					return hir.T(hir.Array, args...)
 				}
@@ -842,6 +860,13 @@ func (l *lowerer) synthFromPropertyTypes(n *ast.Node, props []*ast.Symbol, slots
 				same = false
 				break
 			}
+			if l.unprunedFeatures && f.Type.Kind == hir.Optional && existing.Type.Kind != hir.Optional && f.Type.Args[0].IsRef() {
+				// Sharing a physical reference slot must not erase its declared
+				// absence. Partial<T> accepts records missing this property,
+				// whereas T's required slot does not.
+				same = false
+				break
+			}
 			a, b := f.Type, existing.Type
 			if a.Kind == hir.Optional && a.Args[0].IsRef() {
 				a = a.Args[0]
@@ -873,10 +898,14 @@ func (l *lowerer) synthFromPropertyTypes(n *ast.Node, props []*ast.Symbol, slots
 			return c
 		}
 	}
-	// A data object with a subset of a data interface's fields (the rest
-	// optional) is that data interface with the others absent: plain
-	// objects have no identity of their own.
+	// An explicit type literal describes only its listed fields. Adopting
+	// unrelated optional padding can reject a valid structural argument
+	// whose extra fields have different types. Inferred object layouts
+	// retain their existing optional-superset storage reuse.
 	for _, c := range l.out.Classes {
+		if l.unprunedFeatures && n.Kind == ast.KindTypeLiteral {
+			break
+		}
 		if (!l.shapeLike[c.Name] && !(l.integerOptions.TrapOnFailure && strings.HasPrefix(c.Name, "shape."))) || c.Ctor == nil || len(c.Fields) <= len(fields) {
 			continue
 		}
@@ -961,6 +990,12 @@ func (l *lowerer) synthFromPropertyTypes(n *ast.Node, props []*ast.Symbol, slots
 // shapePropertyReadonly includes checker-created mapped/const properties as well
 // as explicit readonly signatures. Readonly remains metadata on the HIR field.
 func shapePropertyReadonly(p *ast.Symbol) bool {
+	// These properties retain origin declarations for source locations, but
+	// their modifiers have already been resolved by the checker. In particular
+	// Mutable<T> and writable intersection members can remove readonly.
+	if p.CheckFlags&(ast.CheckFlagsMapped|ast.CheckFlagsReverseMapped|ast.CheckFlagsSyntheticProperty) != 0 {
+		return p.CheckFlags&ast.CheckFlagsReadonly != 0
+	}
 	if p.CheckFlags&ast.CheckFlagsReadonly != 0 {
 		return true
 	}
@@ -1474,4 +1509,10 @@ func (l *lowerer) pickedMethodsSource(n *ast.Node, t *checker.Type) (hir.Type, b
 		return hir.Type{}, false
 	}
 	return typ, true
+}
+
+func jsMapType(key, value hir.Type) hir.Type {
+	t := hir.T(hir.OrderedMap, key, value)
+	t.JSMap = true
+	return t
 }

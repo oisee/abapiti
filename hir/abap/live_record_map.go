@@ -19,7 +19,11 @@ func (e *emitter) liveRecordMapRuntime(t hir.Type) {
 	text := e.files[file]
 	text = strings.Replace(text, "PUBLIC SECTION.\n", "PUBLIC SECTION.\nINTERFACES "+storage+".\n", 1)
 	var code strings.Builder
-	code.WriteString("METHOD " + storage + "~structural.\nENDMETHOD.\nMETHOD " + storage + "~source.\nENDMETHOD.\n")
+	source := ""
+	if e.types["runtime.mapView"] {
+		source = "result = map_box.\n"
+	}
+	code.WriteString("METHOD " + storage + "~structural.\nENDMETHOD.\nMETHOD " + storage + "~source.\n" + source + "ENDMETHOD.\n")
 	code.WriteString("METHOD " + storage + "~has.\nRAISE EXCEPTION TYPE " + e.name("view.refusal") + " EXPORTING reason = `live_record_map.go: has: native record-map presence not implemented`.\nENDMETHOD.\nMETHOD " + storage + "~delete.\nRAISE EXCEPTION TYPE " + e.name("view.refusal") + " EXPORTING reason = `live_record_map.go: delete: native record-map deletion not implemented`.\nENDMETHOD.\n")
 	b := &body{e: e, m: &hir.Method{Result: hir.T(hir.Void)}, locals: map[string]string{}}
 	b.line("READ TABLE entries WITH KEY by_k COMPONENTS k = p0 INTO DATA(row).\nIF sy-subrc = 0.")

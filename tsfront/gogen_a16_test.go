@@ -28,7 +28,7 @@ func TestGogenA16MatchAllNodeOracle(t *testing.T) {
 func TestGogenA16MatchGroupsNodeOracle(t *testing.T) {
 	source := `class Probe {static run():string {const out:string[]=[];for(const m of "a ab".matchAll(/(?<first>a)(?<second>b)?/g)){const groups=m.groups!;out.push(groups.first+":"+(groups.second??"missing"));out.push(JSON.stringify(groups)+":"+Object.keys(groups).join(","));}return out.join("|");}}`
 	want := conversionOracle(t, source)
-	gogenOracle(t, source, want[:len(want)-1], "array.matchGroups")
+	gogenOracle(t, source, want[:len(want)-1], "regexp.clone")
 }
 
 func TestGogenA16MatchAllResumeNodeOracle(t *testing.T) {
@@ -39,7 +39,7 @@ func TestGogenA16MatchAllResumeNodeOracle(t *testing.T) {
  const plain=[..."a".matchAll(/(a)(b)?/g)];out.push(JSON.stringify(plain));out.push(String(plain[0].groups));
  return out.join("|");}}`
 	want := conversionOracle(t, source)
-	gogenOracle(t, source, want[:len(want)-1], "array.matchGroups")
+	gogenOracle(t, source, want[:len(want)-1], "regexp.clone")
 }
 
 func TestGogenA16StringEvaluationNodeOracle(t *testing.T) {

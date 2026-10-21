@@ -59,11 +59,27 @@ func (l *lowerer) familySubsetParts(parts []*checker.Type) (hir.Type, bool) {
 				refined := a
 				refined.Tags = tags
 				refined.Literals = l.familyLiterals(part)
-				alternatives = append(alternatives, refined)
 				found = true
+				// Distinct checker members (a runtime mapped copy and its raw
+				// source) can share one storage layout: one alternative with the
+				// joined tag domain, exact only when secondary literals agree.
+				merged := false
+				for i := range alternatives {
+					if alternatives[i].ID != a.ID {
+						continue
+					}
+					joined, ok := joinSubsetAlternative(alternatives[i], refined, u.Discriminant)
+					if !ok {
+						valid = false
+					}
+					alternatives[i], merged = joined, true
+				}
+				if !merged {
+					alternatives = append(alternatives, refined)
+				}
 				break
 			}
-			if !found {
+			if !found || !valid {
 				valid = false
 				break
 			}
@@ -164,4 +180,46 @@ func (l *lowerer) familyRefinesLayout(part, original *checker.Type) bool {
 		}
 	}
 	return true
+}
+
+// joinSubsetAlternative joins two refinements of one stored alternative. The
+// discriminant domain is their union; other literal fields must agree, since a
+// joined per-field domain would admit combinations neither member allows.
+func joinSubsetAlternative(a, b hir.UnionAlternative, discriminant string) (hir.UnionAlternative, bool) {
+	join := func(x, y []string) []string {
+		seen := map[string]bool{}
+		var out []string
+		for _, v := range append(append([]string{}, x...), y...) {
+			if !seen[v] {
+				seen[v] = true
+				out = append(out, v)
+			}
+		}
+		sort.Strings(out)
+		return out
+	}
+	secondary := func(lits []hir.UnionLiteral) string {
+		var key []string
+		for _, f := range lits {
+			if f.Field != discriminant {
+				values := append([]string{}, f.Values...)
+				sort.Strings(values)
+				key = append(key, f.Field+":"+strings.Join(values, ","))
+			}
+		}
+		return strings.Join(key, ";")
+	}
+	if secondary(a.Literals) != secondary(b.Literals) {
+		return a, false
+	}
+	joined := a
+	joined.Tags = join(a.Tags, b.Tags)
+	joined.Literals = nil
+	for _, f := range a.Literals {
+		if f.Field == discriminant {
+			f.Values = joined.Tags
+		}
+		joined.Literals = append(joined.Literals, f)
+	}
+	return joined, true
 }

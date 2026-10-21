@@ -121,6 +121,7 @@ func (l *lowerer) repairFailedBodies() {
 			}
 			for i := len(c.Fields) - 1; i >= 0; i-- {
 				if c.Fields[i].Source == d.Loc {
+					c.FieldsDropped = c.FieldsDropped || !c.Fields[i].Static
 					c.Fields = append(c.Fields[:i], c.Fields[i+1:]...)
 				}
 			}
@@ -174,6 +175,7 @@ func (l *lowerer) repairFailedBodies() {
 			for _, c := range l.out.Classes {
 				for i := len(c.Fields) - 1; i >= 0; i-- {
 					if c.Fields[i].ID == e.ID {
+						c.FieldsDropped = c.FieldsDropped || !c.Fields[i].Static
 						c.Fields = append(c.Fields[:i], c.Fields[i+1:]...)
 						changed = true
 					}
@@ -231,9 +233,10 @@ func (l *lowerer) repairFailedBodies() {
 				}
 			}
 		}
+		verifyBody := hir.NewBodyVerifier(l.out)
 		for _, entry := range entries {
 			m := entry.m
-			if errors := hir.VerifyBody(l.out, entry.c, m); len(errors) > 0 {
+			if errors := verifyBody(entry.c, m); len(errors) > 0 {
 				m.Body = failureBody(m.Node, fmt.Sprintf("%s: HIR verification: %s", m.Source, errors[0]))
 				changed = true
 			}

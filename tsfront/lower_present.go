@@ -248,7 +248,57 @@ func (l *lowerer) evolvedArrayType(d *ast.Node, declared hir.Type) (hir.Type, bo
 		c.ForEachChild(func(child *ast.Node) bool { walk(child); return false })
 	}
 	walk(body)
+	if !ok && l.unprunedFeatures {
+		return l.assignedArrayType(body, d.Symbol())
+	}
 	return found, ok
+}
+
+// assignedArrayType types an evolving `let xs = []` that the checker leaves
+// any[] at every reference (it is read in a closure) by the arrays assigned
+// to it: every `xs = value` must have one non-dynamic array type, apart from
+// empty literals (never[]). Any other use that needs any[] fails
+// verification instead of converting.
+func (l *lowerer) assignedArrayType(body *ast.Node, sym *ast.Symbol) (hir.Type, bool) {
+	var found hir.Type
+	ok, bad := false, false
+	var walk func(*ast.Node)
+	walk = func(c *ast.Node) {
+		if c == nil || bad {
+			return
+		}
+		if c.Kind == ast.KindBinaryExpression {
+			b := c.AsBinaryExpression()
+			if b.OperatorToken.Kind == ast.KindEqualsToken && b.Left.Kind == ast.KindIdentifier && l.resolve(b.Left) == sym {
+				t := l.ck.GetTypeAtLocation(b.Right)
+				parts := []*checker.Type{t}
+				if t != nil && t.IsUnion() {
+					parts = t.AsUnionOrIntersectionType().Types()
+				}
+				for _, p := range parts {
+					if p == nil || !l.ck.IsArrayType(p) {
+						bad = true
+						return
+					}
+					if l.isNeverArray(p) {
+						continue
+					}
+					before := len(l.diags)
+					typ := l.mapCheckerType(b.Right, p)
+					blocked := hasBlocking(l.diags[before:])
+					l.diags = l.diags[:before]
+					if blocked || typ.Kind != hir.Array || typ.Args[0].Kind == hir.Dynamic || ok && !typ.Equal(found) {
+						bad = true
+						return
+					}
+					found, ok = typ, true
+				}
+			}
+		}
+		c.ForEachChild(func(child *ast.Node) bool { walk(child); return false })
+	}
+	walk(body)
+	return found, ok && !bad
 }
 
 // typeMayBeUndefined reports whether the checker type admits undefined.
@@ -596,4 +646,73 @@ func (l *lowerer) dynamicRecordLiteral(n *ast.Node) *hir.Expr {
 	}
 	l.diagf(n, "note-dynamic-record", "object literal lowered as a tagged property snapshot")
 	return record
+}
+
+// dynamicSearchValue boxes an indexOf/includes search value for an any[]
+// receiver; the runtime then compares the boxed values as JS does.
+func (l *lowerer) dynamicSearchValue(recv, x *hir.Expr) *hir.Expr {
+	if x == nil || !l.unprunedFeatures || recv.Type.Kind != hir.Array || recv.Type.Args[0].Kind != hir.Dynamic || x.Type.Kind == hir.Dynamic {
+		return x
+	}
+	return l.coerce(x, recv.Type.Args[0])
+}
+
+// sinkArrayType types a local array of fresh literals (an array literal or
+// a map) by the one typed slot it is stored into: every `{name}` or
+// `{key: name}` use in an object literal must have the same contextual
+// array type, of a lowered class or family element. Other uses keep the
+// checker's view and fail verification if they disagree.
+func (l *lowerer) sinkArrayType(d *ast.Node, typ hir.Type) (hir.Type, bool) {
+	if !l.unprunedFeatures || d.Type() != nil || d.Symbol() == nil || typ.Kind != hir.Array || typ.Args[0].Kind != hir.ClassRef || !strings.HasPrefix(typ.Args[0].Name, "shape.") {
+		return hir.Type{}, false
+	}
+	body := d.Parent
+	for body != nil && body.Body() == nil && body.Kind != ast.KindSourceFile {
+		body = body.Parent
+	}
+	if body == nil {
+		return hir.Type{}, false
+	}
+	sym := d.Symbol()
+	var found hir.Type
+	ok, bad := false, false
+	var walk func(*ast.Node)
+	walk = func(c *ast.Node) {
+		if c == nil || bad {
+			return
+		}
+		var value, prop *ast.Node
+		switch c.Kind {
+		case ast.KindShorthandPropertyAssignment:
+			if l.ck.GetShorthandAssignmentValueSymbol(c) == sym {
+				value, prop = c.Name(), c
+			}
+		case ast.KindPropertyAssignment:
+			if init := c.Initializer(); init != nil && init.Kind == ast.KindIdentifier && l.resolve(init) == sym {
+				value, prop = init, c
+			}
+		}
+		if prop != nil {
+			t := l.ck.GetContextualType(value, checker.ContextFlagsNone)
+			if t == nil {
+				bad = true
+				return
+			}
+			before := len(l.diags)
+			mapped := l.mapCheckerType(value, t)
+			blocked := hasBlocking(l.diags[before:])
+			l.diags = l.diags[:before]
+			if mapped.Kind == hir.Optional {
+				mapped = mapped.Args[0]
+			}
+			if blocked || mapped.Kind != hir.Array || (mapped.Args[0].Kind != hir.ClassRef && mapped.Args[0].Kind != hir.UnionRef) || mapped.Args[0].Name == hir.RootObject || strings.HasPrefix(mapped.Args[0].Name, "shape.") || ok && !mapped.Equal(found) {
+				bad = true
+				return
+			}
+			found, ok = mapped, true
+		}
+		c.ForEachChild(func(child *ast.Node) bool { walk(child); return false })
+	}
+	walk(body)
+	return found, ok && !bad
 }

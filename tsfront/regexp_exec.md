@@ -1,7 +1,15 @@
 # RegExp.exec, match-array declarations, and runtime patterns
 
 `RegExpExecArray` and `RegExpMatchArray` from the TypeScript library share the
-existing nullable string-array reference ABI. `exec` returns the full match,
+string-array storage ABI. Runtime `regexp.exec` and `string.match` use an absent
+reference for non-match internally. The explicit, non-mutating `regexp.boxMatch`
+boundary consumes exactly `Optional<Array<String>>`: an absent result becomes
+tagged JavaScript null, while a present result boxes the same array storage.
+Both Go and ABAP implement this boundary before a source result escapes to
+a local, conditional/coalesce, return, any or unknown value. Nullable match-array
+checker types therefore use the ordinary Dynamic union mapping, which also
+preserves explicit undefined. Ordinary Optional absence and ordinary nil boxing remain undefined;
+this operation does not convert arbitrary missing arrays to null. `exec` returns the full match,
 numbered captures, and a UTF-16 `.index`, or null. Absent optional captures carry
 absence metadata rather than an empty string; indexed match-array reads preserve
 that absence. The array length still includes absent captures.
@@ -38,7 +46,7 @@ uncertified patterns/flag sequences produce
 `unreviewed JavaScript regexp /pattern/flags`; this is not arbitrary RE2 fallback.
 Static patterns outside Go's reviewed language fail emission. Unknown/duplicate static flags
 fail lowering; `m` is restricted to reviewed translations. Backreferences,
-arbitrary lookaround, Unicode mode, named captures, `.groups`, and `.input` are
+arbitrary lookaround, Unicode mode, and `.input` are
 not added by this change. A RegExp object passed as the constructor pattern is
 refused; regex *literals* as constructor patterns preserve their original flags
 unless overridden.
@@ -73,6 +81,10 @@ its legacy string split runtime is unchanged. Live Node differentials in
 and assert the typed refusal for unmatched/repeated capture domains.
 
 String.replace accepts RegExp objects and string pattern/replacement variables.
+A variable string pattern replaces the first literal occurrence, including the
+empty needle. String replacements implement GetSubstitution over the original
+UTF-16 input, including literal dollars, whole matches, prefix/suffix text,
+numbered captures and admitted named captures.
 A variable string pattern replaces the first literal occurrence, including the
 empty needle. String replacements implement GetSubstitution over the original
 UTF-16 input, including literal dollars, whole matches, prefix/suffix text,

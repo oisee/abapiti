@@ -8,6 +8,7 @@ import (
 
 	"github.com/oisee/abapiti/hir"
 	"github.com/oisee/abapiti/internal/tsgo/ast"
+	"github.com/oisee/abapiti/internal/tsgo/checker"
 )
 
 type unionView struct {
@@ -183,6 +184,13 @@ func (l *lowerer) completeUnionInterfaces() {
 					short, long = long, short
 				}
 				for j, p := range short {
+					// A rest argument wraps call arguments; an array parameter
+					// consumes the array itself. Equal storage types do not make
+					// these constituent calling conventions interchangeable.
+					if p.Variadic != long[j].Variadic {
+						same = false
+						break
+					}
 					// A parameter must be accepted by every constituent: keep
 					// the narrower type.
 					switch {
@@ -212,6 +220,199 @@ func (l *lowerer) completeUnionInterfaces() {
 			}
 		}
 	}
+}
+
+// Keep data membership independently of the method-only reference ABI. A
+// nominal or callable alternative prevents structural admission of this union.
+func (l *lowerer) structuralUnionMembers(parts []hir.Type) []hir.StructuralMember {
+	var members []hir.StructuralMember
+	for _, part := range parts {
+		c := l.classByName(part.Name)
+		if part.Kind != hir.ClassRef || c == nil || !c.Structural || !hir.DataClassView(l.out, c.Name) {
+			return nil
+		}
+		source := l.structuralUnionSource(c.Name)
+		if source == nil {
+			return nil
+		}
+		member := hir.StructuralMember{Type: part}
+		for base := c; base != nil; base = l.classByName(base.Super) {
+			for _, f := range base.Fields {
+				if f.Static {
+					continue
+				}
+				prop := l.ck.GetPropertyOfType(source, f.Name)
+				if prop == nil {
+					return nil
+				}
+				t := l.ck.GetTypeOfPropertyOfType(source, f.Name)
+				field := hir.StructuralField{Name: f.Name, Type: f.Type, Optional: prop.Flags&ast.SymbolFlagsOptional != 0}
+				field.Domains = l.structuralDomains(t)
+				member.Fields = append(member.Fields, field)
+			}
+		}
+		members = append(members, member)
+	}
+	return members
+}
+
+// This is a shallow source-domain proof, independent of the physical slot.
+// Unknown unsupported domains refuse when present rather than becoming any.
+func (l *lowerer) structuralDomains(t *checker.Type) []hir.StructuralDomain {
+	if t == nil {
+		return nil
+	}
+	if t.IsUnion() {
+		var out []hir.StructuralDomain
+		seen := map[hir.StructuralDomain]bool{}
+		for _, part := range t.AsUnionOrIntersectionType().Types() {
+			for _, domain := range l.structuralDomains(part) {
+				if !seen[domain] {
+					out = append(out, domain)
+					seen[domain] = true
+				}
+			}
+		}
+		return out
+	}
+	if t.IsIntersection() {
+		for _, part := range t.AsUnionOrIntersectionType().Types() {
+			domains := l.structuralDomains(part)
+			if len(domains) != 1 || domains[0].Kind != hir.ClassRef {
+				return nil
+			}
+		}
+		return []hir.StructuralDomain{{Kind: hir.ClassRef}}
+	}
+	f := t.Flags()
+	domain := hir.StructuralDomain{}
+	switch {
+	case f&(checker.TypeFlagsAny|checker.TypeFlagsUnknown) != 0:
+		domain.Kind = hir.Dynamic
+	case f&(checker.TypeFlagsUndefined|checker.TypeFlagsVoid) != 0:
+		domain.Kind = "undefined"
+	case f&checker.TypeFlagsNull != 0:
+		domain.Kind = "null"
+	case f&checker.TypeFlagsStringLiteral != 0:
+		domain.Kind = hir.String
+		domain.Exact = true
+		domain.Literal = fmt.Sprint(t.AsLiteralType().Value())
+	case f&checker.TypeFlagsNumberLiteral != 0:
+		domain.Kind = hir.Number
+		domain.Exact = true
+		domain.Literal = fmt.Sprint(t.AsLiteralType().Value())
+	case f&checker.TypeFlagsBooleanLiteral != 0:
+		domain.Kind = hir.Bool
+		domain.Exact = true
+		domain.Literal = fmt.Sprint(t.AsLiteralType().Value())
+	case f&checker.TypeFlagsString != 0:
+		domain.Kind = hir.String
+	case f&checker.TypeFlagsNumber != 0:
+		domain.Kind = hir.Number
+	case f&checker.TypeFlagsBoolean != 0:
+		domain.Kind = hir.Bool
+	case f&checker.TypeFlagsNonPrimitive != 0:
+		domain.Kind = hir.ClassRef
+	case f&checker.TypeFlagsObject != 0:
+		if t.IsTupleType() || l.ck.IsArrayType(t) {
+			domain.Kind = hir.Array
+		} else if len(l.ck.GetSignaturesOfType(t, checker.SignatureKindConstruct)) > 0 {
+			domain.Kind = hir.ClassValue
+		} else if len(l.ck.GetSignaturesOfType(t, checker.SignatureKindCall)) > 0 {
+			return nil
+		} else {
+			domain.Kind = hir.ClassRef
+		}
+	default:
+		return nil
+	}
+	return []hir.StructuralDomain{domain}
+}
+
+func (l *lowerer) completeStructuralUnionMembers() {
+	for _, view := range l.unions {
+		view.iface.StructuralMembers = l.structuralUnionMembers(view.parts)
+	}
+}
+
+// A common property shape is a live view of the union's original record,
+// A constituent projection additionally checks that member's source domains.
+func (l *lowerer) structuralUnionProjection(src, dst hir.Type) bool {
+	if src.Kind != hir.InterfaceRef || dst.Kind != hir.ClassRef || !l.shapeLike[dst.Name] {
+		return false
+	}
+	if view := l.structuralReferenceUnion(src); view != nil {
+		for _, part := range view.parts {
+			if part.Equal(dst) {
+				return false
+			}
+		}
+		return true
+	}
+	return false
+}
+
+func (l *lowerer) structuralReferenceUnion(t hir.Type) *unionView {
+	if !l.unprunedFeatures || t.Kind != hir.InterfaceRef {
+		return nil
+	}
+	for _, view := range l.unions {
+		if view.iface.Name != t.Name {
+			continue
+		}
+		for _, part := range view.parts {
+			if part.Kind != hir.ClassRef || !l.shapeLike[part.Name] || !hir.DataClassView(l.out, part.Name) || l.structuralUnionSource(part.Name) == nil {
+				return nil
+			}
+		}
+		return view
+	}
+	return nil
+}
+
+// Reused physical layouts are not source-domain proofs. Anonymous family
+// views can share a layout without having a declaration for every slot; keep
+// their existing native boundary instead of emitting an unprovable projection.
+func (l *lowerer) structuralUnionSource(name string) *checker.Type {
+	source := l.structuralUnionSources[name]
+	if source == nil {
+		for sym, candidate := range l.classes {
+			if candidate.Name == name {
+				source = l.ck.GetDeclaredTypeOfSymbol(sym)
+				break
+			}
+		}
+	}
+	if source == nil {
+		for sym, candidate := range l.synths {
+			if candidate.Name == name {
+				source = l.ck.GetDeclaredTypeOfSymbol(sym)
+				break
+			}
+		}
+	}
+	if source == nil {
+		return nil
+	}
+	for c := l.classByName(name); c != nil; c = l.classByName(c.Super) {
+		for _, field := range c.Fields {
+			if !field.Static && l.ck.GetPropertyOfType(source, field.Name) == nil {
+				return nil
+			}
+		}
+	}
+	if l.structuralUnionSources == nil {
+		l.structuralUnionSources = map[string]*checker.Type{}
+	}
+	l.structuralUnionSources[name] = source
+	return source
+}
+
+func (l *lowerer) checkedStructuralUnion(x *hir.Expr) *hir.Expr {
+	if l.structuralReferenceUnion(x.Type) != nil {
+		return l.dynamicReference(l.coerce(x, hir.T(hir.Dynamic)), x.Type)
+	}
+	return x
 }
 
 // Structural public members alone do not prove a native class identity. Every

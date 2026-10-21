@@ -280,6 +280,7 @@ func (p *Program) lowerWithOptions(files []string, registry *overrides.Registry,
 	l.eraseGenericOverrides()
 	l.abiReady = true
 	l.completeUnionInterfaces()
+	l.slotInterfaceImplements()
 	l.covariantImplements()
 	l.eraseGenericOverrides()
 	l.completeInterfaceValueSlots()
@@ -306,7 +307,7 @@ func (p *Program) lowerWithOptions(files []string, registry *overrides.Registry,
 				continue
 			}
 			mod := l.moduleClassOf(f)
-			hm := &hir.Method{Node: l.node(fn), Name: fn.Name().Text(), Static: true, Internal: fn.ModifierFlags()&ast.ModifierFlagsExport == 0, Result: hir.T(hir.Void)}
+			hm := &hir.Method{Node: l.node(fn), Name: l.moduleFunctionMethod(fn.Name().Text()), Static: true, Internal: fn.ModifierFlags()&ast.ModifierFlagsExport == 0, Result: hir.T(hir.Void)}
 			l.class, l.method = mod, hm
 			if e, ok := l.overrides[fn]; ok && e.Method != nil {
 				hm = e.Method()
@@ -316,7 +317,7 @@ func (p *Program) lowerWithOptions(files []string, registry *overrides.Registry,
 				l.signature(fn, hm)
 			}
 			mod.Methods = append(mod.Methods, hm)
-			l.funcsBy[f.FileName()+" "+hm.Name] = funcRef{owner: mod.Name, method: hm.Name}
+			l.funcsBy[f.FileName()+" "+fn.Name().Text()] = funcRef{owner: mod.Name, method: hm.Name}
 			l.methodsBy[mod.Name+"."+hm.Name] = hm
 		}
 		done()
@@ -430,6 +431,10 @@ func (p *Program) lowerWithOptions(files []string, registry *overrides.Registry,
 	if options.AssumeOnlyIntegerCalculations {
 		l.assumeIntegerTypes()
 	}
+	if l.unprunedFeatures {
+		l.completeStructuralUnionMembers()
+	}
+	hir.SealCheckedMapAccess(l.out)
 	if options.TrapOnFailure {
 		l.repairFailedBodies()
 	}
@@ -446,12 +451,18 @@ func (p *Program) lowerWithOptions(files []string, registry *overrides.Registry,
 // lowerer carries the state of one lowering run; file and ck are the per-file
 // state of the pass being run.
 type lowerer struct {
-	externs         map[string]ExternModule
-	externFunctions map[*ast.Node]*hir.ExternSignature
+	containerCheckerTypes map[string][]*checker.Type
+	freshContainers       map[*hir.Expr]bool
+	freshArraySymbols     map[*ast.Symbol]bool
+	externs               map[string]ExternModule
+	externFunctions       map[*ast.Node]*hir.ExternSignature
 	// The source-pinned deployment is frozen; new generic semantics apply to
 	// unpruned lowering, never perturb its serials or emitted artifacts.
-	gogenCallables     map[*ast.Node]bool
-	unprunedFeatures   bool
+	gogenCallables   map[*ast.Node]bool
+	unprunedFeatures bool
+	// liftResultHint is the element type an array callback with early
+	// returns constructs; liftLocalFn consumes it for that one callback.
+	liftResultHint     hir.Type
 	absentFields       map[*ast.Node]bool
 	absentParams       map[*ast.Node]bool
 	checkedFields      map[*ast.Node]bool
@@ -520,7 +531,11 @@ type lowerer struct {
 	familyFailed map[string]familyFailure
 	familyShapes map[string]hir.Type
 	familyChecks map[string]*checker.Type
-	familyKeys   *familyKeyMemo // family_key_memo.go
+	// contextLiteralTypes types object literals that a lowering places in a
+	// family context the checker did not see (literalFamilyIndex).
+	contextLiteralTypes map[*ast.Node]*checker.Type
+	slotIfaces          map[string]bool // slot_interface.go
+	familyKeys          *familyKeyMemo  // family_key_memo.go
 
 	// Phase 2: preludes turn expressions with inlined loops into hir.Seq.
 	pend []*hir.Stmt
@@ -532,9 +547,10 @@ type lowerer struct {
 	nsNeeded map[string]bool
 	require  *requireBindings // static createRequire bindings (require_binding.go)
 	// views holds lazily grown cast-view interfaces for non-lowered classes.
-	views    map[string]*hir.Interface
-	unions   map[string]*unionView
-	abiReady bool
+	views                  map[string]*hir.Interface
+	unions                 map[string]*unionView
+	structuralUnionSources map[string]*checker.Type
+	abiReady               bool
 	// Interface heritage (lower_iface_heritage.go).
 	ifaceDone       map[*hir.Interface]bool
 	ifaceBases      map[*hir.Interface][]*hir.Interface
@@ -550,10 +566,11 @@ type lowerer struct {
 	thisOverride *hir.Expr
 	// widenedLets marks bindings whose physical storage is wider than the
 	// checker view: common assignment bases or inferred optional array elements.
-	widenedLets        map[*ast.Symbol]bool
-	matchGroupBindings map[*ast.Symbol]bool
-	collectionShapes   map[string]bool
-	collectionElements map[string]bool
+	widenedLets         map[*ast.Symbol]bool
+	matchGroupBindings  map[*ast.Symbol]bool
+	matchCallbackParams map[*ast.Symbol]bool
+	collectionShapes    map[string]bool
+	collectionElements  map[string]bool
 	// guards: locals proven present by an enclosing definedness guard
 	// (`x !== undefined && ...`, `if (x) {...}`), narrowed at every read.
 	guards map[*ast.Symbol]hir.Type
@@ -723,6 +740,22 @@ func (l *lowerer) modvarOf(sym *ast.Symbol) (string, string, bool) {
 			return mod.Name, name, true
 		}
 	}
+	// A known lexical declaration cannot be a module value. In particular,
+	// failed local initializers must not fall through to a same-named global.
+	declarations := sym.Declarations
+	if len(declarations) == 0 && sym.ValueDeclaration != nil {
+		declarations = []*ast.Node{sym.ValueDeclaration}
+	}
+	for _, declaration := range declarations {
+		for parent := declaration.Parent; parent != nil; parent = parent.Parent {
+			if ast.IsFunctionLike(parent) {
+				return "", "", false
+			}
+			if parent.Kind == ast.KindSourceFile {
+				break
+			}
+		}
+	}
 	if f := l.fileOfSymbol(sym); f != nil {
 		if r, ok := l.modvarsByName[f.FileName()+" "+sym.Name]; ok {
 			return r.owner, r.field, true
@@ -781,7 +814,17 @@ func (l *lowerer) locOf(n *ast.Node) string {
 		}
 		return l.prog.locString(l.file, 0)
 	}
-	return l.prog.locString(l.file, scanner.GetTokenPosOfNode(n, l.file, false /*includeJSDoc*/))
+	// Imported aliases and inherited members retain their declaring source,
+	// even when reached while lowering another file.
+	if owner := ast.GetSourceFileOfNode(n); owner != nil {
+		return l.prog.locString(owner, scanner.GetTokenPosOfNode(n, owner, false /*includeJSDoc*/))
+	}
+	// Synthesized/ownerless nodes have no meaningful offset in l.file.
+	// Keep the current project-relative filename, at its start.
+	if l.file != nil {
+		return l.prog.locString(l.file, 0)
+	}
+	return "<unknown>"
 }
 
 // qualifiedName builds the stable identity of a declaration: the file path
@@ -852,6 +895,10 @@ func (l *lowerer) registerFile(f *ast.SourceFile) {
 			// A pure index-signature interface has no nominal method/data
 			// slots. Its checker type already lowers to the ordered-map ABI.
 			if members := stmt.Members(); len(members) == 1 && members[0].Kind == ast.KindIndexSignature && stmt.AsInterfaceDeclaration().HeritageClauses == nil {
+				continue
+			}
+			if l.arrayInterfaceDeclaration(stmt) || l.mapInterfaceDeclaration(stmt) {
+				// Collection interfaces retain their library collection ABI.
 				continue
 			}
 			if l.isDataInterface(stmt) && stmt.Name() != nil && stmt.Symbol() != nil {

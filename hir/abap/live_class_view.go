@@ -27,6 +27,8 @@ func (e *emitter) liveRuntime() {
 	d := e.name("runtime.dynamic")
 	storage := e.name("view.storage")
 	e.files[storage+".intf.abap"] = "INTERFACE " + storage + " PUBLIC.\nMETHODS structural RETURNING VALUE(result) TYPE abap_bool.\nMETHODS source RETURNING VALUE(result) TYPE REF TO " + d + ".\nMETHODS get IMPORTING p0 TYPE string RETURNING VALUE(result) TYPE REF TO " + d + ".\nMETHODS put IMPORTING p0 TYPE string p1 TYPE REF TO " + d + ".\nMETHODS has IMPORTING p0 TYPE string RETURNING VALUE(result) TYPE abap_bool.\nMETHODS delete IMPORTING p0 TYPE string RETURNING VALUE(result) TYPE abap_bool.\nENDINTERFACE.\n"
+	guard := e.name("view.guard")
+	e.files[guard+".intf.abap"] = "INTERFACE " + guard + " PUBLIC.\nMETHODS check IMPORTING p0 TYPE REF TO " + d + ".\nENDINTERFACE.\n"
 	trap := e.name("view.refusal")
 	e.files[trap+".clas.abap"] = "CLASS " + trap + ` DEFINITION PUBLIC INHERITING FROM cx_no_check CREATE PUBLIC.
 PUBLIC SECTION.
@@ -63,6 +65,7 @@ func (e *emitter) liveClassDeclaration(b *strings.Builder, c *hir.Class) {
 	d := e.name("runtime.dynamic")
 	e.ownClassDeclaration(b, c)
 	if e.liveRoot(c) {
+		fmt.Fprintf(b, "DATA %s TYPE REF TO %s.\n", e.name("view.guardSlot"), e.name("view.guard"))
 		fmt.Fprintf(b, "DATA %s TYPE REF TO %s.\nINTERFACES %s.\n", e.name("view.source"), d, e.name("view.storage"))
 		fmt.Fprintf(b, "DATA %s TYPE REF TO %s.\nDATA %s TYPE REF TO %s.\n", e.name("view.ownKeys"), d, e.name("view.extras"), d)
 	}
@@ -245,6 +248,10 @@ func (b *body) liveUnbox(n, d string, t hir.Type) {
 		b.line("IF " + v + " <> trunc( " + v + " ) OR " + v + " < '" + lo + "' OR " + v + " > '" + hi + "'.\nRAISE EXCEPTION TYPE " + e.name("view.refusal") + " EXPORTING reason = `live_class_view.go: liveUnbox: integer is fractional or outside exact range`.\nENDIF.")
 		b.line(n + " = " + v + ".")
 	case hir.Bool:
+		// dynBoolean refuses an absent value in Go with a range fault; a view
+		// read of a missing property yields an unbound box, and the typed
+		// boundary must refuse it instead of dereferencing it.
+		b.line("IF " + d + " IS NOT BOUND.\nRAISE EXCEPTION TYPE " + e.name("view.refusal") + " EXPORTING reason = `live_class_view.go: liveUnbox: undefined cannot inhabit required slot`.\nENDIF.")
 		b.line(n + " = " + d + "->as_boolean( ).")
 	case hir.ClassValue:
 		// Erased reference arrays can carry boxed constructor descriptors.
@@ -261,7 +268,15 @@ func (b *body) liveUnbox(n, d string, t hir.Type) {
 			return
 		}
 		fallthrough
-	case hir.InterfaceRef, hir.OrderedMap, hir.OrderedSet:
+	case hir.InterfaceRef:
+		if view := e.structuralUnion(t); view != "" {
+			b.line(n + " = " + view + "=>decode( " + d + " ).")
+			return
+		}
+		v := b.rawTemp("REF TO object")
+		b.line(v + " = " + d + "->as_ref( ).")
+		b.line(n + " ?= " + v + ".")
+	case hir.OrderedMap, hir.OrderedSet:
 		v := b.rawTemp("REF TO object")
 		b.line(v + " = " + d + "->as_ref( ).")
 		b.line(n + " ?= " + v + ".")
@@ -289,6 +304,8 @@ func (e *emitter) liveClassImplementation(out *strings.Builder, c *hir.Class) {
 		name := e.name("view.read." + c.Name + "." + f.Name)
 		b := makeBody(name)
 		source := "me->" + e.name("view.source")
+		guard := "me->" + e.name("view.guardSlot")
+		b.line("IF " + guard + " IS BOUND.\n" + guard + "->check( " + source + " ).\nENDIF.")
 		b.line("IF " + source + " IS BOUND.")
 		d := b.temp(hir.T(hir.Dynamic))
 		b.line(d + " = " + source + "->get( `" + strings.ReplaceAll(f.Name, "`", "``") + "` ).")
@@ -380,14 +397,16 @@ func (e *emitter) liveClassImplementation(out *strings.Builder, c *hir.Class) {
 	}
 	emit(storage+"~put", b)
 }
-func (b *body) liveView(x *hir.Expr, n, a string) {
+func (b *body) liveView(x *hir.Expr, n, a string, fresh ...bool) {
 	e := b.e
 	d := e.name("runtime.dynamic")
 	trap := e.name("view.refusal")
 	b.line("CLEAR " + n + ".")
 	// Native success remains identity-preserving even for behaviour-bearing classes.
-	b.line("IF " + a + " IS BOUND.")
-	b.line("IF " + a + "->tag = " + d + "=>tag_ref.\nTRY.\n" + n + " ?= " + a + "->oval.\nCATCH cx_sy_move_cast_error.\nENDTRY.\nENDIF.")
+	b.line("IF " + a + " IS BOUND AND " + a + "->tag <> " + d + "=>tag_null.")
+	if len(fresh) == 0 || !fresh[0] {
+		b.line("IF " + a + "->tag = " + d + "=>tag_ref.\nTRY.\n" + n + " ?= " + a + "->oval.\nCATCH cx_sy_move_cast_error.\nENDTRY.\nENDIF.")
+	}
 	b.line("IF " + n + " IS NOT BOUND.")
 	if !hir.DataClassView(e.p, x.Type.Name) {
 		b.line("RAISE EXCEPTION TYPE " + trap + " EXPORTING reason = `live_class_view.go: liveView: behaviour-bearing class requires compatible native reference`.")

@@ -130,6 +130,10 @@ func fastCollectionRuntime(source string) (string, error) {
 	}
 	var extra strings.Builder
 	fast := fastCollectionSource
+	if strings.Contains(source, "type setReadProxy[") {
+		fast = strings.Replace(fast, "type fastOrderedSet[T comparable] struct {", "type fastOrderedSet[T comparable] struct {readProxy *setReadProxy[T];", 1)
+		fast = fastSetViewRuntime(fast)
+	}
 	if strings.Contains(source, " iteration *array[T];") {
 		fast = setIterationFastRuntime(fast)
 	}
@@ -184,6 +188,22 @@ func fastCollectionRuntime(source string) (string, error) {
 		result = fastMapViewRuntime(result)
 	}
 	return result, nil
+}
+
+func fastSetViewRuntime(source string) string {
+	guards := map[string]string{
+		"has(v T) bool":               "if s.readProxy!=nil {return s.readProxy.storage.identityHas(box(v))}",
+		"add(v T) *fastOrderedSet[T]": "if s.readProxy!=nil {panic(newTrap(\"readonly Set view cannot write\"))}",
+		"delete(v T) bool":            "if s.readProxy!=nil {panic(newTrap(\"readonly Set view cannot delete\"))}",
+	}
+	for method, guard := range guards {
+		old := "func (s *fastOrderedSet[T]) " + method + " {"
+		if !strings.Contains(source, old) {
+			panic("set proxy patch target moved: " + method)
+		}
+		source = strings.Replace(source, old, old+guard+";", 1)
+	}
+	return source
 }
 
 const fastCollectionSource = `

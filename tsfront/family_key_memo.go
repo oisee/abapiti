@@ -16,15 +16,15 @@ import (
 // Family keys are context-free 128-bit ids over the type graph, condensed into
 // strongly connected components (SCCs).
 //
-// Nodes: a type reached with named=true resolves to an alias leaf (its
-// arguments are independent key computations), a decl node (interface/class
-// symbol plus its arguments) or the type's structural node. Structural nodes
-// for named=false and for named=true without a short-circuit are the same
-// node, exactly as the #186 traversal treated them. Edges are the child
-// references familyDescribe lists (union/intersection members, reference
-// arguments, property types).
+// Nodes: a type reached with named=true resolves to a union/callable alias
+// anchor, a declaration node (interface/class symbol plus its arguments), or
+// the type's structural node. Record aliases always use their structural node;
+// named=false also skips the remaining nominal anchors. Edges are the child
+// references familyDescribe lists (union members, native container arguments,
+// resolved property types). Intersections and instantiated data interfaces use
+// their resolved fields, not the expressions or bases that produced them.
 //
-// A node outside every cycle (trivial SCC) gets the #186 Merkle id: the hash of
+// A node outside every cycle (trivial SCC) gets a #186-style Merkle id: the hash of
 // its canonical text over its children's ids. #186 spelled an in-cycle
 // reference as "back:"+symbol, which made the id depend on the entry point.
 // Here every member of a cyclic SCC is labelled with that same symbol key and
@@ -104,7 +104,7 @@ func (l *lowerer) familyResolve(t *checker.Type, named bool) familyNode {
 	switch {
 	case t == nil:
 		return familyNode{nil, familyNodeMissing}
-	case named && t.Alias() != nil && l.familySymbolKey(t.Alias().Symbol()) != "" && !l.familyIndexedLibraryAlias(t):
+	case named && t.Alias() != nil && l.familySymbolKey(t.Alias().Symbol()) != "" && !l.familyStructuralAlias(t):
 		return familyNode{t, familyNodeAlias}
 	case named && t.Symbol() != nil && t.Symbol().Flags&(ast.SymbolFlagsInterface|ast.SymbolFlagsClass) != 0:
 		return familyNode{t, familyNodeDecl}
@@ -112,22 +112,11 @@ func (l *lowerer) familyResolve(t *checker.Type, named bool) familyNode {
 	return familyNode{t, familyNodeStruct}
 }
 
-// familyIndexedLibraryAlias reports a default-library alias (Record,
-// Readonly<Record<...>>) whose type carries index signatures. Its arguments
-// may contain the family being keyed, so it is keyed by structure in the same
-// SCC traversal instead of as an alias leaf with independent arguments.
-func (l *lowerer) familyIndexedLibraryAlias(t *checker.Type) bool {
-	sym := t.Alias().Symbol()
-	if sym == nil || len(sym.Declarations) == 0 || len(l.ck.GetIndexInfosOfType(t)) == 0 {
-		return false
-	}
-	for _, d := range sym.Declarations {
-		f := ast.GetSourceFileOfNode(d)
-		if f == nil || !l.prog.prog.IsSourceFileDefaultLibrary(f.Path()) {
-			return false
-		}
-	}
-	return true
+// Record aliases are transparent after resolution, including mapped utilities
+// used as nested member types. Union aliases retain family anchors, and callable
+// aliases retain signature identity rather than becoming empty data records.
+func (l *lowerer) familyStructuralAlias(t *checker.Type) bool {
+	return t.Flags()&(checker.TypeFlagsObject|checker.TypeFlagsIntersection) != 0 && !l.ck.TypeHasCallOrConstructSignatures(t)
 }
 
 // familyKeyCached returns the context-free id of (t, named).
@@ -185,7 +174,19 @@ func (d *familyDesc) text(ids []string) string {
 	return d.render(ids)
 }
 
-// familyDescribe mirrors the #186 traversal (familyTypeKeyMerkle186).
+// Native containers and nominal classes keep their argument-based identity.
+// A generic data interface is a resolved record: Box<string> has exactly the
+// same structural fields as {value: string}, whatever its declaration name.
+func (l *lowerer) familyKeyContainer(t *checker.Type) bool {
+	if t.IsTupleType() || l.ck.IsArrayType(t) {
+		return true
+	}
+	sym := t.Symbol()
+	return sym != nil && (sym.Flags&ast.SymbolFlagsClass != 0 || l.librarySymbol(sym))
+}
+
+// familyDescribe and the independent Merkle traversal share the resolved-field
+// schema; the SCC algorithm supplies context-free identities for cycles.
 func (l *lowerer) familyDescribe(v familyNode) familyDesc {
 	familyKeyRawEvaluation.Add(1)
 	t := v.t
@@ -215,7 +216,7 @@ func (l *lowerer) familyDescribe(v familyNode) familyDesc {
 		}
 		return d
 	}
-	if t.IsUnion() || t.Flags()&checker.TypeFlagsIntersection != 0 {
+	if t.IsUnion() {
 		d := familyDesc{}
 		for _, p := range t.AsUnionOrIntersectionType().Types() {
 			d.kids = append(d.kids, l.familyResolve(p, true))
@@ -228,8 +229,8 @@ func (l *lowerer) familyDescribe(v familyNode) familyDesc {
 		}
 		return d
 	}
-	if t.Flags()&checker.TypeFlagsObject != 0 {
-		if args := l.familyArguments(t); len(args) > 0 {
+	if t.Flags()&(checker.TypeFlagsObject|checker.TypeFlagsIntersection) != 0 {
+		if args := l.familyArguments(t); len(args) > 0 && l.familyKeyContainer(t) {
 			d := familyDesc{}
 			for _, a := range args {
 				d.kids = append(d.kids, l.familyResolve(a, true))

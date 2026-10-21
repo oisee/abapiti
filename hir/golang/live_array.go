@@ -54,10 +54,10 @@ func liveStringElement(d *dynamic) jsString {
  return dynString(d)
 }
 func liveArrayRead[T any](a *array[T],i int32) T {
- v:=a.get(i);if a.live==nil || v.Has {return v.Value};var z T
+ v:=a.get(i);if v.Has {return v.Value};var z T
  if nilRef(z) {return z};r:=reflect.ValueOf(z)
  if r.Kind()==reflect.Struct && r.FieldByName("Has").IsValid() {return z}
- panic(newTrap("live typed array absent element cannot be represented"))
+ panic(newRangeFault())
 }
 func liveArrayElement[T any](d *dynamic) T {
  var z T
@@ -82,6 +82,14 @@ type liveArrayStorage interface {
  liveReverse()
  liveDelete(int32) bool
 }
+// Explicit erased-array conversions preserve the existing invalid-iterable
+// error domain. Field getters use liveArrayView directly so missing properties
+// remain observable as undefined until an operation actually consumes them.
+func checkedArraySource(d *dynamic,erased bool) *dynamic {
+ if erased {if d==nil {panic(newRangeFault())};if _,ok:=d.Value.(liveArrayStorage);!ok {panic(newRangeFault())}}
+ if d==nil {panic(newTrap("live typed array requires array storage"))}
+ return d
+}
 func liveArrayView[T any](d *dynamic,decode func(*dynamic)T) *array[T] {
  if d==nil {return nil}
  a,ok:=d.Value.(liveArrayStorage);if !ok {panic(newTrap("live typed array requires array storage"))}
@@ -92,6 +100,13 @@ func liveArrayView[T any](d *dynamic,decode func(*dynamic)T) *array[T] {
  // Erased reference storage still needs the element converter on every read.
  if reflect.TypeOf(zero)!=nil {if v,ok:=d.Value.(*array[T]);ok {return v}}
  return &array[T]{live:a,source:d,decode:decode}
+}
+func liveReadonlyArrayView[T any](d *dynamic,decode func(*dynamic)T) *array[T] {
+ // Parsed-array assertions retain their existing admission boundary. Typed
+ // native covariance attaches its decoder lazily without scanning storage.
+ if d!=nil && d.Tag==tagArray {return liveArrayView(d,decode)}
+ if d==nil {return nil};src,ok:=d.Value.(liveArrayStorage);if !ok {panic(newTrap("readonly array view requires array storage"))}
+ return &array[T]{live:src,source:d,decode:decode}
 }
 func (a *array[T]) dynamicSource() *dynamic {if a==nil {return nil};return a.source}
 func (a *array[T]) length() int32 {if a.live!=nil {return a.live.liveLength()};return int32(len(a.Items))}

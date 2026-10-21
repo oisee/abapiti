@@ -142,6 +142,18 @@ func (l *lowerer) closureValueInner(n *ast.Node) *hir.Expr {
 		cap := captured.name
 		t, ok := l.lookup(cap)
 		value := hir.V(cap, t)
+		// Bind the read to its checked symbol, so shadowing normalization
+		// renames it together with the captured binding's declaration.
+		if captured.symbol != nil {
+			if l.localSymbols == nil {
+				l.localSymbols = map[*hir.Expr]*ast.Symbol{}
+			}
+			l.localSymbols[value] = captured.symbol
+			if l.localSymbolMethods == nil {
+				l.localSymbolMethods = map[*hir.Expr]*hir.Method{}
+			}
+			l.localSymbolMethods[value] = l.method
+		}
 		if t.Kind == hir.Void {
 			value = l.functionValue(captured.node)
 			if value != nil {

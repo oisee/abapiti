@@ -53,6 +53,18 @@ func (l *lowerer) elementAccess(n *ast.Node) *hir.Expr {
 		l.diagf(n, "unsupported-expr", "element access without an argument")
 		return nil
 	}
+	if l.unprunedFeatures && !ast.IsAssignmentTarget(n) && l.slotInterfaceRef(recv.Type) {
+		key := l.expr(arg)
+		if key == nil {
+			return nil
+		}
+		if key.Type.Kind != hir.String {
+			if key = l.primitiveString(n, key); key == nil {
+				return nil
+			}
+		}
+		return l.slotRead(n, recv, key)
+	}
 	switch recv.Type.Kind {
 	case hir.ClassValue:
 		if arg.Kind == ast.KindStringLiteral && arg.Text() == "name" {
@@ -116,9 +128,9 @@ func (l *lowerer) elementAccess(n *ast.Node) *hir.Expr {
 			return nil
 		}
 		if l.isMatchArrayType(l.ck.GetTypeAtLocation(e.Expression)) {
-			return l.rtOp("array.get", recv, hir.T(hir.Optional, recv.Type.Args[0]), l.indexValue(k))
+			return l.rtOp("array.get", recv, hir.T(hir.Optional, recv.Type.Args[0]), l.arrayReadIndex(k))
 		}
-		return &hir.Expr{Kind: hir.IndexGet, Node: l.node(n), Type: recv.Type.Args[0], X: recv, Y: l.indexValue(k)}
+		return &hir.Expr{Kind: hir.IndexGet, Node: l.node(n), Type: recv.Type.Args[0], X: recv, Y: l.arrayReadIndex(k)}
 	case hir.Dynamic:
 		// The checker's flow-narrowed receiver type (after a typeof test)
 		// names the record behind the box; the checked view raises otherwise.
@@ -288,6 +300,41 @@ func (l *lowerer) typeofValue(x *hir.Expr) *hir.Expr {
 	return x
 }
 
+// typeofOperand restores the declared tagged storage of a plain local read.
+// The checker's flow-narrowed reference view of an erased union local (a loop
+// variable declared over objects, booleans and nullish values) is not proof
+// for typeof: the runtime tag decides, and a checked view admission (family
+// projection, object bridge) must not run before the tag is read.
+func (l *lowerer) typeofOperand(n *ast.Node, x *hir.Expr) *hir.Expr {
+	if x == nil || !l.unprunedFeatures {
+		return x
+	}
+	for n != nil && n.Kind == ast.KindParenthesizedExpression {
+		n = n.Expression()
+	}
+	if n == nil || n.Kind != ast.KindIdentifier {
+		return x
+	}
+	declared, ok := l.lookup(n.Text())
+	if !ok || !typeofStorage(declared) {
+		return x
+	}
+	// Re-read through identifier so the existing binding and symbol
+	// bookkeeping (shadow renaming, method capture) tracks this raw declared
+	// storage like any other local read.
+	raw := l.identifier(n)
+	if raw == nil || !typeofStorage(raw.Type) {
+		return x
+	}
+	return raw
+}
+
+// typeofStorage reports tagged-box storage: the runtime value can hold any
+// JavaScript kind regardless of the checker's narrowed view.
+func typeofStorage(t hir.Type) bool {
+	return t.Kind == hir.Dynamic || t.Kind == hir.Optional && t.Args[0].Kind == hir.Dynamic
+}
+
 func (l *lowerer) isTypeofFunction(t hir.Type) bool {
 	if l.isHIRThunk(t) || l.callableMethod(t) != nil {
 		return true
@@ -333,7 +380,7 @@ func (l *lowerer) typeofTag(n *ast.Node, x *hir.Expr) *hir.Expr {
 // statically typed lowering in pruned workloads.
 func (l *lowerer) typeofExpr(n *ast.Node) (*hir.Expr, bool) {
 	u := n.AsTypeOfExpression()
-	x := l.typeofValue(l.expr(u.Expression))
+	x := l.typeofOperand(u.Expression, l.typeofValue(l.expr(u.Expression)))
 	if x == nil {
 		return nil, false
 	}
@@ -357,7 +404,7 @@ func (l *lowerer) typeofExpr(n *ast.Node) (*hir.Expr, bool) {
 
 // typeofCompare lowers typeof comparisons against JavaScript tag strings.
 func (l *lowerer) typeofCompare(n *ast.Node, x *ast.Node, want string, negated bool) *hir.Expr {
-	e := l.typeofValue(l.expr(x))
+	e := l.typeofOperand(x, l.typeofValue(l.expr(x)))
 	if e == nil {
 		return nil
 	}
@@ -930,6 +977,11 @@ func (l *lowerer) recordLiteral(n *ast.Node, typ hir.Type) *hir.Expr {
 				return nil
 			}
 			l.hint = hir.T(hir.Optional, valT)
+			if l.unprunedFeatures && valT.Kind == hir.Optional {
+				// Partial<Record<K, F>>: the value hint is F | undefined, not
+				// a doubly optional view a family literal cannot match.
+				l.hint = valT
+			}
 			v := l.expr(value)
 			l.hint = hir.Type{}
 			if v == nil {
@@ -985,13 +1037,7 @@ func (l *lowerer) optionalChain(n *ast.Node) *hir.Expr {
 	if n.Kind == ast.KindCallExpression && base.Kind != ast.KindIdentifier {
 		base = base.Expression()
 	}
-	recv := l.anyCallReceiver(base, l.expr(base))
-	if base.Kind == ast.KindElementAccessExpression {
-		arr := l.expr(base.Expression())
-		if arr != nil && arr.Type.Kind == hir.Array {
-			recv = l.rtOp("array.get", arr, hir.T(hir.Optional, arr.Type.Args[0]), l.expr(base.AsElementAccessExpression().ArgumentExpression))
-		}
-	}
+	recv := l.anyCallReceiver(base, l.observedArrayIndex(l.expr(base)))
 	if recv == nil {
 		return nil
 	}
@@ -1025,6 +1071,15 @@ func (l *lowerer) optionalChain(n *ast.Node) *hir.Expr {
 	}
 	saved := l.pend
 	l.pend = nil
+	if elem.Kind == hir.Dynamic {
+		// The nullish test guards this checked array view. Retain the
+		// array's typed operations (including match metadata) in the live
+		// branch rather than looking up native properties on an erased box.
+		typ := l.conditionalCheckerType(base, l.ck.GetNonNullableType(l.ck.GetTypeAtLocation(base)))
+		if typ.Kind == hir.Array {
+			unwrapped = l.dynamicReference(unwrapped, typ)
+		}
+	}
 	value := l.withLocal(base, unwrapped, func() *hir.Expr {
 		switch n.Kind {
 		case ast.KindCallExpression:

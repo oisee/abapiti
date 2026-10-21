@@ -27,6 +27,11 @@ func TestRegExpExecRuntime(t *testing.T) {
 			t.Errorf("missing %s", want)
 		}
 	}
+	// Without a Dynamic in the program nothing reads named groups, and the
+	// dynamic box they would fill is not emitted.
+	if strings.Contains(text, "match_groups") || strings.Contains(text, "named_value") {
+		t.Error("named-group materialization needs the dynamic runtime, which this program does not include")
+	}
 	for _, forbidden := range []string{"RESULTS DATA(", "INTO DATA(hit)", "INTO DATA(group)"} {
 		if strings.Contains(text, forbidden) {
 			t.Errorf("FIND results must use DDIC declarations, found %s", forbidden)
@@ -39,5 +44,43 @@ func TestRegExpExecRuntime(t *testing.T) {
 	}
 	if !strings.Contains(text, "FIND FIRST OCCURRENCE OF PCRE search") || !strings.Contains(text, "METHOD unit_text.") {
 		t.Fatal("JS exec needs the PCRE/UTF-16 path, not legacy POSIX matching")
+	}
+}
+
+// Named groups are materialized inside exec, and the JS subclass inherits
+// the group-name table rather than redeclaring it.
+func TestRegExpExecNamedGroupsLayout(t *testing.T) {
+	result := hir.T(hir.Optional, hir.T(hir.Array, str))
+	pattern := &hir.Expr{Kind: hir.New, Type: hir.T(hir.RegExp), Args: []*hir.Expr{hir.L(str, "(a)(?<x>b)"), hir.L(str, "")}}
+	m := method("exec", result, ret(rt("regexp.exec", pattern, result, hir.L(str, "ab"))))
+	arr := hir.T(hir.Array, str)
+	groups := method("groups", hir.T(hir.Dynamic), ret(rt("array.matchGroups", local("hit", arr), hir.T(hir.Dynamic))))
+	groups.Params = []hir.Param{{Name: "hit", Type: arr}}
+	p := &hir.Program{Classes: []*hir.Class{{Name: "Probe", Methods: []*hir.Method{m, groups}}}}
+	if errs := hir.Verify(p); len(errs) > 0 {
+		t.Fatal(errs)
+	}
+	files, names, err := emitABAPNamed(t, p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	js := files[names.Get("runtime.regexp_js")+".clas.abap"]
+	base := files[names.Get("runtime.regexp")+".clas.abap"]
+	if !strings.Contains(base, "TYPES: BEGIN OF group_name_type") || strings.Contains(js, "group_name_type,") || strings.Contains(js, "DATA group_names TYPE") {
+		t.Error("group-name types must be declared once, in the base class")
+	}
+	if !strings.Contains(js, "CLEAR: source, posix, excluded, ignore_case, global, group_names.") {
+		t.Error("the JS constructor must discard the base constructor's group names")
+	}
+	start := strings.Index(js, "METHOD exec.\n")
+	end := strings.Index(js[start:], "ENDMETHOD.\n") + start
+	if named := strings.Index(js, "IF group_names IS NOT INITIAL."); start < 0 || named < start || named > end {
+		t.Error("named groups must be materialized inside METHOD exec")
+	}
+	if !strings.Contains(files[names.Get("runtime."+arr.String())+".clas.abap"], "DATA match_groups TYPE REF TO "+names.Get("runtime.dynamic")+".") || files[names.Get("runtime.dynamic")+".clas.abap"] == "" {
+		t.Error("a program reading named groups must carry match_groups and the dynamic runtime")
+	}
+	if strings.Contains(js, "named_row-index = sy-tabix") || !strings.Contains(js, "named_row-index = group_count.") {
+		t.Error("named groups must take their capture-group number")
 	}
 }

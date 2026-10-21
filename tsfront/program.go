@@ -14,7 +14,6 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
-	"sync"
 
 	"github.com/oisee/abapiti/internal/tsgo/ast"
 	"github.com/oisee/abapiti/internal/tsgo/bundled"
@@ -35,10 +34,6 @@ type Program struct {
 	// packageNames names files of separate package checkouts outside
 	// configDir by their path inside the package (see packageSourceNames).
 	packageNames map[string]string
-	// mapProbe caches whether any source tests `x instanceof Map`; only then
-	// do Map constructions carry the runtime JS Map marker.
-	mapProbeOnce sync.Once
-	mapProbe     bool
 }
 
 // Load builds a Program for the project described by tsconfigPath. The
@@ -251,6 +246,9 @@ func relativeSource(root, file string) string {
 }
 
 func (p *Program) locString(f *ast.SourceFile, pos int) string {
+	if f == nil {
+		return "<unknown>"
+	}
 	line, col := lineCol(f, pos)
 	return fmt.Sprintf("%s:%d:%d", p.sourceName(f.FileName()), line, col)
 }
@@ -265,6 +263,12 @@ func locString(f *ast.SourceFile, pos int) string {
 // code units — what tsc reports and editors display (é is one unit, an
 // emoji outside the BMP two) — never in UTF-8 bytes.
 func lineCol(f *ast.SourceFile, pos int) (line, col int) {
+	// Invalid/synthetic positions have no column in this source. Fall back
+	// to the file start, rather than slicing or pretending the offset is EOF.
+	// Callers must still select the owning source (see lowerer.locOf).
+	if f == nil || pos < 0 || pos > len(f.Text()) {
+		return 1, 1
+	}
 	starts := f.ECMALineMap() // sorted ascending, byte offsets
 	idx := sort.Search(len(starts), func(i int) bool { return starts[i] > core.TextPos(pos) }) - 1
 	if idx < 0 {

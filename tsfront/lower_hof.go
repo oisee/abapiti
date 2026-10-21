@@ -71,6 +71,9 @@ func (l *lowerer) hofCall(n *ast.Node, name string, recv *hir.Expr, args []*ast.
 		// a missing primitive slot refuses before callback invocation.
 		return l.arrayCallbackLoop(n, name, recv, args, true), true
 	}
+	if name == "map" && l.callReceiverIsMatchArray(n) {
+		return l.matchArrayMapLoop(n, recv, args[0]), true
+	}
 	body, params, ok := l.callbackBody(n, args[0], elem)
 	if !ok {
 		return nil, true
@@ -109,6 +112,7 @@ func (l *lowerer) hofCall(n *ast.Node, name string, recv *hir.Expr, args []*ast.
 		l.pendStmt(&hir.Stmt{Kind: hir.ForEach, Node: l.node(n), Name: params[0], Type: elem, X: recv,
 			Body: loopBody(&hir.Stmt{Kind: hir.ExprStmt, Node: l.node(n),
 				X: l.rtOp("array.push", out, hir.T(hir.I32), body)})})
+		l.markFreshContainer(out)
 		return out, true
 	case "filter":
 		out := l.tempVar(n, hir.T(hir.Array, elem))
@@ -117,6 +121,7 @@ func (l *lowerer) hofCall(n *ast.Node, name string, recv *hir.Expr, args []*ast.
 			Body: loopBody(&hir.Stmt{Kind: hir.If, Node: l.node(n), X: cond,
 				Body: hir.B(&hir.Stmt{Kind: hir.ExprStmt, Node: l.node(n),
 					X: l.rtOp("array.push", out, hir.T(hir.I32), hir.V(params[0], elem))})})})
+		l.markFreshContainer(out)
 		return out, true
 	case "some":
 		out := l.tempInit(n, hir.T(hir.Bool), hir.L(hir.T(hir.Bool), false))
@@ -128,6 +133,57 @@ func (l *lowerer) hofCall(n *ast.Node, name string, recv *hir.Expr, args []*ast.
 		return out, true
 	}
 	return nil, false
+}
+
+func (l *lowerer) callReceiverIsMatchArray(n *ast.Node) bool {
+	if n.Kind != ast.KindCallExpression || n.Expression() == nil || n.Expression().Kind != ast.KindPropertyAccessExpression {
+		return false
+	}
+	receiver := n.Expression().AsPropertyAccessExpression().Expression
+	return l.isMatchArrayType(l.ck.GetTypeAtLocation(receiver))
+}
+
+func (l *lowerer) matchArrayMapLoop(n *ast.Node, receiver *hir.Expr, callback *ast.Node) *hir.Expr {
+	elem := receiver.Type.Args[0]
+	parameter := callback.Parameters()[0]
+	if parameter == nil || parameter.Name() == nil || parameter.Name().Kind != ast.KindIdentifier || len(callback.Parameters()) > 3 {
+		l.diagf(callback, "unsupported-callback", "match array map callback needs one to three simple parameters")
+		return nil
+	}
+	symbol := parameter.Symbol()
+	if symbol != nil {
+		if l.matchCallbackParams == nil {
+			l.matchCallbackParams = map[*ast.Symbol]bool{}
+		}
+		l.matchCallbackParams[symbol] = true
+		defer delete(l.matchCallbackParams, symbol)
+	}
+	body, params, ok := l.callbackBody(n, callback, elem)
+	if !ok || body == nil || body.Type.Kind == hir.Void {
+		return nil
+	}
+	recv := l.tempInit(n, receiver.Type, receiver)
+	out := l.tempVar(n, hir.T(hir.Array, body.Type))
+	i := hir.T(hir.I32)
+	length := l.tempInit(n, i, l.rtOp("array.length", recv, i))
+	index := l.tempInit(n, i, hir.L(i, 0))
+	inner := []*hir.Stmt{{
+		Kind: hir.VarDecl, Node: l.node(n), Name: params[0],
+		Type: hir.T(hir.Optional, elem), X: l.rtOp("array.get", recv, hir.T(hir.Optional, elem), index),
+	}}
+	if len(params) >= 2 {
+		inner = append(inner, &hir.Stmt{Kind: hir.VarDecl, Node: l.node(n), Name: params[1], Type: hir.T(hir.Number), X: l.rtOp("number.fromI32", index, hir.T(hir.Number))})
+	}
+	if len(params) >= 3 {
+		inner = append(inner, &hir.Stmt{Kind: hir.VarDecl, Node: l.node(n), Name: params[2], Type: recv.Type, X: recv})
+	}
+	inner = append(inner,
+		&hir.Stmt{Kind: hir.ExprStmt, Node: l.node(n), X: l.rtOp("array.push", out, i, body)},
+		&hir.Stmt{Kind: hir.Assign, Node: l.node(n), X: index, Y: &hir.Expr{Kind: hir.Binary, Node: l.node(n), Op: "+", Type: i, X: index, Y: hir.L(i, 1)}})
+	l.pendStmt(&hir.Stmt{Kind: hir.While, Node: l.node(n),
+		X: &hir.Expr{Kind: hir.Binary, Node: l.node(n), Op: "<", Type: hir.T(hir.Bool), X: index, Y: length}, Body: hir.B(inner...)})
+	l.markFreshContainer(out)
+	return out
 }
 
 // find captures length once, but reads the current slot for each callback.
@@ -163,6 +219,32 @@ func (l *lowerer) toBool(n *ast.Node, x *hir.Expr) *hir.Expr {
 		return x
 	}
 	return &hir.Expr{Kind: hir.ToBoolean, Node: l.node(n), Type: hir.T(hir.Bool), X: x}
+}
+
+// A narrower record may add keys that the contextual constructor cannot
+// store. Let those callbacks retain their inferred layout; coerce attaches the
+// structural array view afterwards, preserving the extra keys and identities.
+func (l *lowerer) optionalArrayCallbackHint(value *ast.Node, elem hir.Type) hir.Type {
+	for value.Kind == ast.KindParenthesizedExpression {
+		value = value.Expression()
+	}
+	if value.Kind != ast.KindObjectLiteralExpression || elem.Kind != hir.ClassRef {
+		return elem
+	}
+	target := l.classByName(elem.Name)
+	if target == nil {
+		return elem
+	}
+	for _, prop := range l.ck.GetPropertiesOfType(l.ck.GetTypeAtLocation(value)) {
+		found := false
+		for _, field := range target.Fields {
+			found = found || field.Name == prop.Name
+		}
+		if !found {
+			return hir.Type{}
+		}
+	}
+	return elem
 }
 
 // tempInit declares a fresh local initialized with x.
@@ -354,7 +436,7 @@ func (l *lowerer) callbackBody(n *ast.Node, cb *ast.Node, elem hir.Type) (*hir.E
 			// pattern's fields.
 			l.serial++
 			v := "d" + itoa(l.serial)
-			l.destructurePattern(p.Name(), hir.V(v, elem))
+			l.destructurePattern(p.Name(), hir.V(v, elem), false)
 			names = append(names, v)
 			continue
 		}
@@ -382,6 +464,15 @@ func (l *lowerer) callbackBody(n *ast.Node, cb *ast.Node, elem hir.Type) (*hir.E
 			} else {
 				l.diags = l.diags[:before]
 			}
+			if l.matchCallbackParams[ps] {
+				t = hir.T(hir.Optional, elem)
+			}
+		}
+		if l.unprunedFeatures && i != index && elem.Kind == hir.UnionRef && !t.Equal(elem) && l.familyMember(elem, t) && reduceElementParam(n, i) {
+			// leaves.every((t) => t.k === "x") narrowed the receiver, so the
+			// checker types the element as one member. The loop binds the
+			// family element; each read projects it (narrowedAt), checked.
+			t = elem
 		}
 		if i == 0 && (l.collectionShapes[elem.Name] || l.collectionElements[elem.String()]) && params[i].Type() == nil {
 			// Inferred callback types can repeat the checker's first-row
@@ -445,6 +536,10 @@ func (l *lowerer) callbackBody(n *ast.Node, cb *ast.Node, elem hir.Type) (*hir.E
 		l.hint = l.mapTypeNode(cb.Type())
 	} else if l.hint.Kind == hir.Array {
 		l.hint = l.hint.Args[0]
+	} else if l.unprunedFeatures && l.hint.Kind == hir.Optional && l.hint.Args[0].Kind == hir.Array {
+		// A present mapped array in an optional slot retains the same
+		// element context and checked field coercions as a required slot.
+		l.hint = l.optionalArrayCallbackHint(value, l.hint.Args[0].Args[0])
 	} else {
 		l.hint = hir.Type{}
 	}
@@ -462,7 +557,11 @@ func (l *lowerer) callbackBody(n *ast.Node, cb *ast.Node, elem hir.Type) (*hir.E
 // exits that invocation and cannot escape the surrounding array operation.
 func (l *lowerer) callbackWithReturns(cb *ast.Node, names []string) (*hir.Expr, []string, bool) {
 	l.serial++
+	if l.unprunedFeatures && l.hint.Kind == hir.Array {
+		l.liftResultHint = l.hint.Args[0]
+	}
 	lf := l.liftLocalFn("callback_"+itoa(l.serial), cb)
+	l.liftResultHint = hir.Type{}
 	if lf == nil || lf.method.Result.Kind == hir.Void {
 		return nil, nil, false
 	}
@@ -492,7 +591,7 @@ func (l *lowerer) callbackWithReturns(cb *ast.Node, names []string) (*hir.Expr, 
 
 // destructurePattern declares the fields of an object or array binding
 // pattern read from x.
-func (l *lowerer) destructurePattern(pattern *ast.Node, x *hir.Expr) {
+func (l *lowerer) destructurePattern(pattern *ast.Node, x *hir.Expr, matchArray bool) {
 	if pattern == nil {
 		return
 	}
@@ -563,6 +662,25 @@ func (l *lowerer) destructurePattern(pattern *ast.Node, x *hir.Expr) {
 					value = l.rtOp("array.slice1", x, x.Type, hir.L(hir.T(hir.I32), i))
 				} else {
 					value = &hir.Expr{Kind: hir.IndexGet, Node: l.node(el), Type: x.Type.Args[0], X: x, Y: hir.L(hir.T(hir.I32), i)}
+					if matchArray {
+						value = l.rtOp("array.get", x, hir.T(hir.Optional, x.Type.Args[0]), hir.L(hir.T(hir.I32), i))
+						if initializer := el.AsBindingElement().Initializer; initializer != nil {
+							fallback := l.expr(initializer)
+							if fallback == nil {
+								return
+							}
+							result := l.mapCheckerType(el.Name(), l.ck.GetTypeAtLocation(el.Name()))
+							present := &hir.Expr{Kind: hir.Narrow, Node: l.node(el), Type: result, X: value}
+							value = &hir.Expr{Kind: hir.Conditional, Node: l.node(el), Type: result,
+								X: &hir.Expr{Kind: hir.IsUndefined, Node: l.node(el), Type: hir.T(hir.Bool), X: value},
+								Y: l.coerce(fallback, result), Z: present}
+						} else if symbol := el.Symbol(); symbol != nil {
+							if l.widenedLets == nil {
+								l.widenedLets = map[*ast.Symbol]bool{}
+							}
+							l.widenedLets[symbol] = true
+						}
+					}
 				}
 			} else if el.AsBindingElement().DotDotDotToken != nil {
 				typ := l.mapCheckerType(el, l.ck.GetTypeAtLocation(el.Name()))
@@ -793,7 +911,7 @@ func (l *lowerer) fixedArgs(at *ast.Node, args []*ast.Node, params []hir.Param, 
 			}
 			a = l.presentValue(args[i], a, p.Type)
 			a = l.readonlyArrayArgument(a, p.Type, symbols[p.Name])
-			out = append(out, snapshot(l.coerce(a, p.Type)))
+			out = append(out, snapshot(l.guardedShapeArgument(args[i], l.callArgument(at, args[i], i, a, p.Type), p.Type)))
 			continue
 		}
 		if p.Type.Kind == hir.Optional {
@@ -1043,4 +1161,11 @@ func (l *lowerer) callbackIndexParam(n *ast.Node) int {
 		return 2
 	}
 	return -1
+}
+
+// reduceElementParam reports the element parameter of an arr.reduce callback,
+// which reduceLoop binds to the receiver's element type.
+func reduceElementParam(n *ast.Node, i int) bool {
+	callee := n.Expression()
+	return i == 1 && callee != nil && callee.Kind == ast.KindPropertyAccessExpression && callee.Name().Text() == "reduce" && len(n.Arguments()) == 2
 }

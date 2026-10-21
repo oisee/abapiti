@@ -14,6 +14,10 @@ const ownKeysSource = `
 func dynamicKeys(d *dynamic) *array[jsString] {
  if d==nil {panic(newRangeFault())}
  if s,ok:=d.Value.(interface{dynamicSource()*dynamic});ok {if source:=s.dynamicSource();source!=nil {return dynamicKeys(source)}}
+ if isArray(d) {
+  a,ok:=d.Value.(interface{liveLength() int32;liveGet(int32)(*dynamic,bool)});if !ok {panic(newTrap("array lacks indexed storage"))}
+  out:=&array[jsString]{};for i:=int32(0);i<a.liveLength();i++ {if _,present:=a.liveGet(i);present {out.push(integerString(int64(i)))}};return out
+ }
  if d.Tag==2 {if v,ok:=d.Value.(interface{nominalOwnKeys()*array[jsString]});ok {return v.nominalOwnKeys()}}
  if d.Tag!=tagObject {panic(newTrap("own-key enumeration requires original structural property storage"))}
  out:=d.Value.(*orderedMap[jsString,*dynamic]).keys()

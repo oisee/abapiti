@@ -10,8 +10,12 @@ import (
 )
 
 var supportedOps = map[string]bool{
-	"union.declarations": true,
-	"map.view":           true, "union.check": true, "union.admit": true,
+	"map.checkedGet": true, "map.checkedSet": true, "map.checkedValues": true,
+	"union.declarations":          true,
+	"dynamic.mapView":             true,
+	"container.readonlyClassView": true,
+	"container.readonlyView":      true, "collection.has": true, "collection.get": true,
+	"map.view": true, "set.view": true, "union.check": true, "union.admit": true,
 	"union.widen":            true,
 	"union.project":          true,
 	"union.tag":              true,
@@ -37,13 +41,14 @@ var supportedOps = map[string]bool{
 	"map.markJS":              true,
 	"json.stringifyReplacer":  true,
 	"dynamic.classView":       true,
+	"dynamic.asObject":        true,
 	"dynamic.arrayView":       true,
 	"object.classOf":          true, "classvalue.newArgs": true, "classvalue.new": true, "classvalue.name": true, "classvalue.has": true, "dynamic.asClassValue": true,
 	"xml.validate":    true,
 	"clock.telemetry": true, "xml.parseSubset": true, "xml.parseWithErrors": true, "dynamic.materialize": true, "json.parseSubset": true, "json5.parse": true, "json.indent": true,
 	"dynamic.null": true, "dynamic.strictEquals": true, "dynamic.isNullish": true, "dynamic.get": true, "dynamic.put": true, "dynamic.delete": true, "dynamic.asBoolean": true, "dynamic.asNumber": true, "dynamic.isNumber": true, "dynamic.isArray": true, "dynamic.typeof": true, "dynamic.toString": true,
 
-	"string.startsWith": true, "string.endsWith": true, "string.indexOf": true, "string.at": true, "string.replaceFirst": true, "string.repeatIndent": true, "string.parseInt10": true, "string.parseInt10i64": true, "string.compareRegistryKey": true, "string.compareObjectName": true, "string.localeCompareNames": true, "regexp.new": true, "regexp.lastIndex": true, "regexp.setLastIndex": true, "regexp.exec": true, "regexp.test": true, "regexp.match_test": true, "regexp.source": true, "regexp.toString": true,
+	"string.startsWith": true, "string.endsWith": true, "string.indexOf": true, "string.at": true, "string.replaceFirst": true, "string.repeatIndent": true, "string.parseInt10": true, "string.parseInt10i64": true, "string.compareRegistryKey": true, "string.compareObjectName": true, "string.localeCompareNames": true, "regexp.new": true, "regexp.lastIndex": true, "regexp.setLastIndex": true, "regexp.exec": true, "regexp.boxMatch": true, "regexp.test": true, "regexp.match_test": true, "regexp.source": true, "regexp.toString": true,
 
 	"array.spread0": true, "array.reverse": true, "array.unshift": true, "array.concat": true, "array.slice0": true, "array.slice1": true, "array.slice2": true, "array.splice1": true, "array.splice2": true, "array.spliceDrop2": true, "array.splice3": true, "array.splice1_view": true, "array.pop": true, "array.shift": true, "array.indexOf": true, "array.includes": true, "array.join": true, "map.values": true, "record.delete": true, "set.delete": true, "set.clear": true, "map.clear": true, "set.copy": true,
 
@@ -80,9 +85,22 @@ func RuntimeOps() (supported, unsupported []string) {
 }
 
 func (b *body) runtime(x *hir.Expr) string {
-	if x.Op == "map.set" && x.X.Type.Args[0].Kind == hir.Dynamic {
-		b.e.unsupported(x.Node, "boxed Map writes require value-based SameValueZero")
-		return ""
+	if base := hir.CheckedMapBaseOp(x.Op); base != x.Op {
+		copy := *x
+		copy.Op = base
+		x = &copy
+	}
+	if x.Op == "container.readonlyView" {
+		return b.temp(x.Type, b.e.readonlyContainerView(x.Type, "box("+b.expr(x.X)+")"))
+	}
+	if x.Op == "collection.has" {
+		return b.temp(x.Type, b.expr(x.X)+".identityHas("+b.expr(x.Args[0])+")")
+	}
+	if x.Op == "collection.get" {
+		return b.temp(x.Type, fmt.Sprintf("func() %s {v,has:=%s.identityGet(%s);if !has {var z %s;return z};return %s}()", b.e.typ(x.Type), b.expr(x.X), b.expr(x.Args[0]), b.e.typ(x.Type), b.e.viewValue(x.Type, "v")))
+	}
+	if x.Op == "set.view" {
+		return b.expr(x.X)
 	}
 	if x.Op == "map.view" {
 		return b.temp(x.Type, b.mapView(x))
@@ -112,6 +130,14 @@ func (b *body) runtime(x *hir.Expr) string {
 	}
 	code := ""
 	switch x.Op {
+	case "array.indexOf", "array.includes":
+		if x.X.Type.Kind == hir.Array && x.X.Type.Args[0].Kind == hir.Dynamic {
+			// any[] search compares boxed values: === for indexOf, SameValueZero for includes.
+			b.e.dynamicSearch = true
+			code = "dynArray" + strings.ToUpper(x.Op[6:7]) + x.Op[7:] + "(" + a + "," + strings.Join(args, ",") + ")"
+			break
+		}
+		code = a + "." + strings.Split(x.Op, ".")[1] + "(" + strings.Join(args, ",") + ")"
 	case "array.spread0":
 		length := "int32(len(" + a + ".Items))"
 		if b.e.liveStorage() {
@@ -123,7 +149,7 @@ func (b *body) runtime(x *hir.Expr) string {
 		}
 		code = helper + "(" + a + "," + length + ")"
 
-	case "array.has", "array.delete", "array.reverse", "array.unshift", "array.concat", "array.slice0", "array.slice1", "array.slice2", "array.splice1", "array.splice2", "array.spliceDrop2", "array.splice3", "array.splice1_view", "array.pop", "array.shift", "array.indexOf", "array.includes", "array.join", "map.values", "set.delete", "set.copy", "array.push", "array.get", "map.set", "map.get", "map.has", "map.delete", "map.keys", "set.add", "set.has", "set.values", "set.fromArray":
+	case "array.has", "array.delete", "array.reverse", "array.unshift", "array.concat", "array.slice0", "array.slice1", "array.slice2", "array.splice1", "array.splice2", "array.spliceDrop2", "array.splice3", "array.splice1_view", "array.pop", "array.shift", "array.join", "map.values", "set.delete", "set.copy", "array.push", "array.get", "map.set", "map.get", "map.has", "map.delete", "map.keys", "set.add", "set.has", "set.values", "set.fromArray":
 		code = a + "." + strings.Split(x.Op, ".")[1] + "(" + strings.Join(args, ",") + ")"
 	case "string.parseFloatNumber":
 		code = "parseFloatNumber(" + a + ")"
@@ -165,6 +191,9 @@ func (b *body) runtime(x *hir.Expr) string {
 		code = "func() {m:=" + a + ";k:=m.keys().Items;for i:=len(k)-1;i>=0;i-- {m.delete(k[i])}}()"
 	case "array.length", "set.size":
 		code = "int32(len(" + a + ".Items))"
+		if x.Op == "set.size" && b.e.readonlyViews {
+			code = a + ".readonlySetSize()"
+		}
 		if x.Op == "array.length" && b.e.liveStorage() {
 			code = a + ".length()"
 		}
@@ -177,8 +206,10 @@ func (b *body) runtime(x *hir.Expr) string {
 		code = a + "." + strings.Split(x.Op, ".")[1] + "(" + strings.Join(args, ",") + ")"
 	case "string.compareRegistryKey":
 		code = "compareDomain(" + a + "," + args[0] + `,"_0123456789abcdefghijklmnopqrstuvwxyz")`
-	case "string.compareObjectName", "string.localeCompareNames":
+	case "string.compareObjectName":
 		code = "compareDomain(" + a + "," + args[0] + `,"_/0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ")`
+	case "string.localeCompareNames":
+		code = "localeCompareRoot(" + a + "," + args[0] + ")"
 	case "regexp.new":
 		flags := "str(\"\")"
 		if len(args) > 1 {
@@ -196,6 +227,8 @@ func (b *body) runtime(x *hir.Expr) string {
 		code = a + ".LastIndex"
 	case "regexp.setLastIndex":
 		code = a + ".setLastIndex(" + args[0] + ")"
+	case "regexp.boxMatch":
+		code = "func() *dynamic {if " + a + " == nil {return dynNull()};return box(" + a + ")}()"
 	case "regexp.exec":
 		code = a + ".exec(" + args[0] + ")"
 	case "regexp.test":
@@ -395,6 +428,12 @@ func (b *body) runtime(x *hir.Expr) string {
 		if b.e.directCollectionKey(x.X.Type.Args[0]) {
 			code = "markJSFastMap(" + a + ")"
 		}
+		name, isClassValue := mapViewClassName(x.Type.Args[1])
+		if b.e.usesMapViews() && (b.e.dynamicMaps || isClassValue && b.e.liveMapValueTypes[name]) {
+			value := x.Type.Args[1]
+			decoder := b.e.viewValue(value, "d")
+			code = "func(m " + b.e.typ(x.Type) + ") " + b.e.typ(x.Type) + " {m.decode=func(d *dynamic) " + b.e.typ(value) + " {return " + decoder + "};return m}(" + code + ")"
+		}
 		b.e.collectionProbe = true
 	case "dynamic.isMap", "dynamic.isSet":
 		kind := "orderedMap["
@@ -411,12 +450,32 @@ func (b *body) runtime(x *hir.Expr) string {
 		b.e.extraRuntimeKeys = true
 	case "union.check", "union.admit", "union.widen", "union.project", "union.tag", "union.read":
 		code = b.unionOperation(x, a)
-	case "dynamic.classView":
+	case "dynamic.asObject":
+		code = "dynObject(" + a + ")"
+	case "dynamic.mapView":
+		code = b.dynamicMapView(x)
+	case "dynamic.classView", "container.readonlyClassView":
 		code = b.e.liveView(x.Type) + "(" + a + ")"
 	case "dynamic.arrayView":
-		code = b.e.viewValue(x.Type, a)
+		code = b.e.viewValue(x.Type, "checkedArraySource("+a+", false)")
 	case "dynamic.asRef":
 		code = "castRef[" + b.e.typ(x.Type) + "](dynRef(" + a + "))"
+		if x.Owner == "" && x.Type.Kind == hir.ClassRef && x.Type.Name == hir.RootObject {
+			// Same object-root bridge as the view reads: dynObject keeps a
+			// plain record carrier intact where castRef/dynRef would refuse.
+			code = "dynObject(" + a + ")"
+		}
+		if x.Owner != "" {
+			code = b.e.structuralUnionProjection(hir.Type{Kind: hir.InterfaceRef, Name: x.Owner}, x.Type.Name) + "(" + a + ")"
+		}
+		if x.Type.Kind == hir.InterfaceRef {
+			if view := b.e.structuralUnion(x.Type); view != "" {
+				code = view + "(" + a + ")"
+			}
+		}
+		if x.Type.Kind == hir.Array && (x.Type.Args[0].Kind == hir.Dynamic || b.e.p.StructuralArrayUnion(x.Type)) {
+			code = b.e.viewValue(x.Type, "checkedArraySource("+a+", true)")
+		}
 		if x.Type.Kind == hir.OrderedMap && x.Type.Args[0].Kind == hir.String {
 			code = "dynMap[" + b.e.typ(x.Type.Args[1]) + "](" + a + ")"
 		}

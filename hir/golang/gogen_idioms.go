@@ -63,6 +63,9 @@ func (e *emitter) gogenRuntimeSource() string {
 	if _, ok := ops["clock.epochMilliseconds"]; ok {
 		clock = "\nfunc epochMilliseconds() float64 { return float64(time.Now().UnixMilli()) }\n"
 	}
+	if _, ok := ops["string.localeCompareNames"]; ok {
+		clock += localeCompareRootSource
+	}
 	if _, ok := ops["weak.lookupKey"]; !ok {
 		if _, ok = ops["weak.writeKey"]; !ok {
 			return clock
@@ -75,3 +78,35 @@ func weakIdentityKey(d *dynamic, fail func()) any {
 }
 `
 }
+
+// localeCompareRootSource is String.prototype.localeCompare without locales or
+// options (ICU root collation, non-ignorable punctuation) on the domain checked
+// against Node: the primary order below with case folded, then lowercase before
+// uppercase at the first case difference. Other code units raise.
+const localeCompareRootSource = `
+func localeCompareRoot(a, b jsString) int32 {
+ const primary = "_-./#0123456789abcdefghijklmnopqrstuvwxyz"
+ weight := func(s jsString, i int32) (int, bool) {
+  c := rune(s.charCodeAt(i))
+  upper := c >= 'A' && c <= 'Z'
+  if upper { c += 'a' - 'A' }
+  w := strings.IndexRune(primary, c)
+  if w < 0 { panic(newRangeFault()) }
+  return w, upper
+ }
+ for _, s := range []jsString{a, b} { for i := int32(0); i < s.length(); i++ { weight(s, i) } }
+ n := min(a.length(), b.length())
+ for i := int32(0); i < n; i++ {
+  x, _ := weight(a, i)
+  y, _ := weight(b, i)
+  if x != y { if x < y { return -1 }; return 1 }
+ }
+ if a.length() != b.length() { if a.length() < b.length() { return -1 }; return 1 }
+ for i := int32(0); i < n; i++ {
+  _, x := weight(a, i)
+  _, y := weight(b, i)
+  if x != y { if y { return -1 }; return 1 }
+ }
+ return 0
+}
+`

@@ -37,6 +37,12 @@ type Type struct {
 	Kind Kind
 	Name string
 	Args []Type
+	// JSMap retains the library Map/ReadonlyMap origin for erased conversion.
+	// Records share its storage layout and equality, but need a different checked
+	// conversion operation. This flag grants no runtime Map brand.
+	JSMap bool `json:",omitempty"`
+	// Readonly permits a covariant read view; it never changes storage equality.
+	Readonly bool `json:",omitempty"`
 }
 
 func T(k Kind, args ...Type) Type { return Type{Kind: k, Args: args} }
@@ -114,15 +120,45 @@ type Class struct {
 	// storage cannot yet retain undefined. JSON must refuse rather than infer
 	// creation order from subsequent assignments or fabricate zero values.
 	UndefinedDefineFields bool `json:",omitempty"`
-	Fields                []Field
-	Methods               []*Method
-	Ctor                  *Method
+	// FieldsDropped marks a class whose instance fields lost a declaration to
+	// a lowering trap: a by-name property lookup that misses must trap rather
+	// than report the dropped property absent.
+	FieldsDropped bool `json:",omitempty"`
+	Fields        []Field
+	Methods       []*Method
+	Ctor          *Method
 }
 type Interface struct {
 	Node
 	Name    string
 	Methods []*Method
+	// StructuralMembers retains the closed data alternatives of a reference
+	// union. Ordinary (including nominal) interfaces have no such admission.
+	StructuralMembers []StructuralMember `json:",omitempty"`
 }
+
+type StructuralMember struct {
+	Type   Type
+	Fields []StructuralField
+}
+
+// These are source domains, before optional reference erasure. Nested values
+// retain the usual lazy typed-view boundary; admission checks the outer slots.
+type StructuralField struct {
+	Name     string
+	Type     Type
+	Optional bool `json:",omitempty"`
+	Domains  []StructuralDomain
+}
+
+// Exact scalar literals and presence survive scalar/reference ABI erasure.
+// Object and array domains check the outer slot; their members remain lazy.
+type StructuralDomain struct {
+	Kind    Kind
+	Exact   bool   `json:",omitempty"`
+	Literal string `json:",omitempty"`
+}
+
 type Field struct {
 	Node
 	Name              string

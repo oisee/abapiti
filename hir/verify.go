@@ -14,25 +14,40 @@ type Error struct {
 func (e Error) Error() string { return fmt.Sprintf("node %d (%s): %s", e.ID, e.Source, e.Message) }
 
 type verifier struct {
-	p          *Program
-	errors     []error
-	classes    map[string]*Class
-	interfaces map[string]*Interface
+	p           *Program
+	errors      []error
+	classes     map[string]*Class
+	interfaces  map[string]*Interface
+	checkedMaps map[string]bool
 }
 
 // VerifyBody checks one body against all declarations in p. This is also used
 // by opt-in partial lowering to attribute failures without relying on node IDs
 // (synthetic operands may have ID zero).
-func VerifyBody(p *Program, c *Class, m *Method) []error {
-	v := &verifier{p: p, classes: map[string]*Class{}, interfaces: map[string]*Interface{}}
+func VerifyBody(p *Program, c *Class, m *Method) []error { return NewBodyVerifier(p)(c, m) }
+
+// NewBodyVerifier shares declaration and erased-Map layout discovery across
+// bodies of the same program. Replacing rejected bodies with traps is safe;
+// adding declarations or conversion paths requires a new verifier.
+func NewBodyVerifier(p *Program) func(*Class, *Method) []error {
+	classes := map[string]*Class{}
+	interfaces := map[string]*Interface{}
 	for _, x := range p.Classes {
-		v.classes[x.Name] = x
+		if x != nil {
+			classes[x.Name] = x
+		}
 	}
 	for _, x := range p.Interfaces {
-		v.interfaces[x.Name] = x
+		if x != nil {
+			interfaces[x.Name] = x
+		}
 	}
-	v.body(c, m)
-	return v.errors
+	checked := CheckedMapLayouts(p)
+	return func(c *Class, m *Method) []error {
+		v := &verifier{p: p, classes: classes, interfaces: interfaces, checkedMaps: checked}
+		v.body(c, m)
+		return v.errors
+	}
 }
 
 func Verify(p *Program) []error {
@@ -61,7 +76,9 @@ func Verify(p *Program) []error {
 		}
 		v.interfaces[i.Name] = i
 	}
+	v.checkedMaps = CheckedMapLayouts(p)
 	v.unionDeclarations()
+	v.structuralUnions()
 	for _, c := range p.Classes {
 		if c == nil {
 			continue
@@ -194,6 +211,9 @@ const classConstructor = "class_constructor"
 var RootObject = "builtin.object"
 
 func (v *verifier) typ(n Node, t Type) {
+	if t.JSMap && t.Kind != OrderedMap {
+		v.fail(n, "JSMap conversion origin requires ordered-map storage")
+	}
 	arity := 0
 	switch t.Kind {
 	case UnionRef:
@@ -237,9 +257,9 @@ func (v *verifier) typ(n Node, t Type) {
 		if t.Kind == OrderedSet && k.Kind == Optional {
 			k = k.Args[0]
 		}
-		// Boxed Map keys are supported by checked storage views. Backends
-		// still refuse raw allocations and writes without value-based hashing.
-		if t.Kind == OrderedMap && k.Kind == Dynamic {
+		// Boxed Map keys require value-based hashing in the backend. Go
+		// implements it; other backends must retain an explicit refusal.
+		if k.Kind == Dynamic && (t.Kind == OrderedMap || t.Readonly) {
 			return
 		}
 		if k.Kind != Number && k.Kind != String && k.Kind != Bool && k.Kind != I32 && k.Kind != I64 && k.Kind != ClassRef && k.Kind != InterfaceRef && k.Kind != ClassValue && k.Kind != Array {
@@ -953,6 +973,9 @@ func (v *verifier) expr(c *Class, m *Method, e *Expr, env map[string]Type) Type 
 			v.specialOp(e, a, check, args, eq, t)
 			break
 		}
+		if (e.Op == "map.get" || e.Op == "map.set" || e.Op == "map.values") && v.checkedMaps[a.String()] {
+			v.fail(e.Node, "erased Map storage requires an explicit checked access operation")
+		}
 		ps, r, ok := RuntimeSignature(e.Op, a)
 		if !ok {
 			v.fail(e.Node, "unsupported runtime op "+e.Op+" on "+a.String())
@@ -972,6 +995,28 @@ func numeric(t Type) bool { return t.Kind == Number || t.Kind == I32 || t.Kind =
 func (v *verifier) specialOp(e *Expr, a Type, check func(*Expr) Type, args func([]Type), eq func(a, b Type), t Type) {
 	ref := func(x Type) bool { return x.Kind == ClassRef || x.Kind == InterfaceRef }
 	switch e.Op {
+	case "collection.has", "collection.get":
+		if a.Kind != OrderedMap && a.Kind != OrderedSet {
+			v.fail(e.Node, "identity query requires a Map or Set")
+		}
+		args([]Type{T(Dynamic)})
+		if e.Op == "collection.get" {
+			if a.Kind != OrderedMap {
+				v.fail(e.Node, "identity get requires Map")
+			} else {
+				eq(t, T(Optional, a.Args[1]))
+			}
+		} else {
+			eq(t, T(Bool))
+		}
+	case "container.readonlyView":
+		if len(e.Args) != 0 || !t.Readonly || a.Kind != t.Kind || (t.Kind != Array && t.Kind != OrderedMap && t.Kind != OrderedSet) || len(a.Args) != len(t.Args) || (t.Kind == OrderedMap && !a.Args[0].Equal(t.Args[0])) {
+			v.fail(e.Node, "readonly container view requires matching storage and invariant keys")
+		}
+	case "set.view":
+		if len(e.Args) != 0 || a.Kind != OrderedSet || t.Kind != OrderedSet || len(a.Args) != 1 || len(t.Args) != 1 || !a.Args[0].IsRef() || t.Args[0].Kind != ClassRef || !DataClassView(v.p, t.Args[0].Name) {
+			v.fail(e.Node, "Set view needs reference keys and a public data layout")
+		}
 	case "map.view":
 		if len(e.Args) != 0 || !MapViewCompatible(v.p, t, a) {
 			v.fail(e.Node, "map view needs identical structural value layouts and invariant keys")
@@ -1010,7 +1055,7 @@ func (v *verifier) specialOp(e *Expr, a Type, check func(*Expr) Type, args func(
 		eq(t, T(String))
 		args([]Type{T(Optional, T(Dynamic)), T(Optional, T(String))})
 	case "object.get", "object.hasOwn", "object.has":
-		if a.Kind != ClassRef {
+		if a.Kind != ClassRef && !(e.Op == "object.get" && a.Kind == InterfaceRef && v.interfaces[a.Name] != nil) {
 			v.fail(e.Node, "property lookup needs a class receiver")
 		}
 		args([]Type{T(String)})
@@ -1052,7 +1097,17 @@ func (v *verifier) specialOp(e *Expr, a Type, check func(*Expr) Type, args func(
 			v.fail(e.Node, "dynamic.materialize needs Dynamic in and a data class reference out")
 		}
 		args(nil)
-	case "dynamic.classView":
+	case "dynamic.asObject":
+		if a.Kind != Dynamic || !t.Equal(Ref(RootObject)) || e.Owner != "" || e.Name != "" {
+			v.fail(e.Node, "dynamic.asObject needs Dynamic in and the unqualified object root out")
+		}
+		args(nil)
+	case "dynamic.mapView":
+		if a.Kind != Dynamic || t.Kind != OrderedMap || len(t.Args) != 2 || t.Args[0].Kind != String || t.Name != "" || e.Owner != "" || e.Name != "" {
+			v.fail(e.Node, "dynamic.mapView needs Dynamic in and an unqualified string-key Map out")
+		}
+		args(nil)
+	case "dynamic.classView", "container.readonlyClassView":
 		if a.Kind != Dynamic || t.Kind != ClassRef || t.Name == RootObject {
 			v.fail(e.Node, "dynamic.classView needs Dynamic in and a named class reference out")
 		}
@@ -1063,6 +1118,17 @@ func (v *verifier) specialOp(e *Expr, a Type, check func(*Expr) Type, args func(
 		}
 		args(nil)
 	case "dynamic.asRef":
+		// A named structural family certifies a checked member projection,
+		// independently of the representative used by its common interface.
+		if e.Owner != "" {
+			member := false
+			for _, m := range v.p.StructuralUnion(e.Owner) {
+				member = member || m.Type.Equal(e.Type)
+			}
+			if e.Type.Kind != ClassRef || !member || e.Name != "" {
+				v.fail(e.Node, "dynamic.asRef structural projection needs a declared family member")
+			}
+		}
 		if a.Kind != Dynamic || !(ref(t) || t.Kind == Array || t.Kind == OrderedMap || t.Kind == OrderedSet) {
 			v.fail(e.Node, "dynamic.asRef needs Dynamic in and a reference out")
 		}

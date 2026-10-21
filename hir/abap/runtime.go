@@ -27,6 +27,9 @@ func (e *emitter) runtime(t hir.Type) {
 				s = liveArrayMethod(n, s)
 			}
 		}
+		if t.Kind == hir.OrderedMap {
+			s = e.mapViewMethod(t, n, s)
+		}
 		impl.WriteString("METHOD " + n + ".\n" + s + "ENDMETHOD.\n")
 	}
 	switch t.Kind {
@@ -139,6 +142,7 @@ func (e *emitter) runtime(t hir.Type) {
 		}
 		method("get", code+"ENDIF.\n")
 	case hir.OrderedMap, hir.OrderedSet:
+		line(e.mapViewDefinition(t))
 		if t.Kind == hir.OrderedMap {
 			e.chaiMaps = append(e.chaiMaps, t)
 		}
@@ -174,6 +178,12 @@ func (e *emitter) runtime(t hir.Type) {
 		}
 		line("METHODS " + op + " IMPORTING p0 TYPE " + key + params + " RETURNING VALUE(result) TYPE REF TO " + name + ".")
 		method(op, "READ TABLE entries WITH KEY "+lookupKey+" = p0 ASSIGNING FIELD-SYMBOL(<row>).\nIF sy-subrc = 0.\n<row>-v = "+val+".\nELSE.\nAPPEND VALUE #( k = p0 v = "+val+" ) TO entries.\nENDIF.\nresult = me.\n")
+		if t.Kind == hir.OrderedMap && e.types["runtime.mapView"] && t.Args[0].Kind == hir.String {
+			line("METHODS delete IMPORTING p0 TYPE string RETURNING VALUE(result) TYPE abap_bool.")
+			method("delete", "DELETE TABLE entries WITH TABLE KEY by_k COMPONENTS k = p0.\nresult = xsdbool( sy-subrc = 0 ).\n")
+			line("METHODS clear.")
+			method("clear", "CLEAR entries.\n")
+		}
 		if t.Kind == hir.OrderedMap {
 			opt := e.typ(hir.T(hir.Optional, value))
 			line("METHODS get IMPORTING p0 TYPE " + key + " RETURNING VALUE(result) TYPE " + opt + ".")
@@ -218,6 +228,9 @@ func (e *emitter) runtime(t hir.Type) {
 		method(op, "result = NEW #( ).\nLOOP AT entries INTO DATA(row).\nAPPEND row-k TO result->items.\nENDLOOP.\n")
 	}
 	e.files[name+".clas.abap"] = "CLASS " + name + " DEFINITION PUBLIC CREATE PUBLIC.\nPUBLIC SECTION.\n" + def.String() + "PROTECTED SECTION.\nPRIVATE SECTION.\nENDCLASS.\nCLASS " + name + " IMPLEMENTATION.\n" + impl.String() + "ENDCLASS.\n"
+	if extra := e.mapStorageImplementation(t); extra != "" {
+		e.files[name+".clas.abap"] = strings.TrimSuffix(e.files[name+".clas.abap"], "ENDCLASS.\n") + extra + "ENDCLASS.\n"
+	}
 	e.liveRecordMapRuntime(t)
 	if t.Kind == hir.Array && e.arrayViews {
 		e.liveArrayRuntime(t)
@@ -295,6 +308,9 @@ func (e *emitter) support() {
 		e.files[file] = strings.Replace(e.files[file], "PUBLIC SECTION.", "PUBLIC SECTION.\nDATA match_index TYPE i.\nDATA match_has_index TYPE abap_bool.", 1)
 		if e.jsRegexpUsed {
 			e.files[file] = strings.Replace(e.files[file], "PUBLIC SECTION.", "PUBLIC SECTION.\nDATA match_missing TYPE HASHED TABLE OF i WITH UNIQUE KEY table_line.", 1)
+			if e.dynamicUsed {
+				e.files[file] = strings.Replace(e.files[file], "PUBLIC SECTION.", "PUBLIC SECTION.\nDATA match_groups TYPE REF TO "+e.name("runtime.dynamic")+".", 1)
+			}
 			e.files[file] = strings.Replace(e.files[file], "METHOD get.\n", "METHOD get.\nREAD TABLE match_missing WITH TABLE KEY table_line = p0 TRANSPORTING NO FIELDS.\nIF sy-subrc = 0.\nRETURN.\nENDIF.\n", 1)
 		}
 	}
@@ -550,6 +566,9 @@ DATA posix TYPE string.
 DATA excluded TYPE string.
 DATA ignore_case TYPE abap_bool.
 DATA global TYPE abap_bool.
+TYPES: BEGIN OF group_name_type, index TYPE i, name TYPE string, END OF group_name_type.
+TYPES group_names_type TYPE STANDARD TABLE OF group_name_type WITH DEFAULT KEY.
+DATA group_names TYPE group_names_type.
 METHODS constructor IMPORTING pattern TYPE string flags TYPE string excluded_pattern TYPE string OPTIONAL.
 METHODS test IMPORTING p0 TYPE string RETURNING VALUE(result) TYPE abap_bool.
 METHODS match_test IMPORTING p0 TYPE string RETURNING VALUE(result) TYPE abap_bool.
@@ -568,6 +587,9 @@ DATA escaped TYPE abap_bool.
 DATA whitespace TYPE string.
 DATA dot_class TYPE string.
 DATA normalized TYPE string.
+DATA j TYPE i.
+DATA group_count TYPE i.
+DATA named_row TYPE group_name_type.
 whitespace = ` + regexABAPString(jsWhitespaceMembers) + `.
 dot_class = ` + regexABAPString(jsDotClass) + `.
 me->flags = flags.
@@ -656,6 +678,34 @@ WHILE i < n.
     CONCATENATE posix '\A' INTO posix RESPECTING BLANKS.
   ELSEIF in_class = abap_false AND c = '$' AND flags NA 'm'.
     CONCATENATE posix '\z' INTO posix RESPECTING BLANKS.
+  ELSEIF in_class = abap_false AND c = '('.
+    CLEAR named_row.
+    IF i + 3 < n.
+      IF normalized+i(3) = '(?<' AND normalized+i(4) <> '(?<=' AND normalized+i(4) <> '(?<!'.
+        j = i + 3.
+        WHILE j < n.
+          IF normalized+j(1) = '>'.
+            EXIT.
+          ENDIF.
+          j = j + 1.
+        ENDWHILE.
+        named_row-name = substring( val = normalized off = i + 3 len = j - i - 3 ).
+      ENDIF.
+    ENDIF.
+    IF named_row-name IS NOT INITIAL.
+      group_count = group_count + 1.
+      named_row-index = group_count.
+      APPEND named_row TO group_names.
+      CONCATENATE posix '(?P<' INTO posix RESPECTING BLANKS.
+      i = i + 2.
+    ELSE.
+      IF i + 1 >= n.
+        group_count = group_count + 1.
+      ELSEIF normalized+i(2) <> '(?'.
+        group_count = group_count + 1.
+      ENDIF.
+      CONCATENATE posix c INTO posix RESPECTING BLANKS.
+    ENDIF.
   ELSE.
     IF c = '['.
       in_class = abap_true.

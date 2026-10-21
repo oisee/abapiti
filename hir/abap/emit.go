@@ -134,9 +134,15 @@ func emitNamed(p *hir.Program, refusals *[]error, assertionOwners map[string]boo
 	if errors := hir.Verify(p); len(errors) > 0 {
 		return nil, nil, errors[0]
 	}
+	for op, node := range hir.UsedRuntimeOps(p) {
+		if op == "container.readonlyView" || op == "container.readonlyClassView" {
+			return nil, nil, hir.Error{Node: node, Message: "ABAP cannot share storage for covariant readonly container views (" + op + ")"}
+		}
+	}
 	if errors := hir.CheckRuntimeOps(p, "ABAP", SupportsRuntimeOp); (refusals == nil || len(p.Unions) > 0) && len(errors) > 0 {
 		return nil, nil, errors[0]
 	}
+
 	hir.SealLiveClassViewBoundary(p)
 	if err := inline(p); err != nil {
 		return nil, nil, err
@@ -159,13 +165,18 @@ func emitNamed(p *hir.Program, refusals *[]error, assertionOwners map[string]boo
 		if x.Type.Kind == hir.Dynamic && x.X != nil && x.X.Type.Kind == hir.OrderedMap && x.X.Type.Args[0].Kind == hir.String {
 			mapViews = true
 		}
+		if x.Kind == hir.RuntimeOp && x.Op == "dynamic.mapView" {
+			e.types["runtime.mapView"] = true
+			e.arrayViews = true
+			mapViews = true
+		}
 		if x.Kind == hir.RuntimeOp && x.Op == "dynamic.keys" {
 			e.ownKeysUsed = true
 		}
 		if x.Kind == hir.RuntimeOp && x.Op == "dynamic.delete" {
 			e.recordDelete = true
 		}
-		if x.Kind == hir.RuntimeOp && (x.Op == "dynamic.arrayView" || x.Op == "dynamic.asRef" && x.Type.Kind == hir.Array || x.Op == "dynamic.classView" || x.Op == "dynamic.delete" || strings.HasPrefix(x.Op, "lsp.") || strings.HasPrefix(x.Op, "object.") && x.X != nil && x.X.Type.Name == hir.RootObject) {
+		if x.Kind == hir.RuntimeOp && (x.Op == "dynamic.keys" || x.Op == "dynamic.arrayView" || x.Op == "dynamic.asRef" && x.Type.Kind == hir.Array || x.Op == "dynamic.asObject" || x.Op == "dynamic.classView" || x.Op == "dynamic.delete" || strings.HasPrefix(x.Op, "lsp.") || strings.HasPrefix(x.Op, "object.") && x.X != nil && x.X.Type.Name == hir.RootObject) {
 			e.arrayViews = true
 		}
 		findStorage(x.X)
@@ -205,6 +216,9 @@ func emitNamed(p *hir.Program, refusals *[]error, assertionOwners map[string]boo
 	}
 	if e.arrayViews || mapViews {
 		e.liveRuntime()
+		if e.types["runtime.mapView"] {
+			e.mapStorageRuntime()
+		}
 	}
 	e.scanUsage()
 	if e.ownKeysUsed {
@@ -438,7 +452,7 @@ func (e *emitter) scanUsage() {
 			e.chaiUsed = true
 			e.dynamicUsed = true
 		}
-		if x.Kind == hir.RuntimeOp && (x.Op == "dynamic.classView" || x.Op == "dynamic.arrayView" || x.Op == "dynamic.delete" || strings.HasPrefix(x.Op, "lsp.") || (strings.HasPrefix(x.Op, "object.") && x.X != nil && x.X.Type.Name == hir.RootObject)) {
+		if x.Kind == hir.RuntimeOp && (x.Op == "dynamic.asObject" || x.Op == "dynamic.classView" || x.Op == "dynamic.arrayView" || x.Op == "dynamic.delete" || strings.HasPrefix(x.Op, "lsp.") || (strings.HasPrefix(x.Op, "object.") && x.X != nil && x.X.Type.Name == hir.RootObject)) {
 			e.liveRuntime()
 		}
 		if x.Kind == hir.RuntimeOp && x.Op == "json.stringifySubset" {
@@ -1258,7 +1272,11 @@ func (b *body) expr(x *hir.Expr) string {
 		b.line("CLEAR " + row + ".")
 		b.line("READ TABLE " + a + "->items INDEX " + i + " INTO " + row + ".")
 		if row != n {
+			// Absence belongs to the read's nil carrier; only present rows
+			// require the element's checked structural/nominal conversion.
+			b.line("CLEAR " + n + ".\nIF " + row + " IS BOUND.")
 			b.arrayElement(n, row, t)
+			b.line("ENDIF.")
 		}
 	case hir.New:
 		if t.Kind == hir.OrderedMap && len(t.Args) == 2 && t.Args[0].Kind == hir.Dynamic {
@@ -1267,10 +1285,6 @@ func (b *body) expr(x *hir.Expr) string {
 		}
 		if t.Kind == hir.OrderedSet && len(t.Args) == 1 && (t.Args[0].Kind == hir.Optional || t.Args[0].Kind == hir.Dynamic) {
 			e.refuse(fmt.Errorf("node %d (%s): ABAP boxed Set requires value-based SameValueZero", x.ID, x.Source))
-			return n
-		}
-		if t.Kind == hir.ClassRef && t.Name == "builtin.TypeError" {
-			e.refuse(fmt.Errorf("node %d (%s): ABAP RequireObjectCoercible cannot raise an equivalent JS TypeError", x.ID, x.Source))
 			return n
 		}
 		if t.Kind == hir.Array {
@@ -1854,7 +1868,9 @@ func (b *body) codeUnit(target, ch string) {
 
 func (b *body) truth(n, a string, t hir.Type) {
 	test := a + " IS NOT INITIAL"
-	if t.Kind == hir.Dynamic {
+	if t.Kind == hir.Dynamic || t.Kind == hir.Optional && t.Args[0].Kind == hir.Dynamic {
+		// The tagged box decides: boxed false, null, "", 0 and an unbound box
+		// (absent/undefined) are falsy; reference presence is not truthiness.
 		b.line("IF " + a + " IS BOUND.")
 		b.line(n + " = " + a + "->truth( ).")
 		b.line("ENDIF.")
@@ -2076,6 +2092,11 @@ func tableIndex(x *hir.Expr) (string, bool) {
 }
 
 func (b *body) runtimeOp(x *hir.Expr, n string) {
+	if base := hir.CheckedMapBaseOp(x.Op); base != x.Op {
+		copy := *x
+		copy.Op = base
+		x = &copy
+	}
 	if x.Op == "map.set" && x.X.Type.Args[0].Kind == hir.Dynamic {
 		b.e.refuse(fmt.Errorf("node %d (%s): ABAP boxed Map writes require value-based SameValueZero", x.ID, x.Source))
 		return
@@ -2171,6 +2192,13 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 		b.line(n + " = " + a + "->match_index.")
 		return
 	}
+	if x.Op == "array.matchGroups" {
+		b.e.matchUsed = true
+		b.line("IF " + a + " IS BOUND.")
+		b.line(n + " = " + a + "->match_groups.")
+		b.line("ENDIF.")
+		return
+	}
 	if x.Op == "regexp.lastIndex" {
 		b.line(n + " = " + a + "->last_index.")
 		return
@@ -2181,6 +2209,15 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 		b.line("RAISE EXCEPTION TYPE cx_sy_range_out_of_bounds.")
 		b.line("ENDIF.")
 		b.line(a + "->last_index = " + v + ".")
+		return
+	}
+	if x.Op == "regexp.boxMatch" {
+		b.line("IF " + a + " IS BOUND.")
+		b.boxDynamic(n, a, hir.T(hir.Array, hir.T(hir.String)))
+		b.line("ELSE.")
+		b.line("CREATE OBJECT " + n + ".")
+		b.line(n + "->tag = " + b.e.name("runtime.dynamic") + "=>tag_null.")
+		b.line("ENDIF.")
 		return
 	}
 	if x.Op == "regexp.exec" {
@@ -2557,6 +2594,14 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 	case "dynamic.call0":
 		b.nativeCall0(x, n, a)
 		return
+	case "dynamic.asObject":
+		// Graph nodes are valid object-root carriers, without a fabricated nominal
+		// instance. Live boxing recognizes the same node when the root is erased.
+		d := b.e.name("runtime.dynamic") + "=>"
+		b.line("IF " + a + " IS NOT BOUND.\nRAISE EXCEPTION TYPE cx_sy_move_cast_error.\nENDIF.")
+		b.line("CASE " + a + "->tag.\nWHEN " + d + "tag_ref.\nIF " + a + "->oval IS NOT BOUND.\nRAISE EXCEPTION TYPE cx_sy_move_cast_error.\nENDIF.\n" + n + " = " + a + "->oval.")
+		b.line("WHEN " + d + "tag_object OR " + d + "tag_array OR " + d + "tag_class.\n" + n + " = " + a + ".\nWHEN OTHERS.\nRAISE EXCEPTION TYPE cx_sy_move_cast_error.\nENDCASE.")
+		return
 	case "dynamic.keys":
 		b.e.ownKeysRuntime()
 		b.line(n + " = " + b.e.name("runtime.ownKeys") + "=>keys( " + a + " ).")
@@ -2565,7 +2610,7 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 		b.liveView(x, n, a)
 		return
 	case "dynamic.arrayView":
-		b.arrayView(x.Type, n, a)
+		b.requiredArrayView(x.Type, n, a)
 		return
 	case "dynamic.materialize":
 		b.line(n + " = " + b.e.materializer(x.Type) + "=>project( " + a + " ).")
@@ -2604,12 +2649,12 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 		b.line(n + " = " + b.e.name("runtime.xmlValidation") + "=>validate( " + a + " ).")
 		return
 	case "object.get", "object.hasOwn", "object.has":
+		if x.X.Type.Kind == hir.InterfaceRef {
+			b.e.refuse(fmt.Errorf("node %d (%s): property lookup on an interface value is not emitted on ABAP", x.ID, x.Source))
+			return
+		}
 		if x.X.Type.Name == hir.RootObject {
-			if x.Op != "object.get" {
-				b.erasedPropertyHas(x, n, a, args[0])
-				return
-			}
-			b.e.refuse(fmt.Errorf("node %d (%s): erased structural %s is not emitted on ABAP", x.ID, x.Source, x.Op))
+			b.erasedPropertyLookup(x, n, a, args[0])
 			return
 		}
 		method := map[string]string{"object.get": "get", "object.hasOwn": "own", "object.has": "has"}[x.Op]
@@ -2807,11 +2852,33 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 		b.line("ENDIF.")
 		b.line("ENDIF.")
 		return
+	case "dynamic.mapView":
+		b.dynamicMapView(x, n, a)
+		return
+	case "map.markJS":
+		b.line(a + "->js_map = abap_true.")
+		b.line(n + " = " + a + ".")
+		return
 	case "dynamic.isNumber", "dynamic.asNumber", "dynamic.isString", "dynamic.isFunction", "dynamic.asString", "dynamic.asClassValue", "dynamic.asRef":
+		if x.Op == "dynamic.asRef" && x.Owner != "" {
+			view := b.e.structuralUnionProjection(hir.Type{Kind: hir.InterfaceRef, Name: x.Owner}, x.Type.Name)
+			b.line(n + " = " + view + "=>convert( " + a + " ).")
+			return
+		}
+		if x.Op == "dynamic.asRef" && x.Type.Kind == hir.InterfaceRef && b.e.structuralUnion(x.Type) != "" {
+			b.line(n + " = " + b.e.structuralUnion(x.Type) + "=>convert( " + a + " ).")
+			return
+		}
 		if x.Op == "dynamic.asRef" && x.Type.Kind == hir.Array {
 			// A tagged array's as_ref returns the graph itself, not a typed
 			// table wrapper. Publish a live view instead of downcasting it.
+			if b.e.p.StructuralArrayUnion(x.Type) {
+				b.line("TRY.")
+			}
 			b.arrayView(x.Type, n, a)
+			if b.e.p.StructuralArrayUnion(x.Type) {
+				b.line("CATCH " + b.e.name("view.refusal") + ".\nRAISE EXCEPTION TYPE cx_sy_range_out_of_bounds.\nENDTRY.")
+			}
 			return
 		}
 		// The box methods use snake_case ABAP names.
@@ -2901,6 +2968,14 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 		if b.e.arrayViews {
 			b.line(a + "->save( ).")
 		}
+		return
+	}
+	if x.Op == "map.delete" && b.e.types["runtime.mapView"] && x.X.Type.Args[0].Kind == hir.String {
+		b.line(n + " = " + a + "->delete( " + args[0] + " ).")
+		return
+	}
+	if x.Op == "map.clear" && b.e.types["runtime.mapView"] && x.X.Type.Args[0].Kind == hir.String {
+		b.line(a + "->clear( ).")
 		return
 	}
 	if x.Op == "map.delete" {

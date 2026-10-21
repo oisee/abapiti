@@ -34,3 +34,28 @@ func (l *lowerer) emptyArrayLiteral(n *ast.Node) *hir.Expr {
 	l.diagf(n, "unsupported-array", "empty array literal needs an inferable contextual element type")
 	return nil
 }
+
+// A fresh [] fallback can use the checker's proven non-null array ABI even
+// when the nullable source needs tagged storage. Only the selected present
+// branch is unboxed; no existing array storage is copied or reinterpreted.
+func (l *lowerer) emptyArrayFallbackBase(left, right *ast.Node, base hir.Type) hir.Type {
+	if base.Kind != hir.Dynamic || right.Kind != ast.KindArrayLiteralExpression || len(right.AsArrayLiteralExpression().Elements.Nodes) != 0 {
+		return base
+	}
+	typ := l.conditionalCheckerType(left, l.ck.GetNonNullableType(l.ck.GetTypeAtLocation(left)))
+	if typ.Kind == hir.Array {
+		return typ
+	}
+	return base
+}
+
+// A checker-erased array can flow into a contextual string[] slot (and back).
+// These are the element domains supported by the checked live array runtime;
+// other primitive or tuple element layouts still require their own proof.
+func (l *lowerer) erasedStringArrayView(src, dst hir.Type) bool {
+	if !l.unprunedFeatures || src.Kind != hir.Array || dst.Kind != hir.Array || len(src.Args) != 1 || len(dst.Args) != 1 {
+		return false
+	}
+	a, b := src.Args[0].Kind, dst.Args[0].Kind
+	return a == hir.Dynamic && b == hir.String || a == hir.String && b == hir.Dynamic
+}

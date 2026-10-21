@@ -102,7 +102,7 @@ func TestLowerLexerClosure(t *testing.T) {
 		for _, c := range prog.Classes {
 			names = append(names, c.Name)
 		}
-		t.Errorf("expected 59 lowered classes, got %d: %v", classes, names)
+		t.Errorf("expected 62 lowered classes, got %d: %v", classes, names)
 	}
 	t.Logf("%d classes, %d interfaces, %d diagnostics", classes, len(prog.Interfaces), len(diags))
 	if out := fixtureOutputDir(t); out != "" {

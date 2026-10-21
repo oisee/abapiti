@@ -28,6 +28,11 @@ func (e *emitter) argumentFactory(c *hir.Class, ctor *hir.Method) string {
 		case hir.ClassValue:
 			return "dynClass(" + v + ")", true
 		case hir.ClassRef, hir.InterfaceRef:
+			if t.Kind == hir.ClassRef && t.Name == hir.RootObject {
+				// Object-root arguments take record carriers (dynObject), not
+				// the nominal castRef/dynRef bridge that refuses them.
+				return "dynObject(" + v + ")", true
+			}
 			return "castRef[" + e.typ(t) + "](dynRef(" + v + "))", true
 		case hir.Optional:
 			value, ok := convert(t.Args[0], v)

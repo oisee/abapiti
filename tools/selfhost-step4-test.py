@@ -24,6 +24,21 @@ class Step4Test(unittest.TestCase):
         with self.assertRaises(ValueError):
             TOOL['adapt_driver'](source.replace('process.stdout.write', 'console.log'))
 
+    def test_custom_inputs_validate_before_touching_checkout(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            custom = root / 'invalid.json'
+            custom.write_text('{invalid')
+            with patch.object(TOOL['subprocess'], 'run') as run:
+                with self.assertRaises(ValueError):
+                    TOOL['main'](['--inputs', str(custom), str(root / 'abapiti'),
+                                  str(root / 'osg'), str(root / 'lint'),
+                                  str(root / 'transpiler'), str(root / 'out')])
+                run.assert_not_called()
+            self.assertFalse((root / 'osg').exists())
+            self.assertFalse((root / 'out').exists())
+            self.assertEqual(custom.read_text(), '{invalid')
+
     def test_first_difference_counts_bytes_and_handles_eof(self):
         with tempfile.TemporaryDirectory() as directory:
             ref, actual = Path(directory) / 'ref', Path(directory) / 'actual'
@@ -38,19 +53,26 @@ class Step4Test(unittest.TestCase):
     def test_pipeline_summary_and_restore_on_failures(self):
         main = TOOL['main']
         source = "import {readFileSync} from 'node:fs';\nconst inputs=JSON.parse(readFileSync(new URL('./step4-inputs.json', import.meta.url), 'utf8'));\nprocess.stdout.write(emitGo(program));\n"
-        cases = [(f, False, None) for f in [None, 'emit', 'build', 'run']] + [(None, True, None), (None, False, 'deadbeef')]
-        for failure, nosystemd, expect in cases:
-            with self.subTest(failure=failure, nosystemd=nosystemd, expect=expect), tempfile.TemporaryDirectory() as directory:
+        cases = [(f, False, None, custom) for f in [None, 'reference', 'emit', 'build', 'run'] for custom in [False, True]] + [(None, True, None, False), (None, False, 'deadbeef', False), (None, False, 'deadbeef', True)]
+        for failure, nosystemd, expect, custom in cases:
+            with self.subTest(failure=failure, nosystemd=nosystemd, expect=expect, custom=custom), tempfile.TemporaryDirectory() as directory:
                 root = Path(directory)
                 osg, out = root / 'osg', root / 'out'
                 driver = osg / '.local/step4/step4-driver.mjs'
                 driver.parent.mkdir(parents=True)
                 driver.write_text(source)
                 (osg / 'tsconfig.gogen.json').write_text(json.dumps({'compilerOptions': {}}))
+                inputs_path = driver.with_name('step4-inputs.json')
+                original_inputs = b'{"objects": ["CAPTURED"]}\n'
+                inputs_path.write_bytes(original_inputs)
+                custom_path = root / 'custom.json'
+                custom_inputs = b'{"objects": ["TINY"]}\n'
+                custom_path.write_bytes(custom_inputs)
                 calls = []
 
                 def fake_run(command, **kwargs):
                     calls.append(command)
+                    self.assertEqual(inputs_path.read_bytes(), custom_inputs if custom else original_inputs)
                     if command[0] == 'cmp':
                         return SimpleNamespace(returncode=int(Path(command[-2]).read_bytes() != Path(command[-1]).read_bytes()))
                     name = Path(kwargs['stderr'].name).stem
@@ -74,14 +96,20 @@ class Step4Test(unittest.TestCase):
 
                 capture = io.StringIO()
                 args = ['--expect-ref', expect] if expect else []
+                if custom:
+                    args += ['--inputs', str(custom_path)]
                 with patch.dict(TOOL['os'].environ, {'STEP4_NO_SYSTEMD': '1' if nosystemd else '0'}), patch.object(TOOL['subprocess'], 'run', side_effect=fake_run), patch.object(TOOL['shutil'], 'disk_usage', return_value=SimpleNamespace(free=100 * 1024**3)), contextlib.redirect_stdout(capture), contextlib.redirect_stderr(io.StringIO()):
                     status = main([*args, str(root / 'abapiti'), str(osg), str(root / 'lint'), str(root / 'transpiler'), str(out)])
                 self.assertEqual(status, int(failure is not None or expect is not None))
                 self.assertEqual(driver.read_text(), source)
+                self.assertEqual(inputs_path.read_bytes(), original_inputs)
+                if custom:
+                    self.assertEqual((out / 'inputs.json').read_bytes(), custom_inputs)
                 self.assertFalse(driver.with_name('step4-host.ts').exists())
                 self.assertFalse((osg / 'tsconfig.selfhost-step4.json').exists())
                 summary = (out / 'summary.txt').read_text()
-                self.assertEqual(capture.getvalue(), summary)
+                reference_line = 'step4-reference: sha256=' + hashlib.sha256(b'package main\n').hexdigest() + '\n' if custom and failure != 'reference' else ''
+                self.assertEqual(capture.getvalue(), reference_line + summary)
                 if expect is not None:
                     self.assertIn('build=fail run=not-run cmp=not-run', summary)
                 elif failure is None:
@@ -120,7 +148,13 @@ class Step4Test(unittest.TestCase):
                {'functionName': 'm', 'ranges': [{'startOffset': m_start, 'endOffset': method.index('}') + 1, 'count': 2}]},
                {'functionName': 'h', 'ranges': [{'startOffset': method.index('function h'), 'endOffset': len(method) - 1, 'count': 0}]}]
         self.assertEqual(covered(fns, method.index('static'), body=True, text=method)[:2], (2, 'function'))
+        self.assertEqual(covered(fns, method.index('static'), body=True, text=method,
+                                 owner_offset=method.index('static'))[:2], (2, 'function'))
         self.assertEqual(covered(fns, method.index('class'), body=True, text=method)[:2], (1, 'block'))
+        exported = 'export function owner() {}\n'
+        fns = [dict(functionName='', ranges=[dict(startOffset=0, endOffset=len(exported), count=1)]),
+               dict(functionName='owner', ranges=[dict(startOffset=7, endOffset=len(exported) - 1, count=0)])]
+        self.assertEqual(covered(fns, 0, body=True, text=exported, owner_offset=0)[:2], (0, 'function'))
 
     def test_utf16_positions_and_arrow_bodies(self):
         text = 'const s = "\U0001F600é";\nconst f = (a) => a + 1;\n'
@@ -130,70 +164,109 @@ class Step4Test(unittest.TestCase):
         self.assertEqual(TOOL['utf16_offset'](text, 2, None), 17)
         self.assertEqual(TOOL['body_probe'](text, offset), offset + len('(a) => '))
 
+    def test_body_trap_uses_hir_owner_entry_not_nested_arrow(self):
+        text = 'function owner() {\n  const nested = () => { refuse(); };\n}\n'
+        trap = text.index('refuse')
+        trap_column = trap - text.index('\n')
+        nested = text.index('() =>')
+        with tempfile.TemporaryDirectory() as directory:
+            osg = Path(directory)
+            path = osg / 'tools/lib.mjs'
+            path.parent.mkdir()
+            path.write_text(text)
+            site = dict(Class='tools/lib.mjs.module', Method='owner',
+                        MethodSource='tools/lib.mjs:1:1',
+                        Source=f'tools/lib.mjs:2:{trap_column}',
+                        Kind='body', Message='lowering trap: unsupported join')
+            for count in (3, 0):
+                functions = [
+                    dict(functionName='', ranges=[dict(startOffset=0, endOffset=len(text), count=1)]),
+                    dict(functionName='owner', ranges=[dict(startOffset=0, endOffset=len(text) - 1, count=count)]),
+                    dict(functionName='nested', ranges=[dict(startOffset=nested, endOffset=text.index('};') + 1, count=0)]),
+                ]
+                rows, a, g = TOOL['classify_traps']([site], osg, osg / 'lint', osg / 'transpiler', {str(path): functions})
+                self.assertEqual((a, g), (0, 0))
+                self.assertEqual((rows[0]['hits'], rows[0]['evidence']), (count, 'function'))
+                self.assertEqual(rows[0]['probe'], text.index('{') + 1)
+                # Statement/guard coverage still uses the inner arrow count.
+                for kind in ('stmt', 'guard'):
+                    rows, _, _ = TOOL['classify_traps']([dict(site, Kind=kind)], osg, osg / 'lint', osg / 'transpiler', {str(path): functions})
+                    self.assertEqual((rows[0]['hits'], rows[0]['evidence']), (0, 'block'))
+
     def test_list_traps_orders_by_replay_and_excludes_guards(self):
         main = TOOL['main']
         source = "import {readFileSync} from 'node:fs';\nconst inputs=JSON.parse(readFileSync(new URL('./step4-inputs.json', import.meta.url), 'utf8'));\nprocess.stdout.write(emitGo(program));\n"
         lib = 'function a() { if (x) { y(); } }\nfunction b() { z(); }\nfunction c() {}\n'
-        with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory)
-            osg, out = root / 'osg', root / 'out'
-            driver = osg / '.local/step4/step4-driver.mjs'
-            driver.parent.mkdir(parents=True)
-            driver.write_text(source)
-            (osg / 'tools').mkdir()
-            (osg / 'tools/lib.mjs').write_text(lib)
-            (osg / 'tsconfig.gogen.json').write_text(json.dumps({'compilerOptions': {}}))
-            branch = lib.index('{ y')
-            sites = [
-                {'Class': 'tools/lib.mjs.module', 'Method': 'c', 'Source': 'tools/lib.mjs:3:1', 'Kind': 'body', 'Message': 'lowering trap: c'},
-                {'Class': 'tools/lib.mjs.module', 'Method': 'a', 'Source': 'tools/lib.mjs:1:26', 'Kind': 'stmt', 'Message': 'tools/lib.mjs:1:26'},
-                {'Class': 'tools/lib.mjs.module', 'Method': 'b', 'Source': 'tools/lib.mjs:2:1', 'Kind': 'body', 'Message': 'lowering trap: unresolved method a'},
-                {'Class': 'tools/lib.mjs.module', 'Method': 'a', 'Source': 'tools/lib.mjs:1:16', 'Kind': 'guard', 'Message': 'guard'},
-                {'Class': 'src/x.ts.X', 'Method': 'm', 'Source': '', 'Kind': 'body', 'Message': 'opaque'},
-            ]
-            sites[1]['Source'] = f'tools/lib.mjs:1:{lib.index("y()") + 1}'
+        for custom in [False, True]:
+            with tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                osg, out = root / 'osg', root / 'out'
+                driver = osg / '.local/step4/step4-driver.mjs'
+                driver.parent.mkdir(parents=True)
+                driver.write_text(source)
+                inputs_path = driver.with_name('step4-inputs.json')
+                custom_path = root / 'custom.json'
+                custom_path.write_text('{"objects": ["TINY"]}')
+                (osg / 'tools').mkdir()
+                (osg / 'tools/lib.mjs').write_text(lib)
+                (osg / 'tsconfig.gogen.json').write_text(json.dumps({'compilerOptions': {}}))
+                branch = lib.index('{ y')
+                sites = [
+                    {'Class': 'tools/lib.mjs.module', 'Method': 'c', 'Source': 'tools/lib.mjs:3:1', 'Kind': 'body', 'Message': 'lowering trap: c'},
+                    {'Class': 'tools/lib.mjs.module', 'Method': 'a', 'Source': 'tools/lib.mjs:1:26', 'Kind': 'stmt', 'Message': 'tools/lib.mjs:1:26'},
+                    {'Class': 'tools/lib.mjs.module', 'Method': 'b', 'Source': 'tools/lib.mjs:2:1', 'Kind': 'body', 'Message': 'lowering trap: unresolved method a'},
+                    {'Class': 'tools/lib.mjs.module', 'Method': 'a', 'Source': 'tools/lib.mjs:1:16', 'Kind': 'guard', 'Message': 'guard'},
+                    {'Class': 'src/x.ts.X', 'Method': 'm', 'Source': '', 'Kind': 'body', 'Message': 'opaque'},
+                ]
+                sites[1]['Source'] = f'tools/lib.mjs:1:{lib.index("y()") + 1}'
 
-            def fake_run(command, **kwargs):
-                name = Path(kwargs['stderr'].name).stem
-                if name == 'reference':
-                    kwargs['stdout'].write(b'package main\n')
-                    v8 = Path(kwargs['env']['NODE_V8_COVERAGE'])
-                    v8.mkdir()
-                    script = {'url': (osg / 'tools/lib.mjs').as_uri(), 'functions': [
-                        {'functionName': '', 'ranges': [{'startOffset': 0, 'endOffset': len(lib), 'count': 1}]},
-                        {'functionName': 'a', 'ranges': [{'startOffset': 0, 'endOffset': lib.index('\n'), 'count': 2},
-                                                         {'startOffset': branch, 'endOffset': lib.index('}', branch) + 1, 'count': 0}]},
-                        {'functionName': 'b', 'ranges': [{'startOffset': lib.index('function b'), 'endOffset': lib.index('function c') - 1, 'count': 1}]},
-                        {'functionName': 'c', 'ranges': [{'startOffset': lib.index('function c'), 'endOffset': len(lib) - 1, 'count': 4}]}]}
-                    (v8 / 'coverage-1.json').write_text(json.dumps({'result': [script]}))
-                elif name.endswith('-closure'):
-                    (out / f'{name.removesuffix("-closure")}-initialization.json').write_text('[]')
-                elif name == 'coverage':
-                    (out / 'reach.json').write_text(json.dumps({'spans': []}))
-                elif name == 'emit':
-                    self.assertEqual(driver.read_text(), TOOL['adapt_driver'](source))
-                    (out / 'go/evidence').mkdir(parents=True)
-                    (out / 'go/evidence/trap-sites.json').write_text(json.dumps(sites))
-                elif name == 'order':
-                    self.assertEqual(driver.read_text(), source)
-                    breakpoints = json.loads(Path(command[-4]).read_text())
-                    self.assertEqual(sorted(b['id'] for b in breakpoints), [0, 2])
-                    Path(command[-3]).write_text('2\n0\n')
-                    Path(command[-2]).write_bytes(b'package main\n')
-                else:
-                    self.fail(f'unexpected step {name}')
-                return SimpleNamespace(returncode=0)
+                def fake_run(command, **kwargs):
+                    name = Path(kwargs['stderr'].name).stem
+                    self.assertEqual(inputs_path.exists(), custom)
+                    if custom:
+                        self.assertEqual(inputs_path.read_bytes(), custom_path.read_bytes())
+                    if name == 'reference':
+                        kwargs['stdout'].write(b'package main\n')
+                        v8 = Path(kwargs['env']['NODE_V8_COVERAGE'])
+                        v8.mkdir()
+                        script = {'url': (osg / 'tools/lib.mjs').as_uri(), 'functions': [
+                            {'functionName': '', 'ranges': [{'startOffset': 0, 'endOffset': len(lib), 'count': 1}]},
+                            {'functionName': 'a', 'ranges': [{'startOffset': 0, 'endOffset': lib.index('\n'), 'count': 2},
+                                                             {'startOffset': branch, 'endOffset': lib.index('}', branch) + 1, 'count': 0}]},
+                            {'functionName': 'b', 'ranges': [{'startOffset': lib.index('function b'), 'endOffset': lib.index('function c') - 1, 'count': 1}]},
+                            {'functionName': 'c', 'ranges': [{'startOffset': lib.index('function c'), 'endOffset': len(lib) - 1, 'count': 4}]}]}
+                        (v8 / 'coverage-1.json').write_text(json.dumps({'result': [script]}))
+                    elif name.endswith('-closure'):
+                        (out / f'{name.removesuffix("-closure")}-initialization.json').write_text('[]')
+                    elif name == 'coverage':
+                        (out / 'reach.json').write_text(json.dumps({'spans': []}))
+                    elif name == 'emit':
+                        self.assertEqual(driver.read_text(), TOOL['adapt_driver'](source))
+                        (out / 'go/evidence').mkdir(parents=True)
+                        (out / 'go/evidence/trap-sites.json').write_text(json.dumps(sites))
+                    elif name == 'order':
+                        self.assertEqual(driver.read_text(), source)
+                        breakpoints = json.loads(Path(command[-4]).read_text())
+                        self.assertEqual(sorted(b['id'] for b in breakpoints), [0, 2])
+                        Path(command[-3]).write_text('2\n0\n')
+                        Path(command[-2]).write_bytes(b'package main\n')
+                    else:
+                        self.fail(f'unexpected step {name}')
+                    return SimpleNamespace(returncode=0)
 
-            capture = io.StringIO()
-            with patch.dict(TOOL['os'].environ, {'STEP4_NO_SYSTEMD': '1'}), patch.object(TOOL['subprocess'], 'run', side_effect=fake_run), patch.object(TOOL['shutil'], 'disk_usage', return_value=SimpleNamespace(free=100 * 1024**3)), contextlib.redirect_stdout(capture), contextlib.redirect_stderr(io.StringIO()):
-                status = main(['--list-traps', str(root / 'abapiti'), str(osg), str(root / 'lint'), str(root / 'transpiler'), str(out)])
-            self.assertEqual(status, 0)
-            self.assertEqual(driver.read_text(), source)
-            self.assertEqual(capture.getvalue(), 'step4-traps: 2 reached (1/0 unknown) 1 unreached\n')
-            rows = [line.split('\t') for line in (out / 'reached-traps.tsv').read_text().splitlines()[1:]]
-            self.assertEqual([(r[0], r[2], r[3]) for r in rows], [('tools/lib.mjs:2:1', '1', 'root'), ('tools/lib.mjs:3:1', '4', 'root')])
-            self.assertEqual(len((out / 'reached-guards.tsv').read_text().splitlines()), 2)
-            self.assertFalse((out / 'v8').exists())
+                capture = io.StringIO()
+                with patch.dict(TOOL['os'].environ, {'STEP4_NO_SYSTEMD': '1'}), patch.object(TOOL['subprocess'], 'run', side_effect=fake_run), patch.object(TOOL['shutil'], 'disk_usage', return_value=SimpleNamespace(free=100 * 1024**3)), contextlib.redirect_stdout(capture), contextlib.redirect_stderr(io.StringIO()):
+                    args = ['--inputs', str(custom_path)] if custom else []
+                    status = main([*args, '--list-traps', str(root / 'abapiti'), str(osg), str(root / 'lint'), str(root / 'transpiler'), str(out)])
+                self.assertEqual(status, 0)
+                self.assertEqual(driver.read_text(), source)
+                prefix = 'step4-reference: sha256=' + hashlib.sha256(b'package main\n').hexdigest() + '\n' if custom else ''
+                self.assertFalse(inputs_path.exists())
+                self.assertEqual(capture.getvalue(), prefix + 'step4-traps: 2 reached (1/0 unknown) 1 unreached\n')
+                rows = [line.split('\t') for line in (out / 'reached-traps.tsv').read_text().splitlines()[1:]]
+                self.assertEqual([(r[0], r[2], r[3]) for r in rows], [('tools/lib.mjs:2:1', '1', 'root'), ('tools/lib.mjs:3:1', '4', 'root')])
+                self.assertEqual(len((out / 'reached-guards.tsv').read_text().splitlines()), 2)
+                self.assertFalse((out / 'v8').exists())
 
 if __name__ == '__main__':
     unittest.main()

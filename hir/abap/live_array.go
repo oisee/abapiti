@@ -30,16 +30,26 @@ func (e *emitter) liveArrayRuntime(t hir.Type) {
 	makeBody := func() *body { return &body{e: e, m: &hir.Method{Result: hir.T(hir.Void)}, locals: map[string]string{}} }
 	b := makeBody()
 	b.line("IF source IS NOT BOUND.\nRETURN.\nENDIF.\nCLEAR items.\nmissing = source->missing.")
-	if t.Args[0].Kind == hir.Dynamic || t.Args[0].Name == hir.RootObject {
-		// An erased view can also read a native scalar/reference array through
-		// its storage adapter. Do not downcast incompatible table classes.
-		adapter := b.rawTemp("REF TO " + storage)
-		length := b.temp(hir.T(hir.Dynamic))
-		index := b.temp(hir.T(hir.I32))
-		key := b.temp(hir.T(hir.String))
-		item := b.temp(hir.T(hir.Dynamic))
-		b.line("IF source->tag = " + d + "=>tag_ref.\n" + adapter + " ?= source->oval.\n" + length + " = " + adapter + "->get( `length` ).\n" + index + " = 0.\nWHILE " + index + " < " + length + "->nval.\n" + key + " = |{ " + index + " }|.\n" + item + " = " + adapter + "->get( " + key + " ).\nAPPEND " + item + " TO items.\n" + index + " = " + index + " + 1.\nENDWHILE.\nRETURN.\nENDIF.")
+	// Native arrays expose the same checked element storage as graph arrays.
+	// Refresh a private read buffer; identity and every write stay at source.
+	adapter := b.rawTemp("REF TO " + storage)
+	length := b.temp(hir.T(hir.Dynamic))
+	index := b.temp(hir.T(hir.I32))
+	key := b.temp(hir.T(hir.String))
+	item := b.temp(hir.T(hir.Dynamic))
+	value := b.temp(t.Args[0])
+	b.line("IF source->tag = " + d + "=>tag_ref.\n" + adapter + " ?= source->oval.\n" + length + " = " + adapter + "->get( `length` ).\n" + index + " = 0.\nWHILE " + index + " < " + length + "->nval.\n" + key + " = |{ " + index + " }|.\nCLEAR " + value + ".\nIF " + adapter + "->has( " + key + " ) = abap_false.\nINSERT " + index + " + 1 INTO TABLE missing.\nELSE.\n" + item + " = " + adapter + "->get( " + key + " ).\nIF " + item + " IS BOUND.")
+	if t.Args[0].Name == hir.RootObject {
+		b.line("IF " + item + "->tag = " + d + "=>tag_ref.\n" + value + " = " + item + "->as_ref( ).\nELSE.\n" + value + " = " + item + ".\nENDIF.")
+	} else {
+		b.liveUnbox(value, item, t.Args[0])
 	}
+	b.line("ELSE.")
+	if !t.Args[0].IsRef() && t.Args[0].Kind != hir.Optional || (t.Args[0].Kind == hir.InterfaceRef && e.structuralUnion(t.Args[0]) != "" || e.p.StructuralArrayUnion(t.Args[0])) {
+		b.line("RAISE EXCEPTION TYPE " + trap + " EXPORTING reason = `live_array.go: native load: undefined cannot inhabit required element`.")
+	}
+	b.line("ENDIF.\nENDIF.\nAPPEND " + value + " TO items.\n" + index + " = " + index + " + 1.\nENDWHILE.\nRETURN.\nENDIF.")
+
 	idx := b.temp(hir.T(hir.I32))
 	node := b.temp(hir.T(hir.Dynamic))
 	v := b.temp(t.Args[0])
@@ -51,7 +61,7 @@ func (e *emitter) liveArrayRuntime(t hir.Type) {
 		b.liveUnbox(v, node, t.Args[0])
 	}
 	b.line("ELSE.")
-	if !t.Args[0].IsRef() && t.Args[0].Kind != hir.Optional {
+	if !t.Args[0].IsRef() && t.Args[0].Kind != hir.Optional || (t.Args[0].Kind == hir.InterfaceRef && e.structuralUnion(t.Args[0]) != "" || e.p.StructuralArrayUnion(t.Args[0])) {
 		b.line("RAISE EXCEPTION TYPE " + trap + " EXPORTING reason = `live_array.go: load: undefined cannot inhabit required element`.")
 	}
 	b.line("ENDIF.\nENDIF.\nAPPEND " + v + " TO items.\nENDLOOP.")
@@ -62,6 +72,19 @@ func (e *emitter) liveArrayRuntime(t hir.Type) {
 	if wideInteger {
 		b.line("RAISE EXCEPTION TYPE " + trap + " EXPORTING reason = `live_array.go: save: i64 graph publication unavailable`.")
 	}
+	adapter = b.rawTemp("REF TO " + storage)
+	length = b.temp(hir.T(hir.Dynamic))
+	index = b.temp(hir.T(hir.I32))
+	key = b.temp(hir.T(hir.String))
+	item = b.temp(hir.T(hir.Dynamic))
+	value = b.temp(t.Args[0])
+	b.line("IF source->tag = " + d + "=>tag_ref.\n" + adapter + " ?= source->oval.\nCREATE OBJECT " + length + ".\n" + length + "->tag = " + d + "=>tag_number.\n" + length + "->nval = lines( items ).\n" + adapter + "->put( p0 = `length` p1 = " + length + " ).\n" + index + " = 0.\nLOOP AT items INTO " + value + ".\n" + key + " = |{ " + index + " }|.\nREAD TABLE missing WITH TABLE KEY table_line = " + index + " + 1 TRANSPORTING NO FIELDS.\nIF sy-subrc = 0.\n" + adapter + "->delete( " + key + " ).\nELSE.\nCLEAR " + item + ".")
+	if wideInteger {
+		b.line("RAISE EXCEPTION TYPE " + trap + " EXPORTING reason = `live_array.go: native save: i64 element boxing unavailable`.")
+	} else {
+		b.boxDynamic(item, value, t.Args[0])
+	}
+	b.line(adapter + "->put( p0 = " + key + " p1 = " + item + " ).\nENDIF.\n" + index + " = " + index + " + 1.\nENDLOOP.\nRETURN.\nENDIF.")
 	b.line("CLEAR source->items.\nsource->missing = missing.")
 	v = b.temp(t.Args[0])
 	node = b.temp(hir.T(hir.Dynamic))
@@ -73,7 +96,21 @@ func (e *emitter) liveArrayRuntime(t hir.Type) {
 	}
 	b.line("APPEND " + node + " TO source->items.\nENDLOOP.")
 	code.WriteString("METHOD save.\n" + b.constantDeclarations() + b.code.String() + "ENDMETHOD.\n")
-	code.WriteString("METHOD " + storage + "~source.\nresult = source.\nENDMETHOD.\nMETHOD " + storage + "~structural.\nENDMETHOD.\nMETHOD " + storage + "~has.\nRAISE EXCEPTION TYPE " + trap + " EXPORTING reason = `live_array.go: has: live-array key presence unavailable`.\nENDMETHOD.\nMETHOD " + storage + "~delete.\nRAISE EXCEPTION TYPE " + trap + " EXPORTING reason = `live_array.go: delete: live-array key deletion unavailable`.\nENDMETHOD.\n")
+	code.WriteString("METHOD " + storage + "~source.\nresult = source.\nENDMETHOD.\nMETHOD " + storage + "~structural.\nENDMETHOD.\n")
+	for _, op := range []string{"has", "delete"} {
+		b = makeBody()
+		node = b.temp(hir.T(hir.Dynamic))
+		idx = b.temp(hir.T(hir.I32))
+		if op == "has" {
+			b.line("IF p0 = `length`.\nresult = abap_true.\nRETURN.\nENDIF.")
+		}
+		b.line("CREATE OBJECT " + node + ".\nTRY.\n" + idx + " = " + node + "->array_index( p0 ).\nCATCH cx_sy_range_out_of_bounds.\nRAISE EXCEPTION TYPE " + trap + " EXPORTING reason = `live_array.go: native array property operation requires an index`.\nENDTRY.\nresult = " + op + "( " + idx + " ).")
+		methodCode := b.code.String()
+		if op == "has" {
+			methodCode = strings.Replace(methodCode, "RAISE EXCEPTION TYPE "+trap+" EXPORTING reason = `live_array.go: native array property operation requires an index`.", "RETURN.", 1)
+		}
+		code.WriteString("METHOD " + storage + "~" + op + ".\n" + b.constantDeclarations() + methodCode + "ENDMETHOD.\n")
+	}
 	b = makeBody()
 	idx = b.temp(hir.T(hir.I32))
 	node = b.temp(hir.T(hir.Dynamic))
@@ -89,6 +126,8 @@ func (e *emitter) liveArrayRuntime(t hir.Type) {
 	idx = b.temp(hir.T(hir.I32))
 	node = b.temp(hir.T(hir.Dynamic))
 	v = b.temp(t.Args[0])
+	// Resizing preserves the original array object, including holes on growth.
+	b.line("IF p0 = `length`.\nIF p1 IS NOT BOUND OR p1->tag <> " + d + "=>tag_number.\nRAISE EXCEPTION TYPE " + trap + " EXPORTING reason = `live_array.go: length requires a number`.\nENDIF.\nIF p1->nval < 0 OR p1->nval >= 2147483647 OR p1->nval <> trunc( p1->nval ).\nRAISE EXCEPTION TYPE cx_sy_range_out_of_bounds.\nENDIF.\n" + idx + " = p1->nval.\nload( ).\nIF " + idx + " < lines( items ).\n" + idx + " = " + idx + " + 1.\nDELETE items FROM " + idx + ".\n" + idx + " = " + idx + " - 1.\nDELETE missing WHERE table_line > " + idx + ".\nELSE.\nallocate( " + idx + " ).\nENDIF.\nsave( ).\nRETURN.\nENDIF.")
 	b.line("CREATE OBJECT " + node + ".\n" + idx + " = " + node + "->array_index( p0 ).")
 	// Preserve undefined/reference identity; required scalar slots refuse undefined.
 	b.line("IF p1 IS BOUND.")
@@ -98,7 +137,7 @@ func (e *emitter) liveArrayRuntime(t hir.Type) {
 		b.liveUnbox(v, "p1", t.Args[0])
 	}
 	b.line("ELSE.")
-	if !t.Args[0].IsRef() && t.Args[0].Kind != hir.Optional {
+	if !t.Args[0].IsRef() && t.Args[0].Kind != hir.Optional || (t.Args[0].Kind == hir.InterfaceRef && e.structuralUnion(t.Args[0]) != "" || e.p.StructuralArrayUnion(t.Args[0])) {
 		b.line("RAISE EXCEPTION TYPE " + trap + " EXPORTING reason = `live_array.go: put: undefined cannot inhabit required element`.")
 	}
 	b.line("ENDIF.\nput( p0 = " + idx + " p1 = " + v + " ).")
@@ -129,32 +168,54 @@ func (e *emitter) liveArrayRuntime(t hir.Type) {
 	text = strings.Replace(text, "PUBLIC SECTION.\n", "PUBLIC SECTION.\n"+def, 1)
 	e.files[file] = strings.TrimSuffix(text, "ENDCLASS.\n") + code.String() + "ENDCLASS.\n"
 }
+
+// Explicit conversions require array storage. A data-field read may still
+// observe an absent property through the ordinary live view below.
+func (b *body) requiredArrayView(t hir.Type, n, a string) {
+	b.line("IF " + a + " IS NOT BOUND.\nRAISE EXCEPTION TYPE " + b.e.name("view.refusal") + " EXPORTING reason = `arrayView: undefined is not array storage`.\nENDIF.")
+	b.arrayView(t, n, a)
+}
 func (b *body) arrayView(t hir.Type, n, a string) {
 	e := b.e
 	e.liveRuntime()
 	trap, d := e.name("view.refusal"), e.name("runtime.dynamic")
 	if t.Args[0].Kind == hir.Dynamic {
 		e.isArrayUsed = true
-		b.line("IF " + a + " IS NOT BOUND.\nRAISE EXCEPTION TYPE " + trap + " EXPORTING reason = `" + "arrayView: undefined is not array storage" + "`.\nENDIF.")
+		b.line("IF " + a + " IS NOT BOUND.\nRAISE EXCEPTION TYPE " + trap + " EXPORTING reason = `arrayView: undefined is not array storage`.\nENDIF.")
 		b.line("IF " + a + "->tag <> " + d + "=>tag_array.\nIF " + a + "->tag <> " + d + "=>tag_ref OR " + a + "->oval IS NOT INSTANCE OF " + e.name("runtime.arraymark") + ".\nRAISE EXCEPTION TYPE " + trap + " EXPORTING reason = `arrayView: source is not array storage`.\nENDIF.\nENDIF.")
 		b.line("CREATE OBJECT " + n + ".\n" + n + "->source = " + a + ".\n" + n + "->load( ).")
 		return
 	}
 	b.line("CLEAR " + n + ".")
-	b.line("IF " + a + " IS BOUND.\nIF " + a + "->tag = " + d + "=>tag_ref.\nTRY.\n" + n + " ?= " + a + "->oval.\nCATCH cx_sy_move_cast_error.\nRAISE EXCEPTION TYPE " + trap + " EXPORTING reason = `live_array.go: arrayView: incompatible native array reference`.\nENDTRY.\nELSEIF " + a + "->tag = " + d + "=>tag_array.\nCREATE OBJECT " + n + ".\n" + n + "->source = " + a + ".\nELSE.\nRAISE EXCEPTION TYPE " + trap + " EXPORTING reason = `live_array.go: arrayView: source is neither array graph nor reference`.\nENDIF.\n" + n + "->load( ).")
+	e.isArrayUsed = true
+	b.line("IF " + a + " IS BOUND.\nIF " + a + "->tag = " + d + "=>tag_ref.\nTRY.\n" + n + " ?= " + a + "->oval.\nCATCH cx_sy_move_cast_error.\nIF " + a + "->oval IS NOT INSTANCE OF " + e.name("runtime.arraymark") + ".\nRAISE EXCEPTION TYPE " + trap + " EXPORTING reason = `live_array.go: arrayView: reference is not array storage`.\nENDIF.\nCREATE OBJECT " + n + ".\n" + n + "->source = " + a + ".\nENDTRY.\nELSEIF " + a + "->tag = " + d + "=>tag_array.\nCREATE OBJECT " + n + ".\n" + n + "->source = " + a + ".\nELSE.\nRAISE EXCEPTION TYPE " + trap + " EXPORTING reason = `live_array.go: arrayView: source is neither array graph nor reference`.\nENDIF.\n" + n + "->load( ).")
 	// Validate every present element at publication and again on subsequent reads.
 	if t.Args[0].IsRef() && t.Args[0].Name != hir.RootObject {
 		row := b.temp(hir.Ref(hir.RootObject))
 		v := b.temp(t.Args[0])
 		b.line("LOOP AT " + n + "->items INTO " + row + ".")
+		b.line("READ TABLE " + n + "->missing WITH TABLE KEY table_line = sy-tabix TRANSPORTING NO FIELDS.\nIF sy-subrc <> 0.")
 		b.arrayElement(v, row, t.Args[0])
-		b.line("ENDLOOP.")
+		b.line("ENDIF.\nENDLOOP.")
 	}
 	b.line("ENDIF.")
 }
 func (b *body) arrayElement(n, row string, t hir.Type) {
 	if t.Kind == hir.Optional {
+		if t.Args[0].Kind == hir.InterfaceRef && b.e.structuralUnion(t.Args[0]) != "" || b.e.p.StructuralArrayUnion(t.Args[0]) {
+			b.line("CLEAR " + n + ".\nIF " + row + " IS BOUND.")
+			b.arrayElement(n, row, t.Args[0])
+			b.line("ENDIF.")
+			return
+		}
 		t = t.Args[0]
+	}
+	if t.Kind == hir.InterfaceRef && b.e.structuralUnion(t) != "" || b.e.p.StructuralArrayUnion(t) {
+		b.line("IF " + row + " IS NOT BOUND.\nRAISE EXCEPTION TYPE " + b.e.name("view.refusal") + " EXPORTING reason = `structural union array requires a present record`.\nENDIF.")
+		d := b.temp(hir.T(hir.Dynamic))
+		b.liveBox(d, row, t)
+		b.liveUnbox(n, d, t)
+		return
 	}
 	if t.Name == hir.RootObject {
 		b.line(n + " = " + row + ".")
@@ -180,6 +241,11 @@ func (b *body) arrayElement(n, row string, t hir.Type) {
 		b.line("ELSE.")
 		b.boxDynamic(n, row, hir.Ref(hir.RootObject))
 		b.line("ENDIF.")
+	} else if t.Kind == hir.ClassRef && b.e.liveClasses[t.Name] {
+		// An admitted structural layout may read a different native data layout.
+		// Rebox the original slot and use the checked live converter, not a nominal cast.
+		b.liveBox(d, row, hir.Ref(hir.RootObject))
+		b.liveUnbox(n, d, t)
 	} else {
 		b.line(n + " ?= " + row + ".")
 	}

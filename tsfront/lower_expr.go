@@ -103,6 +103,7 @@ func (l *lowerer) expr(n *ast.Node) *hir.Expr {
 			return x
 		}
 	}
+	diagnostics := len(l.diags)
 	saved := l.pend
 	l.pend = nil
 	var x *hir.Expr
@@ -133,8 +134,12 @@ func (l *lowerer) expr(n *ast.Node) *hir.Expr {
 	if x != nil && !l.settledCallUse(n, x) {
 		x = nil
 	}
+	if x == nil {
+		x = l.asyncRefusalExpression(n, diagnostics)
+	}
 	if x != nil {
 		x = l.narrowedAt(n, x)
+		x = l.checkedPropertyReceiver(n, x)
 	}
 	pre := l.pend
 	l.pend = saved
@@ -151,6 +156,35 @@ func (l *lowerer) expr(n *ast.Node) *hir.Expr {
 // reference type than x's natural type. Mapping failures are quiet here: the
 // natural type (from the declaration registry) stands.
 func (l *lowerer) narrowedAt(n *ast.Node, x *hir.Expr) *hir.Expr {
+	if x.Type.Kind == hir.InterfaceRef && n.Parent != nil && n.Parent.Kind == ast.KindPropertyAccessExpression {
+		member := n.Parent
+		if member.Expression() == n && member.Parent != nil && member.Parent.Kind == ast.KindCallExpression && member.Parent.Expression() == member {
+			common := l.interfaceMethod(x.Type.Name, member.Name().Text())
+			selected := l.methodOf(l.resolve(member))
+			if common != nil && selected != nil && !selected.Static && sameMethodSignature(common, selected) {
+				// The common virtual slot already accepts this receiver.
+				// Negative predicates need not prove its runtime class.
+				return x
+			}
+		}
+	}
+	if n.Parent != nil && n.Parent.Kind == ast.KindCallExpression {
+		call := n.Parent
+		if sig := l.ck.GetResolvedSignature(call); sig != nil {
+			if predicate := l.ck.GetTypePredicateOfSignature(sig); predicate != nil && predicate.Kind() == checker.TypePredicateKindIdentifier {
+				i := int(predicate.ParameterIndex())
+				args := call.Arguments()
+				if i >= 0 && i < len(args) && args[i] == n {
+					if context := l.ck.GetContextualType(n, 0); context != nil && context.Flags()&(checker.TypeFlagsAny|checker.TypeFlagsUnknown) != 0 {
+						// A prior false predicate can exclude a class that still
+						// occurs at runtime. Pass the original value to the next
+						// predicate, which accepts and checks that value itself.
+						return x
+					}
+				}
+			}
+		}
+	}
 	if l.unprunedFeatures && x.Type.Kind == hir.Array && (isArrayAssignment(n) || l.hint.Kind == hir.Array && l.hint.Args[0].Kind == hir.Optional && x.Type.Equal(l.hint)) {
 		// Array assignment preserves the actual RHS storage, including values
 		// that unchecked TypeScript array annotations fail to mark optional.
@@ -222,6 +256,13 @@ func (l *lowerer) narrowedAt(n *ast.Node, x *hir.Expr) *hir.Expr {
 	if t == nil || t.Flags()&(checker.TypeFlagsAny|checker.TypeFlagsUnknown) != 0 {
 		return x
 	}
+	if l.unprunedFeatures && (t.Flags()&checker.TypeFlagsNever != 0 || t.Flags()&checker.TypeFlagsIntersection != 0 && l.ck.GetReducedType(t).Flags()&checker.TypeFlagsNever != 0) {
+		// The checker found the guarded branch impossible (an intersection
+		// that reduced to never), yet the guard held at run time.
+		if guarded, ok := l.neverGuardNarrowing(n, x, t); ok {
+			return guarded
+		}
+	}
 	base := x.Type
 	if base.Kind == hir.Optional {
 		base = base.Args[0]
@@ -241,11 +282,20 @@ func (l *lowerer) narrowedAt(n *ast.Node, x *hir.Expr) *hir.Expr {
 	if base.Kind == hir.Array && checkerHasGenerator(t) {
 		return x
 	}
+	if narrowed, ok := l.slotIntersectionNarrowing(n, x, base, t); ok {
+		return narrowed
+	}
 	before := len(l.diags)
 	typ := l.mapCheckerType(n, t)
-	if hasBlocking(l.diags[before:]) {
+	blocked := hasBlocking(l.diags[before:]) || typ.Kind == hir.Void
+	if blocked || typ.Kind == hir.ClassRef && typ.Name == hir.RootObject && !x.Type.Equal(typ) {
 		l.diags = l.diags[:before] // quiet: narrowing is optional
-		return x
+		if guarded, ok := l.neverGuardNarrowing(n, x, t); ok {
+			return guarded
+		}
+		if blocked {
+			return x
+		}
 	}
 	l.diags = l.diags[:before]
 	if l.shapeAliasOf(typ, x.Type) {
@@ -291,6 +341,18 @@ func (l *lowerer) narrowedAt(n *ast.Node, x *hir.Expr) *hir.Expr {
 }
 
 func (l *lowerer) narrowed(n *ast.Node, x *hir.Expr, typ hir.Type) *hir.Expr {
+	if typ.Kind == hir.ClassRef {
+		if view := l.structuralReferenceUnion(x.Type); view != nil {
+			for _, part := range view.parts {
+				if part.Equal(typ) {
+					projection := l.rtOp("dynamic.asRef", l.coerce(x, hir.T(hir.Dynamic)), typ)
+					projection.Node = l.node(n)
+					projection.Owner = x.Type.Name
+					return projection
+				}
+			}
+		}
+	}
 	if x.Type.Kind == hir.InterfaceRef && typ.Kind == hir.InterfaceRef {
 		if adapted := l.closureAdapter(n, x, typ); adapted != nil {
 			return adapted
@@ -300,6 +362,31 @@ func (l *lowerer) narrowed(n *ast.Node, x *hir.Expr, typ hir.Type) *hir.Expr {
 		// Flow proved an optional family value present (a?.k === 'm'):
 		// checked presence, then the family projection.
 		x = &hir.Expr{Kind: hir.Narrow, Node: l.node(n), Type: x.Type.Args[0], X: x}
+	}
+	if l.unprunedFeatures && x.Type.Kind == hir.ClassRef && x.Type.Name == hir.RootObject {
+		// A type predicate narrowed a wider object to a family (member): the
+		// object holds the family's live storage. Project it checked rather
+		// than downcasting the root reference.
+		if typ.Kind == hir.UnionRef {
+			return l.coerce(x, typ)
+		}
+		if typ.Kind == hir.ClassRef {
+		families:
+			for _, u := range l.out.Unions {
+				if u == nil || !u.Complete || strings.HasPrefix(u.Name, "family.subset.") {
+					continue
+				}
+				for _, a := range u.Alternatives {
+					if a.Payload.Equal(typ) {
+						x = l.coerce(x, hir.Type{Kind: hir.UnionRef, Name: u.Name})
+						break families
+					}
+				}
+			}
+		}
+	}
+	if view := l.rootObjectDataView(x, typ); view != nil {
+		return view
 	}
 	if l.unprunedFeatures && x.Type.Kind == hir.UnionRef {
 		if typ.Equal(x.Type) {
@@ -590,9 +677,15 @@ func (l *lowerer) naturalExpr(n *ast.Node) *hir.Expr {
 			elem = hint.Args[0]
 		} else if l.unprunedFeatures && hint.Kind == hir.Dynamic && !l.ck.IsArrayType(l.ck.GetTypeAtLocation(n)) {
 			// A contextual tuple still needs real array storage when boxed.
-			// Preserve canonical arrays: their element ABI must survive boxing
-			// so a typed live view can recover the same native storage.
-			elem = hir.T(hir.Dynamic)
+			// Homogeneous tuples have the same canonical element ABI as an
+			// array. Preserve it so both backends recover the same storage
+			// after a nullable conditional join. Mixed tuples stay tagged.
+			mapped := l.mapCheckerType(n, l.ck.GetTypeAtLocation(n))
+			if mapped.Kind == hir.Array {
+				elem = mapped.Args[0]
+			} else {
+				elem = hir.T(hir.Dynamic)
+			}
 		} else {
 			t := l.ck.GetContextualType(n, checker.ContextFlagsSkipBindingPatterns)
 			if arr := l.singleArrayConstituent(t); arr != nil {
@@ -624,8 +717,15 @@ func (l *lowerer) naturalExpr(n *ast.Node) *hir.Expr {
 				if sv == nil {
 					return nil
 				}
-				if elem.Kind == hir.Optional {
+				if elem.Kind == hir.Optional && l.unprunedFeatures && sv.Type.Args[0].IsRef() && elem.Args[0].IsRef() {
+					sv = l.spreadSnapshotAs(el, sv, typ)
+				} else if elem.Kind == hir.Optional {
 					sv = l.coerce(l.spreadSnapshot(el, sv), typ)
+				} else if l.unprunedFeatures && elem.Kind == hir.ClassRef && sv.Type.Args[0].Kind == hir.ClassRef && !sv.Type.Equal(typ) && l.dataShapeSubtype(elem, sv.Type.Args[0]) {
+					// Rows of a data interface spread among rows of its
+					// extension (Param[] into FrontendParam[]): the copied
+					// rows are the same objects seen through the wider view.
+					sv = l.coerce(sv, typ)
 				}
 				nxt := l.rtOp("array.concat", arr, typ, sv)
 				l.serial++
@@ -648,6 +748,9 @@ func (l *lowerer) naturalExpr(n *ast.Node) *hir.Expr {
 	case ast.KindRegularExpressionLiteral:
 		return l.regexLiteral(n)
 	case ast.KindElementAccessExpression:
+		if x, handled := l.literalFamilyIndex(n); handled {
+			return x
+		}
 		if x, ok := l.processRead(n); ok {
 			return x
 		}
@@ -732,6 +835,9 @@ func (l *lowerer) identifier(n *ast.Node) *hir.Expr {
 			}
 		}
 		l.localSymbols[x] = symbol
+		if l.freshArraySymbols[symbol] {
+			l.markFreshContainer(x)
+		}
 		if l.localSymbolMethods == nil {
 			l.localSymbolMethods = map[*hir.Expr]*hir.Method{}
 		}
@@ -882,6 +988,9 @@ func (l *lowerer) propertyAccess(n *ast.Node) *hir.Expr {
 		return x
 	}
 	f, hasField := l.fieldOf(sym)
+	if hasField && l.slotInterfaceReceiver(p.Expression) {
+		hasField = false // slotRead below: the object's own property
+	}
 	if sym != nil && hasField {
 		if f.Static {
 			owner := l.classOf(sym.Parent)
@@ -913,6 +1022,17 @@ func (l *lowerer) propertyAccess(n *ast.Node) *hir.Expr {
 		}
 		if recv.Type.Kind == hir.Optional {
 			recv = &hir.Expr{Kind: hir.Narrow, Node: l.node(n), Type: recv.Type.Args[0], X: recv}
+		}
+		if l.unprunedFeatures && f.Name == "size" {
+			// A data interface inheriting Map/Set can register the library's
+			// property symbol as a field. The actual collection receiver still
+			// owns its builtin ABI, rather than that interface's class layout.
+			switch recv.Type.Kind {
+			case hir.OrderedMap:
+				return l.rtOp("map.size", recv, hir.T(hir.I32))
+			case hir.OrderedSet:
+				return l.rtOp("set.size", recv, hir.T(hir.I32))
+			}
 		}
 		// The receiver's lowered class owns the field's type: the checker's
 		// property symbol may belong to a structural view of it.
@@ -951,6 +1071,9 @@ func (l *lowerer) propertyAccess(n *ast.Node) *hir.Expr {
 	base := recv.Type
 	if base.Kind == hir.Optional {
 		base = base.Args[0]
+	}
+	if l.unprunedFeatures && !ast.IsAssignmentTarget(n) && l.slotInterfaceRef(base) {
+		return l.slotRead(n, recv, hir.L(hir.T(hir.String), n.Name().Text()))
 	}
 	if base.Kind == hir.Dynamic || base.Kind == hir.ClassRef && base.Name == hir.RootObject && n.Name().Text() != "constructor" {
 		if recv.Type.Kind == hir.Optional {
@@ -1171,12 +1294,15 @@ func (l *lowerer) call(n *ast.Node) *hir.Expr {
 						if !ok2 {
 							return nil
 						}
-						return &hir.Expr{Kind: hir.DirectCall, Node: l.node(n), Owner: ref.owner, Name: ref.method,
-							Type: l.callbackResultType(ref), Args: args}
+						return l.assertedDirectCallResult(n, &hir.Expr{Kind: hir.DirectCall, Node: l.node(n), Owner: ref.owner, Name: ref.method,
+							Type: l.callbackResultType(ref), Args: args})
 					}
 				}
 			}
 		}
+	}
+	if x, handled := l.assertedMethodReceiverCall(n, callee); handled {
+		return x
 	}
 	if callee.Kind == ast.KindPropertyAccessExpression {
 		if x, handled := l.requiredMemberCall(n, callee); handled {
@@ -1190,7 +1316,7 @@ func (l *lowerer) call(n *ast.Node) *hir.Expr {
 		// A class method is called through its class, never as a stored
 		// function value, even when a structural shape lists it as a field.
 		// Interface/type-literal method signatures are stored functions.
-		if sym := l.resolve(callee); sym == nil || sym.ValueDeclaration == nil || sym.ValueDeclaration.Kind != ast.KindMethodDeclaration {
+		if sym := l.resolve(callee); (sym == nil || sym.ValueDeclaration == nil || sym.ValueDeclaration.Kind != ast.KindMethodDeclaration) && !l.slotInterfaceReceiver(callee.Expression()) {
 			if field, ok := l.fieldOf(sym); ok && l.callableMethod(optionalBase(field.Type)) != nil && optionalBase(field.Type).Name != thunkInterfaceName {
 				return l.functionValueCall(n, callee)
 			}
@@ -1571,6 +1697,11 @@ func (l *lowerer) call(n *ast.Node) *hir.Expr {
 			return x
 		}
 		x, handled := l.libraryCall(n, name, recv)
+		if x == nil && !handled && recv.Type.Kind == hir.InterfaceRef && n.AsCallExpression().QuestionDotToken != nil {
+			if dispatched, ok := l.interfaceMethodDispatch(n, name, recv); ok {
+				return dispatched
+			}
+		}
 		if x == nil && !handled && l.unprunedFeatures && len(n.Arguments()) == 0 && (recv.Type.Kind == hir.Dynamic || recv.Type.Kind == hir.ClassRef || recv.Type.Kind == hir.InterfaceRef) {
 			for _, c := range l.out.Classes {
 				if c.Structural {
@@ -1798,7 +1929,7 @@ func (l *lowerer) libraryCall(n *ast.Node, name string, recv *hir.Expr) (*hir.Ex
 			if isConditionOnly(n) {
 				return l.rtOp("regexp.match_test", pattern, boolT, recv), true
 			}
-			return l.rtOp("string.match", recv, hir.T(hir.Optional, hir.T(hir.Array, str)), pattern), true
+			return l.rtOp("regexp.boxMatch", l.rtOp("string.match", recv, hir.T(hir.Optional, hir.T(hir.Array, str)), pattern), hir.T(hir.Dynamic)), true
 		case "concat":
 			return l.rtOp("string.concat", recv, str, one()), true
 		case "replace", "replaceAll":
@@ -1899,7 +2030,7 @@ func (l *lowerer) libraryCall(n *ast.Node, name string, recv *hir.Expr) (*hir.Ex
 				return l.rtOp("regexp.test", recv, boolT, input()), true
 			}
 			if len(args) == 1 {
-				return l.rtOp("regexp.exec", recv, hir.T(hir.Optional, hir.T(hir.Array, str)), input()), true
+				return l.rtOp("regexp.boxMatch", l.rtOp("regexp.exec", recv, hir.T(hir.Optional, hir.T(hir.Array, str)), input()), hir.T(hir.Dynamic)), true
 			}
 		case "toString":
 			if len(args) == 0 {
@@ -1991,11 +2122,11 @@ func (l *lowerer) libraryCall(n *ast.Node, name string, recv *hir.Expr) (*hir.Ex
 		case "pop", "shift":
 			return l.rtOp("array."+name, recv, hir.T(hir.Optional, recv.Type.Args[0])), true
 		case "indexOf":
-			return l.rtOp("array.indexOf", recv, i32, one()), true
+			return l.rtOp("array.indexOf", recv, i32, l.dynamicSearchValue(recv, one())), true
 		case "lastIndexOf":
 			return l.primitiveLastIndexOf(n, recv, args), true
 		case "includes":
-			x := one()
+			x := l.dynamicSearchValue(recv, one())
 			if x != nil && l.unprunedFeatures {
 				if probe, ok := l.scalarIncludesProbe(n, recv, x); ok {
 					return probe, true
@@ -2025,7 +2156,14 @@ func (l *lowerer) libraryCall(n *ast.Node, name string, recv *hir.Expr) (*hir.Ex
 		}
 		switch name {
 		case "has":
-			return l.rtOp("set.has", recv, boolT, value()), true
+			q := one()
+			if out := l.collectionIdentityQuery(recv, q, false); out != nil {
+				return out, true
+			}
+			if l.unprunedFeatures {
+				q = l.coerce(q, recv.Type.Args[0])
+			}
+			return l.rtOp("set.has", recv, boolT, q), true
 		case "add":
 			return l.rtOp("set.add", recv, recv.Type, value()), true
 		case "size":
@@ -2037,16 +2175,23 @@ func (l *lowerer) libraryCall(n *ast.Node, name string, recv *hir.Expr) (*hir.Ex
 		key := func() *hir.Expr {
 			x := one()
 			if l.unprunedFeatures && recv.Type.Args[0].Kind == hir.Dynamic {
+				x = observedBoxedMapKey(x)
 				x = l.coerce(x, recv.Type.Args[0])
 			}
 			return x
 		}
 		switch name {
 		case "get":
-			return l.mapRead(recv, key()), true
+			q := key()
+			if out := l.collectionIdentityQuery(recv, q, true); out != nil {
+				return out, true
+			}
+			return l.mapRead(recv, q), true
 		case "set":
 			var a, b *hir.Expr
-			if (recv.Type.Args[1].Kind == hir.Optional || recv.Type.Args[1].Kind == hir.UnionRef) && len(args) == 2 {
+			// A fresh literal value is built as the map's value type.
+			literal := l.unprunedFeatures && len(args) == 2 && recv.Type.Args[1].Kind == hir.ClassRef && recv.Type.Args[1].Name != hir.RootObject && ast.SkipParentheses(args[1]).Kind == ast.KindObjectLiteralExpression
+			if (recv.Type.Args[1].Kind == hir.Optional || recv.Type.Args[1].Kind == hir.UnionRef || literal) && len(args) == 2 {
 				a = l.expr(args[0])
 				saved := l.hint
 				l.hint = recv.Type.Args[1]
@@ -2056,11 +2201,18 @@ func (l *lowerer) libraryCall(n *ast.Node, name string, recv *hir.Expr) (*hir.Ex
 				a, b = two()
 			}
 			if l.unprunedFeatures && a != nil && b != nil {
+				if recv.Type.Args[0].Kind == hir.Dynamic {
+					a = observedBoxedMapKey(a)
+				}
 				a, b = l.coerce(a, recv.Type.Args[0]), l.coerce(b, recv.Type.Args[1])
 			}
 			return l.rtOp("map.set", recv, recv.Type, a, b), true
 		case "has":
-			return l.rtOp("map.has", recv, boolT, key()), true
+			q := key()
+			if out := l.collectionIdentityQuery(recv, q, false); out != nil {
+				return out, true
+			}
+			return l.rtOp("map.has", recv, boolT, q), true
 		case "delete":
 			return l.rtOp("map.delete", recv, boolT, key()), true
 		case "size":
@@ -2505,6 +2657,9 @@ func (l *lowerer) binary(n *ast.Node) *hir.Expr {
 			if base.Kind == hir.Optional {
 				base = base.Args[0]
 			}
+			if op == ast.KindBarBarToken {
+				base = l.emptyArrayFallbackBase(b.Left, b.Right, base)
+			}
 			emptyArray := base.Kind == hir.Array && b.Right.Kind == ast.KindArrayLiteralExpression && len(b.Right.AsArrayLiteralExpression().Elements.Nodes) == 0
 			emptyRecord := base.Kind == hir.OrderedMap && b.Right.Kind == ast.KindObjectLiteralExpression && len(b.Right.AsObjectLiteralExpression().Properties.Nodes) == 0
 			if emptyArray || emptyRecord {
@@ -2526,6 +2681,9 @@ func (l *lowerer) binary(n *ast.Node) *hir.Expr {
 				// operand is unboxed as the result's primitive (raises for
 				// another payload).
 				typ = hint
+			}
+			if target, ok := nullableReferenceJoin(x, y, hint); ok {
+				typ = target
 			}
 			condition := &hir.Expr{Kind: hir.ToBoolean, Type: hir.T(hir.Bool), X: x}
 			var left, right *hir.Expr
@@ -2574,6 +2732,7 @@ func (l *lowerer) binary(n *ast.Node) *hir.Expr {
 		if x == nil || y == nil {
 			return nil
 		}
+		x, y = l.observedArrayIndex(x), l.observedArrayIndex(y)
 		cop := map[ast.Kind]string{
 			ast.KindLessThanToken: "<", ast.KindLessThanEqualsToken: "<=",
 			ast.KindGreaterThanToken: ">", ast.KindGreaterThanEqualsToken: ">="}[op]
@@ -2646,6 +2805,7 @@ func (l *lowerer) binary(n *ast.Node) *hir.Expr {
 		if base.Kind == hir.Optional {
 			base = base.Args[0]
 		}
+		base = l.emptyArrayFallbackBase(b.Left, b.Right, base)
 		hint := l.hint
 		l.hint = base
 		y := l.expr(b.Right)
@@ -2655,17 +2815,34 @@ func (l *lowerer) binary(n *ast.Node) *hir.Expr {
 		}
 		left := x
 		if x.Type.Kind == hir.Optional {
-			left = &hir.Expr{Kind: hir.Narrow, Type: base, X: x}
+			// The fallback may select a different array ABI; presence
+			// unwraps only the actual stored element, then conversion checks it.
+			left = &hir.Expr{Kind: hir.Narrow, Node: l.node(b.Left), Type: x.Type.Args[0], X: x}
 		}
 		result := y.Type
 		if !base.Equal(y.Type) {
 			result = l.mapCheckerType(n, l.ck.GetTypeAtLocation(n))
 		}
+		if target, ok := nullableReferenceJoin(left, y, hint); ok {
+			result = target
+		}
+		if l.unprunedFeatures && (!l.conditionalConvertible(b.Left, left, result) || !l.conditionalConvertible(b.Right, y, result)) {
+			// A fresh collection in the fallback can make the checker infer
+			// Map<any, any>, even though lowering gave that branch a typed
+			// collection. Keep a proven context/operand ABI rather than
+			// changing the storage of an existing map to that inferred type.
+			for _, target := range []hir.Type{hint, y.Type, base} {
+				if l.conditionalConvertible(b.Left, left, target) && l.conditionalConvertible(b.Right, y, target) {
+					result = target
+					break
+				}
+			}
+		}
 		if result.Kind == hir.Void {
 			return nil
 		}
 		test := &hir.Expr{Kind: hir.IsUndefined, Node: l.node(n), Type: hir.T(hir.Bool), X: x}
-		if base.Kind == hir.Dynamic {
+		if left.Type.Kind == hir.Dynamic {
 			test = l.rtOp("dynamic.isNullish", left, hir.T(hir.Bool))
 		}
 		return &hir.Expr{Kind: hir.Conditional, Node: l.node(n), Type: result, X: test, Y: l.convertConditionalBranch(b.Right, y, result, false), Z: l.convertConditionalBranch(b.Left, left, result, false)}
@@ -2753,6 +2930,13 @@ func (l *lowerer) arithmetic(n *ast.Node, b *ast.BinaryExpression, op string) *h
 		x, y = l.absentNumericOperand(x), l.absentNumericOperand(y)
 	}
 	x, y = l.presentValue(b.Left, x, hir.T(hir.Number)), l.presentValue(b.Right, y, hir.T(hir.Number))
+	if l.unprunedFeatures && (op == "-" || op == "*" || op == "/" || op == "%") && (x.Type.Kind == hir.Dynamic) != (y.Type.Kind == hir.Dynamic) && (numberType(x.Type) || numberType(y.Type)) {
+		// An any operand (an untyped local's c.type.getLength()) next to a
+		// number: the checked unboxing yields the number, any other payload
+		// (a string ToNumber would convert) raises.
+		number := hir.T(hir.Number)
+		x, y = l.coerce(x, number), l.coerce(y, number)
+	}
 	return &hir.Expr{Kind: hir.Binary, Node: l.node(n), Op: op, Type: x.Type, X: x, Y: y}
 }
 
@@ -2820,33 +3004,9 @@ func (l *lowerer) instanceOf(n *ast.Node) *hir.Expr {
 	return nil
 }
 
-// usesMapProbe reports (syntactically, once per program) whether a source
-// file contains `x instanceof Map`.
-func (l *lowerer) usesMapProbe() bool {
-	p := l.prog
-	p.mapProbeOnce.Do(func() {
-		var visit func(*ast.Node) bool
-		visit = func(n *ast.Node) bool {
-			if n.Kind == ast.KindBinaryExpression {
-				b := n.AsBinaryExpression()
-				if b.OperatorToken.Kind == ast.KindInstanceOfKeyword && b.Right.Kind == ast.KindIdentifier && b.Right.Text() == "Map" {
-					p.mapProbe = true
-					return true
-				}
-			}
-			return n.ForEachChild(visit)
-		}
-		for _, f := range p.prog.SourceFiles() {
-			if !f.IsDeclarationFile && visit(f.AsNode()) {
-				return
-			}
-		}
-	})
-	return p.mapProbe
-}
-
 // sealJSMap marks the value of a `new Map(...)` expression as a JavaScript
-// Map. Records share the ordered-map storage; only this marker, set by the
+// Map, independently of whether this program uses instanceof. Records share
+// the ordered-map storage; only this marker, set by the
 // Map constructor and nothing else, makes `instanceof Map` true at run time.
 func (l *lowerer) sealJSMap(n *ast.Node, x *hir.Expr) *hir.Expr {
 	if x == nil || !l.unprunedFeatures || x.Type.Kind != hir.OrderedMap {
@@ -2856,7 +3016,7 @@ func (l *lowerer) sealJSMap(n *ast.Node, x *hir.Expr) *hir.Expr {
 	if callee == nil || callee.Kind != ast.KindIdentifier || callee.Text() != "Map" {
 		return x
 	}
-	if sym := l.resolve(callee); sym == nil || !l.librarySymbol(sym) || !l.usesMapProbe() {
+	if sym := l.resolve(callee); sym == nil || !l.librarySymbol(sym) {
 		return x
 	}
 	return l.rtOp("map.markJS", x, x.Type)
@@ -2925,9 +3085,7 @@ func (l *lowerer) equality(n *ast.Node, b *ast.BinaryExpression, negated bool) *
 	if x == nil || y == nil {
 		return nil
 	}
-	if b.OperatorToken.Kind == ast.KindEqualsEqualsEqualsToken || b.OperatorToken.Kind == ast.KindExclamationEqualsEqualsToken {
-		x, y = l.observedArrayIndex(x), l.observedArrayIndex(y)
-	}
+	x, y = l.observedArrayIndex(x), l.observedArrayIndex(y)
 	// Dynamic uses reference storage but can carry a primitive boolean.
 	// Keep its tag for equality instead of applying the object-only proof.
 	tagged := func(t hir.Type) bool {
@@ -2972,26 +3130,26 @@ func (l *lowerer) equality(n *ast.Node, b *ast.BinaryExpression, negated bool) *
 		}
 		return test
 	}
-	// Match arrays encode null as an absent reference, not as Dynamic's
-	// distinct undefined tag. Preserve JS null checks without boxing it.
+	// A direct String.match null check needs no capture materialization.
+	// Escaping match results already crossed regexp.boxMatch, so all other
+	// comparisons use tagged equality, including null versus undefined.
 	for _, pair := range []struct {
-		node, other *ast.Node
-		value       *hir.Expr
-	}{{b.Left, b.Right, x}, {b.Right, b.Left, y}} {
-		if pair.other.Kind == ast.KindNullKeyword && l.isMatchArrayType(l.ck.GetTypeAtLocation(pair.node)) {
-			test := &hir.Expr{Kind: hir.IsUndefined, Node: l.node(n), Type: hir.T(hir.Bool), X: pair.value}
-			if value := pair.value; value.Kind == hir.RuntimeOp && value.Op == "string.match" {
-				// A null check does not read captures (which may be absent).
-				present := l.rtOp("regexp.match_test", value.Args[0], hir.T(hir.Bool), value.X)
-				test = &hir.Expr{Kind: hir.Unary, Node: l.node(n), Type: hir.T(hir.Bool), Op: "!", X: present}
-			}
+		other *ast.Node
+		value *hir.Expr
+	}{{b.Right, x}, {b.Left, y}} {
+		value := pair.value
+		if pair.other.Kind == ast.KindNullKeyword && value.Kind == hir.RuntimeOp && value.Op == "regexp.boxMatch" && value.X.Kind == hir.RuntimeOp && value.X.Op == "string.match" {
+			match := value.X
+			present := l.rtOp("regexp.match_test", match.Args[0], hir.T(hir.Bool), match.X)
 			if negated {
-				return &hir.Expr{Kind: hir.Unary, Node: l.node(n), Op: "!", Type: hir.T(hir.Bool), X: test}
+				return present
 			}
-			return test
+			return &hir.Expr{Kind: hir.Unary, Node: l.node(n), Type: hir.T(hir.Bool), Op: "!", X: present}
 		}
 	}
-	structuralIdentity := l.unprunedFeatures && (x.Type.Kind == hir.UnionRef || y.Type.Kind == hir.UnionRef || !loose && (optionalBase(x.Type).Kind == hir.UnionRef || optionalBase(y.Type).Kind == hir.UnionRef) || l.structuralEqualityTypes(x.Type, y.Type) || x.Type.Kind == hir.Array && y.Type.Kind == hir.Array && !x.Type.Equal(y.Type))
+
+	arrayIdentity := optionalBase(x.Type).Kind == hir.Array && optionalBase(y.Type).Kind == hir.Array && !optionalBase(x.Type).Equal(optionalBase(y.Type))
+	structuralIdentity := l.unprunedFeatures && (x.Type.Kind == hir.UnionRef || y.Type.Kind == hir.UnionRef || !loose && (optionalBase(x.Type).Kind == hir.UnionRef || optionalBase(y.Type).Kind == hir.UnionRef) || l.structuralEqualityTypes(x.Type, y.Type) || arrayIdentity)
 	if tagged(x.Type) || tagged(y.Type) || structuralIdentity {
 		if loose && !structuralIdentity {
 			l.diagf(n, "unsupported-dynamic-comparison", "loose tagged equality requires JavaScript coercion")
@@ -3018,6 +3176,20 @@ func (l *lowerer) equality(n *ast.Node, b *ast.BinaryExpression, negated bool) *
 	}
 	if l.unprunedFeatures && y.Type.IsRef() && x.Type.Kind == hir.Optional && x.Type.Args[0].IsRef() && l.acceptsType(x.Type.Args[0], y.Type) {
 		y = l.optionalView(l.coerce(y, x.Type.Args[0]), x.Type)
+	}
+	if x.Type.Kind == hir.Optional && x.Type.Args[0].Equal(y.Type) {
+		present := &hir.Expr{Kind: hir.Narrow, Node: l.node(n), Type: x.Type.Args[0], X: x}
+		absent := hir.L(hir.T(hir.Bool), negated)
+		return &hir.Expr{Kind: hir.Conditional, Node: l.node(n), Type: hir.T(hir.Bool),
+			X: &hir.Expr{Kind: hir.IsUndefined, Node: l.node(n), Type: hir.T(hir.Bool), X: x}, Y: absent,
+			Z: &hir.Expr{Kind: hir.Binary, Node: l.node(n), Op: "==", Type: hir.T(hir.Bool), X: present, Y: y}}
+	}
+	if y.Type.Kind == hir.Optional && y.Type.Args[0].Equal(x.Type) {
+		present := &hir.Expr{Kind: hir.Narrow, Node: l.node(n), Type: y.Type.Args[0], X: y}
+		absent := hir.L(hir.T(hir.Bool), negated)
+		return &hir.Expr{Kind: hir.Conditional, Node: l.node(n), Type: hir.T(hir.Bool),
+			X: &hir.Expr{Kind: hir.IsUndefined, Node: l.node(n), Type: hir.T(hir.Bool), X: y}, Y: absent,
+			Z: &hir.Expr{Kind: hir.Binary, Node: l.node(n), Op: "==", Type: hir.T(hir.Bool), X: x, Y: present}}
 	}
 	if !x.Type.Equal(y.Type) && x.Type.IsRef() && y.Type.IsRef() {
 		if l.acceptsType(x.Type, y.Type) {
@@ -3091,6 +3263,36 @@ func (l *lowerer) asExpression(n *ast.Node) *hir.Expr {
 	if fixed, ok := l.assertionOverride(n); ok {
 		return l.assertedView(n, x, fixed)
 	}
+	if mapped.Kind == hir.ClassRef {
+		if view := l.structuralReferenceUnion(x.Type); view != nil {
+			for _, part := range view.parts {
+				if part.Equal(mapped) {
+					return l.narrowed(n, x, mapped)
+				}
+			}
+		}
+	}
+	if view := l.rootObjectDataView(x, mapped); view != nil {
+		return view
+	}
+	if view := l.classShapeView(n, x, mapped); view != nil {
+		return view
+	}
+	if l.unprunedFeatures && l.structuralUnionProjection(x.Type, mapped) {
+		return l.dynamicReference(l.coerce(l.checkedStructuralUnion(x), hir.T(hir.Dynamic)), mapped)
+	}
+	if l.unprunedFeatures && x.Type.Kind == hir.UnionRef && mapped.Kind == hir.ClassRef {
+		// A family assertion needs its checked payload projection, just as
+		// flow narrowing does. A property-only assertion can instead read a
+		// live structural view of the same boxed object; never cast the
+		// family's storage directly to a class layout.
+		if projected := l.narrowed(n, x, mapped); projected != x {
+			return projected
+		}
+		if l.shapeLike[mapped.Name] {
+			return l.dynamicReference(l.coerce(x, hir.T(hir.Dynamic)), mapped)
+		}
+	}
 	if l.unprunedFeatures && x.Type.Kind == hir.ClassRef && mapped.Kind == hir.Optional &&
 		mapped.Args[0].Kind == hir.ClassRef && l.acceptsType(x.Type, mapped.Args[0]) {
 		value := x
@@ -3151,6 +3353,12 @@ func (l *lowerer) asExpression(n *ast.Node) *hir.Expr {
 			}
 			l.diagf(n, "unsupported-assertion", "type assertion requires checker-proven narrowing of its operand")
 			return nil
+		}
+		if l.unprunedFeatures && mapped.Kind == hir.ClassRef && (x.Type.Kind == hir.UnionRef || x.Type.Kind == hir.Optional && x.Type.Args[0].Kind == hir.UnionRef) {
+			// A structural view of a union payload (`/** @type {{value?: T}} */
+			// (expr)`) erases in JS: read the payload's own properties through
+			// the checked record view instead of an unverified nominal cast.
+			return l.dynamicReference(l.coerce(x, hir.T(hir.Dynamic)), mapped)
 		}
 		l.diagf(n, "note-cast", "cast to %s recorded as an unchecked view", mapped.String())
 		return &hir.Expr{Kind: hir.Cast, Node: l.node(n), Type: mapped, X: x}

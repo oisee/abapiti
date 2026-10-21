@@ -41,12 +41,46 @@ func emitPackage(p *hir.Program, pkg string, profile bool) (map[string]string, *
 	e.characterSets()
 	e.collectBoxedShapes()
 	e.liveClasses = hir.LiveClassViewLayouts(p)
+	e.enableLiveMapValueViews()
+	for _, iface := range p.Interfaces {
+		for _, member := range iface.StructuralMembers {
+			if e.liveClasses[member.Type.Name] {
+				e.extraRuntimeKeys = true
+			}
+		}
+	}
+	_, e.referenceSets = hir.UsedRuntimeOps(p)["set.view"]
+	for _, c := range p.Classes {
+		if !e.liveClasses[c.Name] {
+			continue
+		}
+		for _, f := range c.Fields {
+			if f.Type.Readonly || f.Type.Kind == hir.Optional && f.Type.Args[0].Readonly {
+				e.readonlyViews = true
+			}
+		}
+	}
+	for op := range hir.UsedRuntimeOps(p) {
+		if op == "container.readonlyView" || op == "collection.has" || op == "collection.get" {
+			e.readonlyViews = true
+		}
+	}
+	if e.readonlyViews {
+		e.mapViews = true
+		e.mapViewsKnown = true
+		e.collectionProbe = true
+		e.usesLiveArrays = true
+	}
+
 	if len(p.Unions) > 0 {
 		e.extraRuntimeKeys = true
 	}
 	for _, c := range p.Classes {
 		check := func(s *hir.Stmt) {
 			walkStmt(s, func(*hir.Stmt) {}, func(x, _ *hir.Expr) {
+				if x.Type.Kind == hir.OrderedMap && len(x.Type.Args) == 2 && x.Type.Args[0].Kind == hir.Dynamic {
+					e.boxedMaps = true
+				}
 				if x.Kind == hir.RuntimeOp && x.Op == "arrayLike.length" {
 					e.nonfiniteNumbers = true
 					e.toNumber = true
@@ -74,10 +108,10 @@ func emitPackage(p *hir.Program, pkg string, profile bool) (map[string]string, *
 					e.recordDeletion = true
 					e.extraRuntimeKeys = true
 				}
-				if x.Kind == hir.RuntimeOp && x.Op == "dynamic.arrayView" {
+				if x.Kind == hir.RuntimeOp && (x.Op == "dynamic.mapView" || x.Op == "dynamic.asObject" || x.Op == "dynamic.keys" || x.Op == "dynamic.arrayView" || x.Op == "dynamic.asRef" && x.Type.Kind == hir.Array && (x.Type.Args[0].Kind == hir.Dynamic || p.StructuralArrayUnion(x.Type))) {
 					e.usesLiveArrays = true
 				}
-				if x.Kind == hir.RuntimeOp && (x.Op == "dynamic.isMap" || x.Op == "dynamic.isSet" || x.Op == "map.markJS") {
+				if x.Kind == hir.RuntimeOp && (x.Op == "dynamic.isMap" || x.Op == "dynamic.isSet" || x.Op == "map.markJS" || x.Op == "dynamic.mapView") {
 					e.collectionProbe = true // before record allocations are emitted
 				}
 				if x.Kind == hir.RuntimeOp && (x.Op == "dynamic.keys" ||
@@ -167,8 +201,18 @@ func emitPackage(p *hir.Program, pkg string, profile bool) (map[string]string, *
 	if e.usesStorageIdentity() {
 		runtime = storageIdentityRuntime(runtime)
 	}
+	if e.boxedMaps {
+		runtime = boxedMapRuntime(runtime)
+	}
 	if e.usesMapViews() {
 		runtime = mapViewRuntime(runtime)
+		if _, ok := hir.UsedRuntimeOps(p)["dynamic.mapView"]; ok || e.liveMapValueViews || e.readonlyViews {
+			runtime += dynamicMapStorageSource
+			if e.readonlyViews {
+				runtime = readonlySetRuntime(runtime)
+				runtime += readonlyCollectionSource
+			}
+		}
 	}
 	if e.recordString {
 		runtime += recordStringSource
@@ -193,7 +237,7 @@ func emitPackage(p *hir.Program, pkg string, profile bool) (map[string]string, *
 			runtime += recordDeletionSource
 		}
 	}
-	if e.liveStorage() {
+	if e.liveStorage() || e.usesMapViews() {
 		runtime = strings.Replace(runtime, "return a == b\n}", "return dynEqual(box(a), box(b))\n}", 1)
 		runtime = strings.Replace(runtime, "return equal(a.Value, b.Value)", "return a.Value == b.Value", -1)
 	}
@@ -238,6 +282,13 @@ func emitPackage(p *hir.Program, pkg string, profile bool) (map[string]string, *
 	if e.liveStorage() {
 		runtime = liveArrayRuntime(runtime)
 		jsonWriter = strings.ReplaceAll(jsonWriter, "range a.Items", "range a.values()")
+	}
+	if e.dynamicSearch {
+		length := "int32(len(a.Items))"
+		if e.liveStorage() {
+			length = "a.length()"
+		}
+		runtime += strings.ReplaceAll(dynamicSearchSource, "LENGTH", length)
 	}
 	generated := e.code.String() + e.extra.String()
 	if e.hirStrconv {
@@ -291,6 +342,9 @@ func relativeSource(source string) string {
 }
 
 type emitter struct {
+	boxedMaps         bool
+	referenceSets     bool
+	readonlyViews     bool
 	externAdapters    []string
 	externImports     map[string]string
 	hirStrconv        bool
@@ -322,6 +376,7 @@ type emitter struct {
 	hirMath           bool
 	extraRuntimeKeys  bool
 	recordDeletion    bool
+	dynamicSearch     bool
 	usesLiveArrays    bool
 	spreadRuntime     bool
 	collectionProbe   bool
@@ -337,7 +392,12 @@ type emitter struct {
 	usesArrayDeletion bool
 	recordString      bool
 	mapViews          bool
+	dynamicMaps       bool
+	liveMapValueViews bool
+	liveMapValueTypes map[string]bool
 	mapViewsKnown     bool
+	objCarriers       bool
+	objCarriersKnown  bool
 	nonfiniteNumbers  bool
 	toNumber          bool
 	usesTypedCatch    bool
@@ -444,10 +504,15 @@ func (e *emitter) typ(t hir.Type) string {
 		return "*" + name + "[" + e.typ(t.Args[0]) + "," + e.typ(t.Args[1]) + "]"
 	case hir.OrderedSet:
 		name := "orderedSet"
-		if e.directCollectionKey(t.Args[0]) {
+		elem := t.Args[0]
+		if e.referenceSets && elem.IsRef() {
+			// A program with a reference Set view shares erased keys across
+			// all aliases, including writes through the original typed Set.
+			elem = hir.Ref(hir.RootObject)
+		} else if e.directCollectionKey(elem) {
 			name = "fastOrderedSet"
 		}
-		return "*" + name + "[" + e.typ(t.Args[0]) + "]"
+		return "*" + name + "[" + e.typ(elem) + "]"
 	default:
 		e.unsupported(hir.Node{}, "type "+t.String())
 		return "any"
@@ -514,6 +579,7 @@ func (e *emitter) class(c *hir.Class) {
 	}
 	if e.liveClasses[c.Name] {
 		e.line("viewSource *dynamic")
+		e.line("viewCheck func(*dynamic)")
 	}
 	// Only materializable data shapes can acquire a dynamic source. Other
 	// objects still escape normally, but need no permanently nil source slot.
@@ -812,6 +878,11 @@ func (b *body) truth(v string, t hir.Type) string {
 	case hir.BigInt:
 		return v + "!=jsBigInt(\"0\")"
 	case hir.Optional:
+		if t.Args[0].Kind == hir.Dynamic {
+			// The tagged box decides: boxed false, null, "", 0 and a nil box
+			// (absent/undefined) are falsy; pointer presence is not truthiness.
+			return "dynTruth(" + v + ")"
+		}
 		if t.Args[0].IsRef() {
 			return "!nilRef(" + v + ")"
 		}
@@ -897,6 +968,9 @@ func (b *body) expr(x *hir.Expr) string {
 	case hir.IndexGet:
 		a, i := b.expr(x.X), b.expr(x.Y)
 		code = a + ".get(" + i + ").Value"
+		if !t.IsRef() && t.Kind != hir.Optional {
+			code = "unwrap(" + a + ".get(" + i + "))"
+		}
 		if e.liveStorage() {
 			code = "liveArrayRead(" + a + "," + i + ")"
 		}
@@ -908,10 +982,6 @@ func (b *body) expr(x *hir.Expr) string {
 			}
 		}
 	case hir.New:
-		if t.Kind == hir.OrderedMap && len(t.Args) == 2 && t.Args[0].Kind == hir.Dynamic {
-			e.unsupported(x.Node, "boxed Map allocation requires value-based SameValueZero")
-			return "nil"
-		}
 		a := []string{}
 		if t.Kind == hir.ClassRef {
 			m, _ := e.method(e.classBy(t.Name), "constructor")

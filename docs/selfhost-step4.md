@@ -16,6 +16,14 @@ Both executions run in the supplied OSG checkout. Input folders must point to
 its prepared libraries. Abaplint core sources and the transpiler rearranger
 are resolved through tsconfig paths, as in the pilot measurement kit.
 
+For a smaller experiment, pass `--inputs /absolute/path/to/inputs.json`.
+The harness computes a fresh Node reference and prints its full SHA256;
+`--expect-ref` remains optional and can pin that custom reference. The JSON
+is copied to `out-dir/inputs.json` and temporarily staged at the driver's
+usual input path for the reference, coverage replay and generated program.
+The captured inputs are restored on success or failure. Without `--inputs`,
+the original input handling and summary output are unchanged.
+
 Every Node, abapiti, generated program and Go build subprocess runs under
 `systemd-run --user --scope -q -p MemoryMax=16G nice` (24G for the generated
 module build). The harness checks for at least 40 GiB free before each step.
@@ -82,8 +90,10 @@ write `registry-traps.json` contribute body traps only.
 Each site is matched against the raw V8 block coverage of the reference run.
 A statement uses the innermost range that contains it, so a count-0 branch
 inside an executed function counts as not reached. A body trap fires on
-entry, so it uses the call count of the function V8 starts at or just after
-the trap node. Abaplint and transpiler sources run from their
+entry, so it uses the call count of the owner recorded in `MethodSource`
+(the HIR `Class`/`Method` source), even when `Source` points inside an
+uncalled nested arrow. The V8 function must start at or just after that
+owner location and contain the trap node. Abaplint and transpiler sources run from their
 `node_modules` builds, which have no source maps. Their body traps are
 matched by function name within the compiled file (evidence `name`).
 Unmatched ones are unknown: A for abaplint/transpiler, G for gogen. Files

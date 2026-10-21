@@ -370,7 +370,7 @@ func (l *lowerer) destructureDecl(d *ast.Node) []*hir.Stmt {
 	// destructurePattern appends to the prelude; collect around it.
 	saved := l.pend
 	l.pend = nil
-	l.destructurePattern(d.Name(), hir.V(tmp, t))
+	l.destructurePattern(d.Name(), hir.V(tmp, t), l.isMatchArrayType(l.ck.GetTypeAtLocation(d.Initializer())))
 	out = append(out, l.pend...)
 	l.pend = saved
 	return out

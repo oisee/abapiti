@@ -7,6 +7,7 @@ import (
 )
 
 var supportedOps = map[string]bool{
+	"map.checkedGet": true, "map.checkedSet": true, "map.checkedValues": true,
 	"string.splitRegex": true, "string.padStart": true, "string.parseFloatNumber": true, "string.toNumber": true,
 	"string.sha1Hex": true, "xml.parseWithErrors": true,
 	"json5.parse": true,
@@ -23,10 +24,12 @@ var supportedOps = map[string]bool{
 	"json.indent":          true,
 	"dynamic.keys":         true,
 	"dynamic.classView":    true,
-	"dynamic.arrayView":    true,
-	"object.get":           true, "object.hasOwn": true, "object.has": true, "xml.validate": true,
-	"regexp.exec": true, "regexp.lastIndex": true, "regexp.setLastIndex": true,
-	"string.repeat": true, "string.match": true, "array.matchIndex": true,
+	"dynamic.mapView":      true, "map.markJS": true,
+	"dynamic.asObject":  true,
+	"dynamic.arrayView": true,
+	"object.get":        true, "object.hasOwn": true, "object.has": true, "xml.validate": true,
+	"regexp.exec": true, "regexp.boxMatch": true, "regexp.lastIndex": true, "regexp.setLastIndex": true,
+	"string.repeat": true, "string.match": true, "array.matchIndex": true, "array.matchGroups": true,
 	"string.replaceRegex":     true,
 	"string.toLowerCase":      true,
 	"object.checkedClassView": true,
@@ -51,11 +54,12 @@ var supportedOps = map[string]bool{
 
 // Operations without a reviewed ABAP implementation retain explicit refusals.
 var unsupportedOps = map[string]bool{
-	"union.check": true, "map.view": true, "host.stderrWrite": true,
+	"collection.get": true, "collection.has": true, "container.readonlyClassView": true, "container.readonlyView": true,
+	"union.check": true, "map.view": true, "set.view": true, "host.stderrWrite": true,
 	"number.hex16":     true,
 	"arrayLike.length": true,
 	"number.isInteger": true, "number.isSafeInteger": true, "number.isFinite": true, "number.strictIsNaN": true, "number.abs": true, "host.getenv": true, "string.codePoints": true, "dynamic.values": true,
-	"string.padEnd": true, "string.relativeAt": true, "regexp.clone": true, "regexp.flags": true, "regexp.matchAllNext": true, "array.matchGroups": true,
+	"string.padEnd": true, "string.relativeAt": true, "regexp.clone": true, "regexp.flags": true, "regexp.matchAllNext": true,
 	"string.parseFloat": true,
 	"array.spread0":     true,
 	// Recursive structural families use the Go oracle until the ABAP ABI exists.
@@ -66,7 +70,7 @@ var unsupportedOps = map[string]bool{
 	// Number(boxed) needs the dynamic ToPrimitive ABI; ABAP refuses at the call.
 	"dynamic.toNumber": true,
 	// JS Map/Set tests on a tagged value need the dynamic collection ABI.
-	"dynamic.isMap": true, "dynamic.isSet": true, "map.markJS": true,
+	"dynamic.isMap": true, "dynamic.isSet": true,
 	// JSON.stringify replacer callbacks need a per-property callback ABI.
 	"json.stringifyReplacer": true,
 }

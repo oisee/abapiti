@@ -1,7 +1,6 @@
 package tsfront
 
 import (
-	"github.com/oisee/abapiti/hir/golang"
 	"strings"
 	"testing"
 )
@@ -15,13 +14,9 @@ func TestStep4EmitNullableStringMapViewNodeOracle(t *testing.T) {
 `, "map.view")
 }
 
-func TestStep4EmitBoxedMapAllocationRefusesPointerKeys(t *testing.T) {
+func TestStep4EmitBoxedMapABAPRefusal(t *testing.T) {
 	p := lowerStatementsProbe(t, map[string]string{"probe.ts": `class Probe {static run():number{const m=new Map<string|null|undefined,number>();m.set(null,7);return m.get(null)??0;}}`}, []string{"probe.ts"})
-	_, err := golang.Emit(p)
-	if err == nil || !strings.Contains(err.Error(), "probe.ts:") || !strings.Contains(err.Error(), "value-based SameValueZero") {
-		t.Fatalf("wanted located boxed Map refusal, got %v", err)
-	}
-	_, err = emitABAP(t, p)
+	_, err := emitABAP(t, p)
 	if err == nil || !strings.Contains(err.Error(), "probe.ts:") || !strings.Contains(err.Error(), "value-based SameValueZero") {
 		t.Fatalf("wanted located ABAP boxed Map refusal, got %v", err)
 	}

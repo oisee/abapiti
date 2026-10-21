@@ -16,6 +16,21 @@ func (e *emitter) recordGraphRuntime() {
 IF tag = tag_object.
 READ TABLE entries WITH KEY k = p0 TRANSPORTING NO FIELDS.
 result = xsdbool( sy-subrc = 0 ).
+ELSEIF tag = tag_array.
+IF p0 = 'length'.
+result = abap_true.
+RETURN.
+ENDIF.
+DATA array_index_value TYPE i.
+TRY.
+array_index_value = array_index( p0 ) + 1.
+CATCH cx_sy_range_out_of_bounds.
+RETURN.
+ENDTRY.
+IF array_index_value <= lines( items ).
+READ TABLE missing WITH TABLE KEY table_line = array_index_value TRANSPORTING NO FIELDS.
+result = xsdbool( sy-subrc <> 0 ).
+ENDIF.
 ELSEIF tag = tag_ref.
 DATA adapter TYPE REF TO $S.
 TRY.
@@ -106,25 +121,38 @@ func (e *emitter) nativeStructuralPresence(out *strings.Builder, c *hir.Class) {
 	}
 	fmt.Fprintf(out, "IF me->%s IS BOUND.\nignored = me->%s->delete( p0 ).\nENDIF.\nENDCASE.\nIF %s IS BOUND.\nignored = %s->delete( p0 ).\nENDIF.\nresult = abap_true.\nENDMETHOD.\n", e.name("view.extras"), e.name("view.extras"), bag, bag)
 }
-func (b *body) erasedPropertyHas(x *hir.Expr, n, a, key string) {
+
+// Root-object lookup accepts proven structural storage and arrays, without
+// granting a nominal class layout. Reads use the same presence proof as has.
+func (b *body) erasedPropertyLookup(x *hir.Expr, n, a, key string) {
 	e := b.e
 	e.liveRuntime()
+	e.isArrayUsed = true
 	d := b.temp(hir.T(hir.Dynamic))
 	adapter := b.rawTemp("REF TO " + e.name("view.storage"))
+	present := b.temp(hir.T(hir.Bool))
+	inherited := b.temp(hir.T(hir.Bool))
 	trap := e.name("view.refusal")
-	b.line("CLEAR " + d + ".\nCLEAR " + adapter + ".")
-	b.line("IF " + a + " IS NOT BOUND.\nRAISE EXCEPTION TYPE " + trap + " EXPORTING reason = `record_storage.go: erasedPropertyHas: receiver is undefined`.\nENDIF.")
+	b.line("CLEAR " + d + ".\nCLEAR " + adapter + ".\nIF " + a + " IS NOT BOUND.\nRAISE EXCEPTION TYPE " + trap + " EXPORTING reason = `object lookup requires a receiver`.\nENDIF.")
 	b.line("TRY.\n" + d + " ?= " + a + ".\nCATCH cx_sy_move_cast_error.\nENDTRY.")
-	b.line("IF " + d + " IS NOT BOUND.\nTRY.\n" + adapter + " ?= " + a + ".\nCATCH cx_sy_move_cast_error.\nRAISE EXCEPTION TYPE " + trap + " EXPORTING reason = `record_storage.go: erasedPropertyHas: reference lacks view storage`.\nENDTRY.\n" + d + " = " + adapter + "->source( ).")
-	b.line("IF " + d + " IS NOT BOUND.\nIF " + adapter + "->structural( ) = abap_false.\nRAISE EXCEPTION TYPE " + trap + " EXPORTING reason = `record_storage.go: erasedPropertyHas: source-less storage is not structural`.\nENDIF.\n" + n + " = " + adapter + "->has( " + key + " ).\nELSE.\n" + n + " = " + d + "->has( " + key + " ).\nENDIF.\nELSE.")
-	b.line("IF " + d + "->tag <> " + e.name("runtime.dynamic") + "=>tag_object.\nRAISE EXCEPTION TYPE " + trap + " EXPORTING reason = `record_storage.go: erasedPropertyHas: source is not object graph`.\nENDIF.\n" + n + " = " + d + "->has( " + key + " ).\nENDIF.")
-	if x.Op == "object.has" {
-		b.line("IF " + n + " = abap_false.")
-		clauses := []string{}
-		for _, v := range []string{"constructor", "__proto__", "hasOwnProperty", "isPrototypeOf", "propertyIsEnumerable", "toLocaleString", "toString", "valueOf", "__defineGetter__", "__defineSetter__", "__lookupGetter__", "__lookupSetter__"} {
-			clauses = append(clauses, key+" = `"+v+"`")
-		}
-		b.line(n + " = xsdbool( " + strings.Join(clauses, " OR ") + " ).\nENDIF.")
+	b.line("IF " + d + " IS NOT BOUND.\nTRY.\n" + adapter + " ?= " + a + ".\nCATCH cx_sy_move_cast_error.\nRAISE EXCEPTION TYPE " + trap + " EXPORTING reason = `object lookup lacks structural storage`.\nENDTRY.\n" + d + " = " + adapter + "->source( ).\nENDIF.")
+	b.line("IF " + d + " IS NOT BOUND.\nIF " + adapter + "->structural( ) <> abap_true AND " + a + " IS NOT INSTANCE OF " + e.name("runtime.arraymark") + ".\nRAISE EXCEPTION TYPE " + trap + " EXPORTING reason = `object lookup refuses nominal storage`.\nENDIF.\n" + present + " = " + adapter + "->has( " + key + " ).\nELSE.\nIF " + d + "->tag <> " + e.name("runtime.dynamic") + "=>tag_object AND " + d + "->tag <> " + e.name("runtime.dynamic") + "=>tag_array.\nRAISE EXCEPTION TYPE " + trap + " EXPORTING reason = `object lookup requires structural object or array`.\nENDIF.\n" + present + " = " + d + "->has( " + key + " ).\nENDIF.")
+	clauses := []string{}
+	for _, v := range []string{"constructor", "__proto__", "hasOwnProperty", "isPrototypeOf", "propertyIsEnumerable", "toLocaleString", "toString", "valueOf", "__defineGetter__", "__defineSetter__", "__lookupGetter__", "__lookupSetter__"} {
+		clauses = append(clauses, key+" = `"+v+"`")
+	}
+	b.line(inherited + " = xsdbool( " + strings.Join(clauses, " OR ") + " ).")
+	arrayClauses := []string{}
+	for _, v := range []string{"at", "concat", "copyWithin", "fill", "find", "findIndex", "findLast", "findLastIndex", "lastIndexOf", "pop", "push", "reverse", "shift", "unshift", "slice", "sort", "splice", "includes", "indexOf", "join", "keys", "entries", "values", "forEach", "filter", "flat", "flatMap", "map", "every", "some", "reduce", "reduceRight", "toReversed", "toSorted", "toSpliced", "with"} {
+		arrayClauses = append(arrayClauses, key+" = `"+v+"`")
+	}
+	b.line("IF ( " + d + " IS BOUND AND " + d + "->tag = " + e.name("runtime.dynamic") + "=>tag_array ) OR " + a + " IS INSTANCE OF " + e.name("runtime.arraymark") + ".\nIF " + strings.Join(arrayClauses, " OR ") + ".\n" + inherited + " = abap_true.\nENDIF.\nENDIF.")
+	if x.Op == "object.get" {
+		b.line("CLEAR " + n + ".\nIF " + present + " = abap_true.\nIF " + d + " IS BOUND.\n" + n + " = " + d + "->get( " + key + " ).\nELSE.\n" + n + " = " + adapter + "->get( " + key + " ).\nENDIF.\nELSEIF " + inherited + " = abap_true.\nRAISE EXCEPTION TYPE " + trap + " EXPORTING reason = `erased prototype reads remain unsupported`.\nENDIF.")
+	} else if x.Op == "object.has" {
+		b.line(n + " = xsdbool( " + present + " = abap_true OR " + inherited + " = abap_true ).")
+	} else {
+		b.line(n + " = " + present + ".")
 	}
 }
 

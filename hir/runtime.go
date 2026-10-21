@@ -22,6 +22,7 @@ var RuntimeSpecs = map[string]RuntimeSpec{
 	"regexp.clone":              {RegExp, 0, false},
 	"regexp.flags":              {RegExp, 0, false},
 	"regexp.matchAllNext":       {RegExp, 1, true},
+	"regexp.boxMatch":           {Optional, 0, false},
 	"array.matchGroups":         {Array, 0, false},
 	"string.parseFloatNumber":   {String, 0, false},
 	"string.parseIntNumber":     {String, 0, false},
@@ -44,6 +45,9 @@ var RuntimeSpecs = map[string]RuntimeSpec{
 	"dynamic.keys":              {Dynamic, 0, false},
 	"dynamic.spread":            {Dynamic, 0, false},
 	"dynamic.isMap":             {Dynamic, 0, false},
+	"map.checkedGet":            {OrderedMap, 1, false},
+	"map.checkedSet":            {OrderedMap, 2, true},
+	"map.checkedValues":         {OrderedMap, 0, false},
 	"map.markJS":                {OrderedMap, 0, true},
 	"dynamic.isSet":             {Dynamic, 0, false},
 	"dynamic.get":               {Dynamic, 1, false},
@@ -105,28 +109,34 @@ var RuntimeSpecs = map[string]RuntimeSpec{
 // SpecialOps lists ops whose typing rules depend on more than the receiver
 // kind; the verifier checks them individually.
 var SpecialOps = map[string]bool{
-	"map.view":                true,
-	"union.check":             true, // Dynamic -> validated complete family
-	"union.admit":             true,
-	"union.widen":             true,
-	"union.project":           true,
-	"union.tag":               true,
-	"union.read":              true,
-	"object.get":              true, // nominal static property table -> Dynamic
-	"object.hasOwn":           true,
-	"object.has":              true,
-	"object.checkedClassView": true, // nominal class view; invalid runtime types trap
-	"object.classOf":          true, // any object ref -> ClassValue
-	"classvalue.newArgs":      true,
-	"classvalue.new":          true, // ClassValue -> a class or interface reference
-	"chai.throwMatch":         true, // tests-only thunk or boxed parameterless callable
-	"chai.box":                true, // tests-only box; parsed-to-native snapshot escapes refuse
-	"dynamic.of":              true, // any value -> Dynamic (tagged box)
-	"dynamic.asRef":           true,
-	"dynamic.classView":       true, // live structural storage, never a nominal assertion
-	"dynamic.arrayView":       true, // checked live primitive storage
-	"dynamic.materialize":     true, // Dynamic -> a class or interface reference
-	"regexp.new":              true, // pattern, [flags] -> RegExp
+	"map.view":       true,
+	"collection.has": true, "collection.get": true,
+	"container.readonlyClassView": true,
+	"container.readonlyView":      true,
+	"set.view":                    true,
+	"union.check":                 true, // Dynamic -> validated complete family
+	"union.admit":                 true,
+	"union.widen":                 true,
+	"union.project":               true,
+	"union.tag":                   true,
+	"union.read":                  true,
+	"object.get":                  true, // nominal static property table -> Dynamic
+	"object.hasOwn":               true,
+	"object.has":                  true,
+	"object.checkedClassView":     true, // nominal class view; invalid runtime types trap
+	"object.classOf":              true, // any object ref -> ClassValue
+	"classvalue.newArgs":          true,
+	"classvalue.new":              true, // ClassValue -> a class or interface reference
+	"chai.throwMatch":             true, // tests-only thunk or boxed parameterless callable
+	"chai.box":                    true, // tests-only box; parsed-to-native snapshot escapes refuse
+	"dynamic.of":                  true, // any value -> Dynamic (tagged box)
+	"dynamic.asRef":               true,
+	"dynamic.asObject":            true, // checked broad object carrier, never a nominal class projection
+	"dynamic.mapView":             true, // branded live string-key Map, checked values on access
+	"dynamic.classView":           true, // live structural storage, never a nominal assertion
+	"dynamic.arrayView":           true, // checked live primitive storage
+	"dynamic.materialize":         true, // Dynamic -> a class or interface reference
+	"regexp.new":                  true, // pattern, [flags] -> RegExp
 
 	"json.stringifySubset": true, // JSON data graph; unproven native order refuses
 	"json.stringifyConfig": true, // source-pinned Config.getDefault data graph -> String
@@ -145,6 +155,11 @@ func optionalOf(t Type) Type {
 }
 
 func RuntimeSignature(op string, t Type) ([]Type, Type, bool) {
+	// Only this boundary interprets the regex runtime's absent array as null.
+	// Ordinary Optional absence remains JavaScript undefined.
+	if op == "regexp.boxMatch" {
+		return nil, T(Dynamic), t.Equal(T(Optional, T(Array, T(String))))
+	}
 	s, ok := RuntimeSpecs[op]
 	if !ok || s.Receiver != t.Kind || (t.Kind != String && len(t.Args) != map[Kind]int{Array: 1, OrderedMap: 2, OrderedSet: 1}[t.Kind]) {
 		return nil, Type{}, false
@@ -286,7 +301,7 @@ func RuntimeSignature(op string, t Type) ([]Type, Type, bool) {
 		return nil, optionalOf(t.Args[0]), true
 	case "set.delete", "map.delete":
 		return []Type{t.Args[0]}, b, true
-	case "map.values":
+	case "map.values", "map.checkedValues":
 		return nil, T(Array, t.Args[1]), true
 	case "string.at":
 		// Absent when the index is out of range (JavaScript s[i] === undefined).
@@ -315,9 +330,9 @@ func RuntimeSignature(op string, t Type) ([]Type, Type, bool) {
 			return nil, Type{}, false
 		}
 		return []Type{T(Optional, T(String))}, T(String), true
-	case "map.set":
+	case "map.set", "map.checkedSet":
 		return []Type{t.Args[0], t.Args[1]}, t, true
-	case "map.get":
+	case "map.get", "map.checkedGet":
 		// get observes a value, not membership: stored undefined and a missing
 		// key both yield undefined. map.has keeps membership independent.
 		return []Type{t.Args[0]}, optionalOf(t.Args[1]), true

@@ -4,12 +4,20 @@ package hir
 // storage. Only explicit classView operations activate this ABI. Constructors
 // are never executed for a view. Nominal assertions use their separate boundary.
 func LiveClassViewLayouts(p *Program) map[string]bool {
+	return LiveClassViewLayoutsWith(p, nil)
+}
+
+// LiveClassViewLayoutsWith adds backend-discovered structural data roots to
+// the same recursive expansion used for explicit classView operations. This
+// lets a backend reuse the view ABI for fields whose structural relationship
+// is visible only after lowering or code generation.
+func LiveClassViewLayoutsWith(p *Program, additional map[string]bool) map[string]bool {
 	classes := map[string]*Class{}
 	for _, c := range p.Classes {
 		classes[c.Name] = c
 	}
 	out := map[string]bool{}
-	for name := range classViewTargets(p) {
+	for name := range classViewTargets(p, additional) {
 		if DataClassView(p, name) {
 			for c := classes[name]; c != nil; c = classes[c.Super] {
 				out[c.Name] = true
@@ -22,7 +30,7 @@ func LiveClassViewLayouts(p *Program) map[string]bool {
 // SealLiveClassViewBoundary preserves a refusal after optimizations remove a
 // prototype call. Backend inlining must never invent methods on plain records.
 func SealLiveClassViewBoundary(p *Program) {
-	for name := range classViewTargets(p) {
+	for name := range classViewTargets(p, nil) {
 		if !DataClassView(p, name) {
 			for _, c := range p.Classes {
 				if c.Name == name {
@@ -34,8 +42,12 @@ func SealLiveClassViewBoundary(p *Program) {
 	}
 }
 
-func classViewTargets(p *Program) map[string]bool {
-	out := map[string]bool{}
+func classViewTargets(p *Program, additional map[string]bool) map[string]bool {
+	out := make(map[string]bool, len(additional))
+	for name := range additional {
+		out[name] = true
+	}
+	_, dynamicMaps := UsedRuntimeOps(p)["dynamic.mapView"]
 	for _, u := range p.Unions {
 		if u != nil {
 			for _, a := range u.Alternatives {
@@ -49,15 +61,63 @@ func classViewTargets(p *Program) map[string]bool {
 		if x == nil {
 			return
 		}
+		if dynamicMaps && x.Kind == RuntimeOp && x.Op == "map.markJS" && len(x.Type.Args) == 2 {
+			t := x.Type.Args[1]
+			for t.Kind == Optional || t.Kind == Array {
+				t = t.Args[0]
+			}
+			out[t.Name] = true
+			if t.Kind == InterfaceRef {
+				for _, m := range p.StructuralUnion(t.Name) {
+					out[m.Type.Name] = true
+				}
+			}
+		}
+		if x.Kind == RuntimeOp && x.Op == "container.readonlyView" {
+			t := x.Type
+			for len(t.Args) > 0 {
+				t = t.Args[len(t.Args)-1]
+			}
+			out[t.Name] = true
+		}
+		if x.Kind == RuntimeOp && x.Op == "set.view" && len(x.Type.Args) == 1 {
+			out[x.Type.Args[0].Name] = true
+		}
 		if x.Kind == RuntimeOp && x.Op == "map.view" {
 			out[x.Type.Args[1].Name] = true
 			out[x.X.Type.Args[1].Name] = true
 		}
-		if x.Kind == RuntimeOp && x.Op == "dynamic.classView" {
+		if x.Kind == RuntimeOp && x.Op == "dynamic.mapView" {
+			t := x.Type.Args[1]
+			for t.Kind == Optional || t.Kind == Array {
+				t = t.Args[0]
+			}
+			out[t.Name] = true
+			if t.Kind == InterfaceRef {
+				for _, m := range p.StructuralUnion(t.Name) {
+					out[m.Type.Name] = true
+				}
+			}
+		}
+		if x.Kind == RuntimeOp && (x.Op == "dynamic.classView" || x.Op == "container.readonlyClassView") {
 			out[x.Type.Name] = true
 		}
 		if x.Kind == RuntimeOp && x.Op == "dynamic.arrayView" && x.Type.Args[0].Kind == ClassRef {
 			out[x.Type.Args[0].Name] = true
+		}
+		if x.Kind == RuntimeOp && x.Op == "dynamic.asRef" {
+			if x.Owner != "" {
+				out[x.Type.Name] = true
+			}
+			t := x.Type
+			for t.Kind == Array || t.Kind == Optional {
+				t = t.Args[0]
+			}
+			if t.Kind == InterfaceRef {
+				for _, member := range p.StructuralUnion(t.Name) {
+					out[member.Type.Name] = true
+				}
+			}
 		}
 		expr(x.X)
 		expr(x.Y)
@@ -98,12 +158,25 @@ func classViewTargets(p *Program) map[string]bool {
 	var expand func(string)
 	var row func(Type)
 	row = func(t Type) {
-		if t.Kind == Optional || t.Kind == Array {
+		if t.Kind == OrderedMap && t.Readonly {
+			row(t.Args[1])
+		} else if t.Kind == OrderedSet && t.Readonly {
+			row(t.Args[0])
+		} else if t.Kind == Optional || t.Kind == Array {
 			row(t.Args[0])
 		} else if t.Kind == ClassRef {
 			if c := classes[t.Name]; c != nil && c.Structural {
 				out[c.Name] = true
 				expand(c.Name)
+			}
+		} else if t.Kind == InterfaceRef {
+			for _, iface := range p.Interfaces {
+				if iface.Name == t.Name {
+					for _, member := range iface.StructuralMembers {
+						row(member.Type)
+					}
+					break
+				}
 			}
 		}
 	}

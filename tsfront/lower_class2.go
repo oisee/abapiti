@@ -15,7 +15,7 @@ import (
 // functionToMethod lowers a module-level function declaration to a static
 // method.
 func (l *lowerer) functionToMethod(fn *ast.Node, owner *hir.Class) *hir.Method {
-	return l.functionBodyToMethod(fn, owner, fn.Name().Text())
+	return l.functionBodyToMethod(fn, owner, l.moduleFunctionMethod(fn.Name().Text()))
 }
 
 func (l *lowerer) functionBodyToMethod(fn *ast.Node, owner *hir.Class, name string) *hir.Method {
@@ -90,12 +90,22 @@ func (l *lowerer) applyDefaults(fn *ast.Node, hm *hir.Method) []*hir.Stmt {
 		if p.Initializer() != nil && i < len(hm.Params) && hm.Params[i].Type.Kind == hir.Optional {
 			hp := hm.Params[i]
 			l.hint = hp.Type.Args[0]
+			// The initializer and its conversion run only when the argument
+			// is absent: their temporaries belong to that branch.
+			saved := l.pend
+			l.pend = nil
 			def := l.expr(p.Initializer())
 			l.hint = hir.Type{}
+			var value *hir.Expr
+			if def != nil {
+				value = l.coerce(def, hp.Type)
+			}
+			pre := l.pend
+			l.pend = saved
 			if def != nil {
 				out = append(out, &hir.Stmt{Kind: hir.If, Node: l.node(p),
 					X:    &hir.Expr{Kind: hir.IsUndefined, Node: l.node(p), Type: hir.T(hir.Bool), X: hir.V(hp.Name, hp.Type)},
-					Body: hir.B(&hir.Stmt{Kind: hir.Assign, Node: l.node(p), X: hir.V(hp.Name, hp.Type), Y: l.coerce(def, hp.Type)})})
+					Body: hir.B(append(pre, &hir.Stmt{Kind: hir.Assign, Node: l.node(p), X: hir.V(hp.Name, hp.Type), Y: value})...)})
 			}
 		}
 		out = append(out, l.bindObjectParameter(p, hm.Params[i])...)
@@ -190,6 +200,8 @@ func (l *lowerer) localFnMemberName(local string, fn *ast.Node) string {
 // method body is lowered on demand, when the enclosing method's scope still
 // holds the captured locals.
 func (l *lowerer) liftLocalFn(name string, fn *ast.Node) *localFn {
+	resultHint := l.liftResultHint
+	l.liftResultHint = hir.Type{}
 	undefinedThis := l.refuseUndefinedThis(fn)
 	receiver := l.gogenRefuseReceiver(fn)
 	if undefinedThis || receiver {
@@ -320,6 +332,11 @@ func (l *lowerer) liftLocalFn(name string, fn *ast.Node) *localFn {
 		if sigs := l.ck.GetSignaturesOfType(t, checker.SignatureKindCall); len(sigs) == 1 && isIntrinsicVoid(l.ck.GetReturnTypeOfSignature(sigs[0])) {
 			m.Result = hir.T(hir.Void)
 		}
+	}
+	if fn.Type() == nil && m.Result.Kind == hir.ClassRef && m.Result.Name == hir.RootObject && (resultHint.Kind == hir.ClassRef || resultHint.Kind == hir.UnionRef) && resultHint.Name != hir.RootObject {
+		// The checker infers the union of the returned literals, which has
+		// no lowered type; the array the callback fills gives their type.
+		m.Result = resultHint
 	}
 	// Distinct lexical functions may share a source name in this class.
 	baseName := m.Name
@@ -462,6 +479,14 @@ func (l *lowerer) freeLocals(fn *ast.Node) []localCapture {
 		switch x.Kind {
 		case ast.KindPropertyAccessExpression:
 			walk(x.Expression())
+			return
+		case ast.KindPropertyAssignment:
+			// {path: value} names a property; only a computed key and the
+			// value read bindings ({path} shorthand stays a read below).
+			if name := x.Name(); name != nil && name.Kind == ast.KindComputedPropertyName {
+				walk(name)
+			}
+			walk(x.Initializer())
 			return
 		case ast.KindParameter, ast.KindVariableDeclaration, ast.KindFunctionDeclaration, ast.KindFunctionExpression:
 			if x.Name() != nil && x.Name().Kind == ast.KindIdentifier {
@@ -664,6 +689,15 @@ func (l *lowerer) coerce(x *hir.Expr, dst hir.Type) *hir.Expr {
 	if x == nil {
 		return nil
 	}
+	if dst.Kind == hir.Optional || dst.Kind == hir.Dynamic {
+		x = l.observedArrayIndex(x)
+	}
+	if l.unprunedFeatures && !l.isFreshContainer(x) && l.mutableContainerCovariance(dst, x.Type, map[string]bool{}) {
+		return x
+	}
+	if view := l.freshContainerConversion(x, dst); view != nil {
+		return view
+	}
 	if (x.Type.Kind == hir.InterfaceRef || x.Type.Kind == hir.ClassRef && strings.HasPrefix(x.Type.Name, "closure.")) && dst.Kind == hir.InterfaceRef {
 		if adapted := l.closureAdapter(nil, x, dst); adapted != nil {
 			return adapted
@@ -680,12 +714,26 @@ func (l *lowerer) coerce(x *hir.Expr, dst hir.Type) *hir.Expr {
 		// field read the checker types as any): checked narrowing, absent raises.
 		x = &hir.Expr{Kind: hir.Narrow, Node: x.Node, Type: x.Type.Args[0], X: x}
 	}
+	if l.unprunedFeatures && l.inJSFile() && dst.Kind == hir.UnionRef && x.Type.Kind == hir.ClassRef && x.Type.Name == hir.RootObject {
+		// Unchecked JavaScript stores an object-typed value (the checker's
+		// type for a family table read) where JSDoc declares the family: the
+		// boxed object goes through the checked projection below.
+		x = l.coerce(x, hir.T(hir.Dynamic))
+	}
 	if l.unprunedFeatures && dst.Kind == hir.UnionRef && x.Type.Kind == hir.Dynamic {
 		// A boxed value (a flow-narrowed `F | null` local) stored into a
 		// family slot: the family shares the boxed storage and the projection
 		// validates membership; a mismatch raises, never retags.
 		if u := l.out.Union(dst.Name); u != nil && u.Complete {
 			return l.rtOp("union.project", x, dst)
+		}
+	}
+	if l.unprunedFeatures && dst.Kind == hir.UnionRef && x.Type.Kind == hir.ClassRef && x.Type.Name == hir.RootObject {
+		// A checker-narrowed object (a type predicate over a wider object
+		// graph) holds a family payload: project its live storage checked,
+		// a value outside the family raises, never retags.
+		if u := l.out.Union(dst.Name); u != nil && u.Complete {
+			return l.rtOp("union.project", l.coerce(x, hir.T(hir.Dynamic)), dst)
 		}
 	}
 	if l.unprunedFeatures && dst.Kind == hir.UnionRef && !x.Type.Equal(dst) {
@@ -700,7 +748,14 @@ func (l *lowerer) coerce(x *hir.Expr, dst hir.Type) *hir.Expr {
 		// `F | undefined` is admitted to (widened into) F first; the optional
 		// wrapping is the ordinary present value.
 		if admitted := l.familyAdmission(x, dst.Args[0]); admitted != x {
-			return l.coerce(admitted, dst)
+			// Reference storage can be absent despite a present-only checker
+			// annotation (notably an unchecked array read). Test absence before
+			// admitting the present arm, and evaluate the source only once.
+			saved := l.tempInit(nil, x.Type, x)
+			saved.Node = x.Node
+			return &hir.Expr{Kind: hir.Conditional, Node: x.Node, Type: dst,
+				X: &hir.Expr{Kind: hir.IsUndefined, Node: x.Node, Type: hir.T(hir.Bool), X: saved},
+				Y: &hir.Expr{Kind: hir.Lit, Node: x.Node, Type: dst}, Z: l.coerce(l.familyAdmission(saved, dst.Args[0]), dst)}
 		}
 	}
 	if l.unprunedFeatures && dst.Kind == hir.Optional && len(dst.Args) == 1 && dst.Args[0].Kind == hir.UnionRef && x.Type.Kind == hir.Optional && len(x.Type.Args) == 1 && l.familyViewSubtype(dst.Args[0], x.Type.Args[0], map[string]bool{}) {
@@ -709,6 +764,12 @@ func (l *lowerer) coerce(x *hir.Expr, dst hir.Type) *hir.Expr {
 		return &hir.Expr{Kind: hir.Conditional, Node: x.Node, Type: dst,
 			X: &hir.Expr{Kind: hir.IsUndefined, Node: x.Node, Type: hir.T(hir.Bool), X: saved},
 			Y: &hir.Expr{Kind: hir.Lit, Node: x.Node, Type: dst}, Z: l.coerce(l.familyAdmission(present, dst.Args[0]), dst)}
+	}
+	if view := l.readonlyContainerConversion(x, dst); view != nil {
+		return view
+	}
+	if l.setReferenceView(dst, x.Type) {
+		return l.rtOp("set.view", x, dst)
 	}
 	if l.mapStorageView(dst, x.Type) {
 		view := l.rtOp("map.view", x, dst)
@@ -724,7 +785,9 @@ func (l *lowerer) coerce(x *hir.Expr, dst hir.Type) *hir.Expr {
 		}
 		// Keep anonymous contextual return shapes on their existing ABI.
 		// Declared data-interface destinations have a stable live-view layout.
-		if !strings.HasPrefix(dst.Args[0].Name, "shape.") && l.dataShapeSubtype(dst.Args[0], src) {
+		// Optional covariant and erased/string arrays use checked element views as
+		// present arrays, preserving absence and their live backing storage.
+		if !strings.HasPrefix(dst.Args[0].Name, "shape.") && l.dataShapeSubtype(dst.Args[0], src) || l.dataArraySubtype(dst.Args[0], src) || l.erasedStringArrayView(src, dst.Args[0]) {
 			if x.Type.Kind != hir.Optional {
 				return l.coerce(l.coerce(x, dst.Args[0]), dst)
 			}
@@ -737,9 +800,20 @@ func (l *lowerer) coerce(x *hir.Expr, dst hir.Type) *hir.Expr {
 				Y: &hir.Expr{Kind: hir.Lit, Node: x.Node, Type: dst}, Z: l.coerce(l.coerce(present, dst.Args[0]), dst)}
 		}
 	}
-	if l.unprunedFeatures && dst.Kind == hir.Array && x.Type.Kind == hir.Array && len(dst.Args) == 1 && len(x.Type.Args) == 1 && dst.Args[0].Kind == hir.ClassRef && x.Type.Args[0].Kind == hir.ClassRef && l.dataShapeSubtype(dst.Args[0], x.Type.Args[0]) {
+	if l.erasedStringArrayView(x.Type, dst) {
+		// Crossing tagged/string element ABIs keeps the array's live storage.
+		// Publication and subsequent reads check the typed element domain.
+		return l.rtOp("dynamic.arrayView", l.coerce(x, hir.T(hir.Dynamic)), dst)
+	}
+	if l.unprunedFeatures && l.dataArraySubtype(dst, x.Type) {
 		// Reuse the original array and convert its element views on access.
 		// Snapshotting would lose aliases and later pushes by the caller.
+		return l.dynamicReference(l.coerce(x, hir.T(hir.Dynamic)), dst)
+	}
+	if l.unprunedFeatures && dst.Kind == hir.Array && x.Type.Kind == hir.Array && len(dst.Args) == 1 && len(x.Type.Args) == 1 && dst.Args[0].Kind == hir.UnionRef && x.Type.Args[0].Kind == hir.UnionRef && !dst.Equal(x.Type) && l.familyViewSubtype(dst.Args[0], x.Type.Args[0], map[string]bool{}) {
+		// ValueExpr[] stored where Expr[] is declared: family values share
+		// the boxed storage, so the same array is viewed as the wider family
+		// (as a scalar is widened); every read validates its member.
 		return l.dynamicReference(l.coerce(x, hir.T(hir.Dynamic)), dst)
 	}
 	if l.unprunedFeatures && l.dataShapeSubtype(dst, x.Type) {
@@ -770,7 +844,16 @@ func (l *lowerer) coerce(x *hir.Expr, dst hir.Type) *hir.Expr {
 			return &hir.Expr{Kind: hir.Conditional, Type: dst, X: &hir.Expr{Kind: hir.IsUndefined, Type: hir.T(hir.Bool), X: x}, Y: &hir.Expr{Kind: hir.Lit, Type: dst}, Z: l.coerce(present, base)}
 		}
 	}
-	if l.unprunedFeatures && x.Type.Kind == hir.Array && dst.Kind == hir.Array && x.Type.Args[0].Kind == hir.Dynamic && dst.Args[0].Kind == hir.ClassRef {
+	if l.unprunedFeatures && x.Type.Kind == hir.Array && dst.Kind == hir.Array && x.Type.Args[0].Kind == hir.Dynamic && (dst.Args[0].Kind == hir.ClassRef || dst.Args[0].Kind == hir.InterfaceRef) {
+		// Family payloads can erase an untagged element union to Dynamic.
+		// Recover its checked reference-array view when a typed local captures
+		// the field, retaining both storage and per-element reference checks.
+		return l.dynamicReference(l.coerce(x, hir.T(hir.Dynamic)), dst)
+	}
+	if l.unprunedFeatures && x.Type.Kind == hir.Array && dst.Kind == hir.Array && len(x.Type.Args) == 1 && len(dst.Args) == 1 && dst.Args[0].Kind == hir.Dynamic && (x.Type.Args[0].Kind == hir.InterfaceRef || x.Type.Args[0].Kind == hir.ClassRef) {
+		// A typed reference array stored in a slot laid out as tagged values
+		// (a family payload's parts: TemplatePart[] of an untagged union): the
+		// same array is viewed, never copied, so later pushes stay visible.
 		return l.dynamicReference(l.coerce(x, hir.T(hir.Dynamic)), dst)
 	}
 	if x.Type.Kind == hir.Dynamic && dst.Kind == hir.ClassValue {
@@ -803,6 +886,12 @@ func (l *lowerer) coerce(x *hir.Expr, dst hir.Type) *hir.Expr {
 		// JSDoc declares a present one (`f(map.get(k))`): the value flows on
 		// unchanged, as `x!` does; absence reaches the use, as in JavaScript.
 		return l.coerce(&hir.Expr{Kind: hir.Narrow, Node: x.Node, Type: x.Type.Args[0], X: x}, dst)
+	}
+	if l.unprunedFeatures && l.inJSFile() && x.Type.Kind == hir.Array && dst.Kind == hir.Array && len(x.Type.Args) == 1 && len(dst.Args) == 1 && l.slotInterfaceRef(x.Type.Args[0]) && (dst.Args[0].Kind == hir.InterfaceRef || dst.Args[0].Kind == hir.ClassRef) && !dst.Args[0].Equal(x.Type.Args[0]) && l.acceptsType(x.Type.Args[0], dst.Args[0]) {
+		// Unchecked JavaScript passes ArtifactObject[] where JSDoc declares
+		// IObject[]: the same array (reference arrays share storage), each
+		// element checked as the subtype when it is read.
+		return &hir.Expr{Kind: hir.Narrow, Node: x.Node, Type: dst, X: x}
 	}
 	if l.unprunedFeatures && l.inJSFile() && x.Type.Kind == hir.UnionRef && dst.Kind == hir.ClassRef {
 		// Unchecked JavaScript passes a family value where JSDoc declares one

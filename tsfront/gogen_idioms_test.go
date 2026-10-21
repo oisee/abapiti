@@ -79,7 +79,7 @@ func TestGogenJSDocObjectParameters(t *testing.T) {
 	if errs := hir.Verify(p); len(errs) > 0 {
 		t.Fatal(errs)
 	}
-	gogenCheck(t, p, "probe.js", source, "6ep:pgiCPa", "RequireObjectCoercible")
+	gogenCheck(t, p, "probe.js", source, "6ep:pgiCPa")
 }
 
 func TestGogenObjectParameters(t *testing.T) {
@@ -89,7 +89,7 @@ func TestGogenObjectParameters(t *testing.T) {
   return st + ctx + t + expr + place + rowValue;
  }
  function g(program: string, {classes: CLASSES, poly: POLY}: {classes: string; poly: string}): string { return program + CLASSES + POLY; }
- class Probe { static run(): string { const r = {expr:"e", place:"p", rowValue:3}; return f("s","c",2,r) + ":" + r.expr + ":" + g("g",{classes:"C",poly:"P"}); } }`, "sc2e!p3:e:gCP", "RequireObjectCoercible")
+ class Probe { static run(): string { const r = {expr:"e", place:"p", rowValue:3}; return f("s","c",2,r) + ":" + r.expr + ":" + g("g",{classes:"C",poly:"P"}); } }`, "sc2e!p3:e:gCP")
 }
 
 func TestGogenObjectParameterGetters(t *testing.T) {
@@ -100,7 +100,7 @@ func TestGogenObjectParameterGetters(t *testing.T) {
  static arg(): number {Source.trace += "a";return 1;}
  }
  function read({expr, place: renamed}: Source, n: number): string {return expr+":"+renamed+":"+Source.trace+n;}
- class Probe {static run(): string {return read(new Source(),Source.arg());}}`, "ae:aep:aep1", "RequireObjectCoercible")
+ class Probe {static run(): string {return read(new Source(),Source.arg());}}`, "ae:aep:aep1")
 }
 
 func TestGogenObjectParameterRefusals(t *testing.T) {
@@ -113,7 +113,7 @@ func TestGogenObjectParameterRefusals(t *testing.T) {
 
 func TestGogenObjectParameterNameCollision(t *testing.T) {
 	gogenOracle(t, `function f($binding1:string, {expr}: {expr:string}):string {return $binding1+expr;}
- class Probe {static run():string {return f("a",{expr:"b"});}}`, "ab", "RequireObjectCoercible")
+ class Probe {static run():string {return f("a",{expr:"b"});}}`, "ab")
 }
 
 func TestGogenWeakMapNodeOracle(t *testing.T) {

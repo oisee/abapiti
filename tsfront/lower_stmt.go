@@ -356,6 +356,9 @@ func (l *lowerer) varDecl(d *ast.Node) []*hir.Stmt {
 		if evolved, ok := l.evolvedArrayType(d, typ); ok {
 			typ = evolved
 		}
+		if sink, ok := l.sinkArrayType(d, typ); ok {
+			typ = sink
+		}
 		l.hint = typ
 		x = l.expr(init)
 		l.hint = hir.Type{}
@@ -434,12 +437,25 @@ func (l *lowerer) varDecl(d *ast.Node) []*hir.Stmt {
 		if d.Type() == nil && init != nil && d.Parent != nil && d.Parent.Flags&ast.NodeFlagsConst == 0 {
 			typ = l.widenLet(d, sym, typ)
 		}
+		if init != nil && init.Kind == ast.KindCallExpression {
+			if sink, ok := l.sinkArrayType(d, typ); ok {
+				typ = sink
+			}
+		}
 		if init != nil {
 			// The contextual type makes `undefined` literals well typed.
 			l.hint = typ
 			x = l.expr(init)
 			l.hint = hir.Type{}
 			if x == nil {
+				if l.unprunedFeatures && l.integerOptions.TrapOnFailure {
+					// Keep the checked binding visible to later closures. A failed
+					// initializer must not expose an unrelated module global of
+					// the same name. The initializer still refuses execution.
+					declaration := l.localDeclaration(d, name, typ, nil)
+					trap := &hir.Stmt{Kind: hir.Trap, Node: l.node(init), Name: "lowering trap: " + l.locOf(init) + ": initializer of " + name + " was not lowered"}
+					return []*hir.Stmt{declaration, trap}
+				}
 				return nil
 			}
 			if d.Type() == nil && isArrayAssignment(init) && x.Type.Kind == hir.Array {
@@ -482,7 +498,29 @@ func (l *lowerer) varDecl(d *ast.Node) []*hir.Stmt {
 		}
 	}
 	if x != nil {
+		if l.unprunedFeatures && d.Type() == nil && arrayIndexRead(x) {
+			// An inferred local is storage, not a required-value use. Carry
+			// absence until a consumer asks for the annotated element type.
+			x = l.observedArrayIndex(x)
+			if x.Type.Kind == hir.Optional {
+				typ = x.Type
+			}
+		}
+		if l.unprunedFeatures && typ.Kind == hir.Optional && arrayIndexRead(x) {
+			// The checker narrows an optional binding to the array's annotated
+			// element type at initialization. That does not prove presence.
+			if l.widenedLets == nil {
+				l.widenedLets = map[*ast.Symbol]bool{}
+			}
+			l.widenedLets[sym] = true
+		}
 		x = l.coerce(x, typ)
+	}
+	if x != nil && l.isFreshContainer(x) && sym != nil {
+		if l.freshArraySymbols == nil {
+			l.freshArraySymbols = map[*ast.Symbol]bool{}
+		}
+		l.freshArraySymbols[sym] = true
 	}
 	return append(stmts, l.localDeclaration(d, name, typ, x))
 }
@@ -793,8 +831,19 @@ func (l *lowerer) forStatement(n *ast.Node) *hir.Stmt {
 	if f.Statement != nil {
 		body = append(body, l.scopeBlock(f.Statement))
 	}
+	var update *hir.Stmt
 	if f.Incrementor != nil {
-		update := l.expressionStatement(f.Incrementor)
+		update = l.expressionStatement(f.Incrementor)
+	}
+	l.pop()
+	out = append(out, l.steppedWhile(n, cond, body, update))
+	return hir.B(out...)
+}
+
+// steppedWhile is a while loop whose body ends with update; a continue
+// targeting this loop executes the update before jumping back to cond.
+func (l *lowerer) steppedWhile(n *ast.Node, cond *hir.Expr, body []*hir.Stmt, update *hir.Stmt) *hir.Stmt {
+	if update != nil {
 		if continueCrossesFinally(hir.B(body...), false) {
 			// Put the update at the next iteration's entry. An intervening
 			// finalizer runs first and may replace continue with break/return.
@@ -811,9 +860,7 @@ func (l *lowerer) forStatement(n *ast.Node) *hir.Stmt {
 			body = append(body, update)
 		}
 	}
-	l.pop()
-	out = append(out, &hir.Stmt{Kind: hir.While, Node: l.node(n), X: cond, Body: hir.B(body...)})
-	return hir.B(out...)
+	return &hir.Stmt{Kind: hir.While, Node: l.node(n), X: cond, Body: hir.B(body...)}
 }
 
 func (l *lowerer) forOfStatement(n *ast.Node) *hir.Stmt {
@@ -894,6 +941,33 @@ func (l *lowerer) forOfStatement(n *ast.Node) *hir.Stmt {
 	if elem.Kind == hir.Void {
 		return nil
 	}
+	if l.isMatchArrayType(l.ck.GetTypeAtLocation(f.Expression)) {
+		if decls[0].Name().Kind != ast.KindIdentifier {
+			// An element is a group string or undefined: JS would destructure
+			// the string's code points or throw, never the match array.
+			l.diagf(decls[0].Name(), "unsupported-binding", "for-of over a regexp match array needs an identifier binding")
+			return nil
+		}
+		recv := l.tempInit(f.Expression, x.Type, x)
+		i := hir.T(hir.I32)
+		length := l.tempInit(f.Expression, i, l.rtOp("array.length", recv, i))
+		index := l.tempInit(f.Expression, i, hir.L(i, 0))
+		less := func() *hir.Expr {
+			return &hir.Expr{Kind: hir.Binary, Node: l.node(n), Op: "<", Type: hir.T(hir.Bool), X: index, Y: length}
+		}
+		// The always-true guard restates the loop condition so the integer
+		// range proof also holds when the step runs at the next iteration's entry.
+		step := &hir.Stmt{Kind: hir.If, Node: l.node(n), X: less(), Body: &hir.Stmt{Kind: hir.Assign, Node: l.node(n), X: index,
+			Y: &hir.Expr{Kind: hir.Binary, Node: l.node(n), Op: "+", Type: i, X: index, Y: hir.L(i, 1)}}}
+		l.push()
+		name := decls[0].Name().Text()
+		l.declare(name, hir.T(hir.Optional, elem))
+		inner := []*hir.Stmt{{Kind: hir.VarDecl, Node: l.node(n), Name: name,
+			Type: hir.T(hir.Optional, elem), X: l.rtOp("array.get", recv, hir.T(hir.Optional, elem), index)},
+			l.scopeBlock(f.Statement)}
+		l.pop()
+		return l.steppedWhile(n, less(), inner, step)
+	}
 	l.push()
 	if decls[0].Name().Kind != ast.KindIdentifier {
 		// A destructuring binding: loop over a fresh name, then declare the
@@ -902,7 +976,7 @@ func (l *lowerer) forOfStatement(n *ast.Node) *hir.Stmt {
 		name := "f" + itoa(l.serial)
 		saved := l.pend
 		l.pend = nil
-		l.destructurePattern(decls[0].Name(), hir.V(name, elem))
+		l.destructurePattern(decls[0].Name(), hir.V(name, elem), false)
 		pre := l.pend
 		l.pend = saved
 		body := l.scopeBlock(f.Statement)

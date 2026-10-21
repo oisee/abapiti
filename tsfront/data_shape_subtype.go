@@ -5,6 +5,13 @@ import (
 	"github.com/oisee/abapiti/internal/tsgo/ast"
 )
 
+// dataArraySubtype uses the same data-only element proof for present and
+// optional array destinations. Conversion attaches a live view; it never copies
+// storage or admits unrelated nominal/structural element layouts.
+func (l *lowerer) dataArraySubtype(dst, src hir.Type) bool {
+	return dst.Kind == hir.Array && src.Kind == hir.Array && len(dst.Args) == 1 && len(src.Args) == 1 && l.dataShapeSubtype(dst.Args[0], src.Args[0])
+}
+
 // Property-only structural compatibility. Container storage remains invariant;
 // a present primitive or reference may widen to its optional slot through the live
 // adapter. Absent writes into required backing storage still explicitly refuse.
@@ -38,10 +45,30 @@ func (l *lowerer) dataShapeSubtypeSeen(dst, src hir.Type, active map[string]bool
 				continue
 			}
 			compatible := f.Type.Equal(g.Type) || l.gogenOptionalDynamicField(f.Type, g.Type)
+			if (f.Type.Readonly || f.Type.Kind == hir.Optional && f.Type.Args[0].Readonly) && l.readonlyShapeRead(f.Type, g.Type, active) {
+				compatible = true
+			}
 			if g.Type.Kind == hir.Optional && len(g.Type.Args) == 1 && f.Type.Equal(g.Type.Args[0]) && l.widenedRequiredProperty(s, g.Name) {
 				compatible = true
 			}
-			if f.Readonly && g.Readonly && (hir.UnionReadAccepts(l.out, f.Type, g.Type) || hir.StructuralStorageEquivalent(l.out, f.Type, g.Type, l.shapeLike) || l.readonlyShapeRead(f.Type, g.Type, active)) {
+			if f.Readonly && (hir.UnionReadAccepts(l.out, f.Type, g.Type) || hir.StructuralStorageEquivalent(l.out, f.Type, g.Type, l.shapeLike) || l.readonlyShapeRead(f.Type, g.Type, active)) {
+				compatible = true
+			}
+			if f.Type.Kind == hir.Array && g.Type.Kind == hir.Array && f.Type.Args[0].IsRef() && g.Type.Args[0].IsRef() && l.readonlyShapeRead(f.Type, g.Type, active) {
+				// Reference arrays already share erased element storage. A
+				// structural field can expose their live covariant element view
+				// even when the property holding the readonly array is mutable.
+				compatible = true
+			}
+			if l.dataShapeSubtypeSeen(f.Type, g.Type, active) {
+				// A nested record of a property-only subtype (QueryContext's
+				// program: QueryProgram over CompilationContext's
+				// FrontendProgram): reads view the same live nested record.
+				compatible = true
+			}
+			if f.Type.Kind == hir.Optional && len(f.Type.Args) == 1 && l.dataShapeSubtypeSeen(f.Type.Args[0], g.Type, active) {
+				// A present nested record viewed through an optional slot of a
+				// property-only supertype: the same live nested view.
 				compatible = true
 			}
 			if f.Type.Kind == hir.Dynamic || f.Type.Kind == hir.Optional && f.Type.Args[0].Equal(g.Type) {
@@ -85,7 +112,7 @@ func (l *lowerer) structuralEqualityTypes(a, b hir.Type) bool {
 	if b.Kind == hir.Optional {
 		b = b.Args[0]
 	}
-	return l.dataShapeSubtype(a, b) || l.dataShapeSubtype(b, a) || l.mapStorageView(a, b) || l.mapStorageView(b, a)
+	return l.readonlyContainerAssignable(a, b) || l.readonlyContainerAssignable(b, a) || l.dataShapeSubtype(a, b) || l.dataShapeSubtype(b, a) || l.mapStorageView(a, b) || l.mapStorageView(b, a) || l.setReferenceView(a, b) || l.setReferenceView(b, a)
 }
 
 // Required checker properties may carry optional primitive storage because an
@@ -113,6 +140,9 @@ func (l *lowerer) readonlyShapeRead(dst, src hir.Type, active map[string]bool) b
 			src = src.Args[0]
 		}
 		return l.readonlyShapeRead(dst.Args[0], src, active)
+	}
+	if l.readonlyContainerAssignable(dst, src) {
+		return true
 	}
 	if dst.Kind == hir.Array && src.Kind == hir.Array && len(dst.Args) == 1 && len(src.Args) == 1 {
 		return l.readonlyShapeRead(dst.Args[0], src.Args[0], active)

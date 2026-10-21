@@ -116,12 +116,17 @@ func (e *emitter) regexpJSSubclass() {
 		text = strings.Replace(text, "DATA "+field+" TYPE abap_bool.\n", "", 1)
 	}
 	text = strings.Replace(text, "DATA last_index TYPE i.\n", "", 1)
+	for _, inherited := range []string{"TYPES: BEGIN OF group_name_type", "TYPES group_names_type ", "DATA group_names TYPE"} {
+		start := strings.Index(text, inherited)
+		end := strings.Index(text[start:], ".\n") + start
+		text = text[:start] + text[end+2:]
+	}
 	for _, method := range []string{"test", "match_test", "match", "replace"} {
 		start := strings.Index(text, "METHODS "+method+" IMPORTING")
 		end := strings.Index(text[start:], ".\n") + start
 		text = text[:start] + "METHODS " + method + " REDEFINITION" + text[end:]
 	}
-	text = strings.Replace(text, "METHOD constructor.\n", "METHOD constructor.\nsuper->constructor( pattern = pattern flags = flags excluded_pattern = excluded_pattern ).\nCLEAR: source, posix, excluded, ignore_case, global.\n", 1)
+	text = strings.Replace(text, "METHOD constructor.\n", "METHOD constructor.\nsuper->constructor( pattern = pattern flags = flags excluded_pattern = excluded_pattern ).\nCLEAR: source, posix, excluded, ignore_case, global, group_names.\n", 1)
 	arr := e.typ(hir.T(hir.Array, hir.T(hir.String)))
 	text = strings.Replace(text, "PUBLIC SECTION.", "PUBLIC SECTION.\nCLASS-METHODS exec_legacy IMPORTING p0 TYPE REF TO "+base+" p1 TYPE string RETURNING VALUE(result) TYPE "+arr+".\n", 1)
 	text = strings.TrimSuffix(text, "ENDCLASS.\n") + `METHOD exec_legacy.

@@ -20,7 +20,10 @@ func (l *lowerer) objectLogical(n *ast.Node, x *hir.Expr) (*hir.Expr, bool) {
 	y := l.expr(b.Right)
 	var yes, no *hir.Expr
 	if y != nil {
-		y = l.coerce(y, typ)
+		if target, ok := nullableReferenceJoin(x, y, l.hint); ok {
+			typ = target
+		}
+		y = l.conditionalConversion(b.Right, y, typ)
 	}
 	pending := l.pend
 	l.pend = saved

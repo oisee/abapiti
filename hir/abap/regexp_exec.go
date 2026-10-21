@@ -8,6 +8,28 @@ import (
 // Added only for materialized exec results, keeping unrelated output stable.
 func (e *emitter) regexpExecRuntime(name string) {
 	arr := e.typ(hir.T(hir.Array, hir.T(hir.String)))
+	// Named groups are read only as a Dynamic (array.matchGroups), so a
+	// program without the dynamic box has no reader and no box to fill.
+	namedDecl, named := "", ""
+	if e.dynamicUsed {
+		dynamic := e.name("runtime.dynamic")
+		namedDecl = "DATA named_row TYPE group_name_type.\nDATA named_value TYPE REF TO " + dynamic + ".\n"
+		named = `IF group_names IS NOT INITIAL.
+  CREATE OBJECT result->match_groups.
+  result->match_groups->tag = ` + dynamic + `=>tag_object.
+  LOOP AT group_names INTO named_row.
+    READ TABLE groups INDEX named_row-index INTO group.
+    IF sy-subrc = 0 AND group-offset >= 0.
+      CREATE OBJECT named_value.
+      named_value->tag = ` + dynamic + `=>tag_string.
+      named_value->sval = p0+group-offset(group-length).
+    ENDIF.
+    APPEND VALUE #( k = named_row-name v = named_value ) TO result->match_groups->entries.
+    CLEAR named_value.
+  ENDLOOP.
+ENDIF.
+`
+	}
 	file := name + ".clas.abap"
 	e.files[file] = strings.Replace(e.files[file], "DATA global TYPE abap_bool.", "DATA global TYPE abap_bool.\nDATA sticky TYPE abap_bool.\nDATA last_index TYPE i.\nDATA exec_pattern TYPE string.", 1)
 	e.files[file] = strings.Replace(e.files[file], "ELSEIF c = 'g'.", "ELSEIF c = 'y'.\n    sticky = abap_true.\n  ELSEIF c = 'g'.", 1)
@@ -23,7 +45,7 @@ DATA search TYPE string.
 DATA hit TYPE match_result.
 DATA groups TYPE submatch_result_tab.
 DATA group TYPE submatch_result.
-IF global = abap_true OR sticky = abap_true.
+` + namedDecl + `IF global = abap_true OR sticky = abap_true.
   start = nmax( val1 = 0 val2 = last_index ).
 ENDIF.
 IF start > strlen( p0 ).
@@ -103,7 +125,7 @@ LOOP AT groups INTO group.
   ENDIF.
   APPEND part TO result->items.
 ENDLOOP.
-ENDMETHOD.
+` + named + `ENDMETHOD.
 ENDCLASS.
 `
 	text := e.files[file]

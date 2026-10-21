@@ -312,6 +312,9 @@ func (l *lowerer) recursiveFamilyType(n *ast.Node, t *checker.Type) (res hir.Typ
 }
 
 func (r *familyRegistration) typ(n *ast.Node, t *checker.Type) hir.Type {
+	return r.l.rememberContainer(t, r.typRaw(n, t))
+}
+func (r *familyRegistration) typRaw(n *ast.Node, t *checker.Type) hir.Type {
 	l := r.l
 	if t == nil {
 		r.failed = true
@@ -681,7 +684,7 @@ func (r *familyRegistration) familyCopy(parts []*checker.Type) (hir.Type, bool) 
 				if used[m] || tags == "" || tags != strings.Join(l.familyTags(l.ck.GetTypeOfPropertyOfType(m, f.tag)), ",") {
 					continue
 				}
-				if l.familyCopyShape(part, m) {
+				if l.familyCopyShape(part, m) || l.familyCopyWidens(part, m) {
 					used[m], found = true, true
 					break
 				}
@@ -710,6 +713,39 @@ func (l *lowerer) familyCopyShape(part, member *checker.Type) bool {
 		}
 		x, y := l.ck.GetTypeOfPropertyOfType(part, p.Name), l.ck.GetTypeOfPropertyOfType(member, p.Name)
 		if x != y && (!l.ck.IsTypeAssignableTo(x, y) || !l.ck.IsTypeAssignableTo(y, x)) {
+			return false
+		}
+	}
+	return true
+}
+
+// familyCopyWidens admits a copy whose family member only adds optional
+// properties (OSG FrontendStmt = FrontendIR<Stmt> & {pos?}: a body slot typed
+// FrontendIR<Stmt>[] holds the same records). The checker must find the two
+// mutually assignable; the shared properties are copies as in familyCopyShape.
+func (l *lowerer) familyCopyWidens(part, member *checker.Type) bool {
+	a, b := l.ck.GetPropertiesOfType(part), l.ck.GetPropertiesOfType(member)
+	if len(a) >= len(b) || !l.ck.IsTypeAssignableTo(part, member) || !l.ck.IsTypeAssignableTo(member, part) {
+		return false
+	}
+	for _, p := range b {
+		q := l.ck.GetPropertyOfType(part, p.Name)
+		if q == nil {
+			if p.Flags&ast.SymbolFlagsOptional == 0 {
+				return false
+			}
+			continue
+		}
+		if (q.Flags&ast.SymbolFlagsOptional != 0) != (p.Flags&ast.SymbolFlagsOptional != 0) {
+			return false
+		}
+		x, y := l.ck.GetTypeOfPropertyOfType(part, p.Name), l.ck.GetTypeOfPropertyOfType(member, p.Name)
+		if x != y && (!l.ck.IsTypeAssignableTo(x, y) || !l.ck.IsTypeAssignableTo(y, x)) {
+			return false
+		}
+	}
+	for _, p := range a {
+		if l.ck.GetPropertyOfType(member, p.Name) == nil {
 			return false
 		}
 	}

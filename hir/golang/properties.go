@@ -22,6 +22,9 @@ func (e *emitter) propertyLookup(t hir.Type) string {
 	if t.Name == hir.RootObject {
 		return e.structuralPropertyLookup(name)
 	}
+	if t.Kind == hir.InterfaceRef {
+		return e.interfacePropertyLookup(name, t)
+	}
 	c := e.classBy(t.Name)
 	type entry struct {
 		name, value string
@@ -112,6 +115,13 @@ func (e *emitter) propertyLookup(t hir.Type) string {
 	if e.recordDeletion {
 		line("if self.%s().deletedKeys[key] {return struct{value *dynamic;own,exists bool}{}}", e.getter(c.Name))
 	}
+	dropped := false
+	for base := c; base != nil; base = e.classBy(base.Super) {
+		dropped = dropped || base.FieldsDropped
+	}
+	if dropped {
+		line("if _,ok:=%s[key];!ok {panic(newTrap(\"property lookup on a class whose fields were dropped by a lowering trap\"))}", table)
+	}
 	line("p,ok:=%s[key];var value *dynamic;if !read {return struct{value *dynamic;own,exists bool}{nil,p.own,ok}};switch p.slot {", table)
 	for i, p := range entries {
 		line("case %d:if ok {value=%s}", i, p.value)
@@ -131,7 +141,7 @@ func (e *emitter) structuralPropertyLookup(name string) string {
 	line := func(f string, args ...any) { fmt.Fprintf(&b, f+"\n", args...) }
 	line("func %s(self any,key jsString,read bool) struct{value *dynamic;own,exists bool} {", name)
 	line("if nilRef(self) {panic(newRangeFault())};d:=box(self)")
-	line("if d==nil {panic(newRangeFault())};if d.Tag!=tagObject {")
+	line("if d==nil {panic(newRangeFault())};if d.Tag!=tagObject && !isArray(d) {")
 	line("allowed:=false;switch classOf(d.Value) {")
 	for _, c := range e.p.Classes {
 		if c.Structural {
@@ -139,13 +149,63 @@ func (e *emitter) structuralPropertyLookup(name string) string {
 		}
 	}
 	line("};if !allowed {panic(newTrap(\"erased property lookup requires original structural storage\"))}}")
-	line("keys:=dynamicKeys(d);own:=false;for _,k:=range keys.Items {if k==key {own=true;break}}")
+	line("keys:=dynamicKeys(d);own:=isArray(d) && key==str(\"length\");for _,k:=range keys.Items {if k==key {own=true;break}}")
 	line("inherited:=false;switch key {")
 	for _, k := range []string{"constructor", "__proto__", "hasOwnProperty", "isPrototypeOf", "propertyIsEnumerable", "toLocaleString", "toString", "valueOf", "__defineGetter__", "__defineSetter__", "__lookupGetter__", "__lookupSetter__"} {
 		line("case str(%q):inherited=true", k)
 	}
-	line("};var value *dynamic;if read {if own {value=d.get(key)} else if inherited {panic(newTrap(\"erased prototype function reads are unsupported\"))}}")
+	line("};if isArray(d) {switch key {")
+	for _, k := range []string{"at", "concat", "copyWithin", "fill", "find", "findIndex", "findLast", "findLastIndex", "lastIndexOf", "pop", "push", "reverse", "shift", "unshift", "slice", "sort", "splice", "includes", "indexOf", "join", "keys", "entries", "values", "forEach", "filter", "flat", "flatMap", "map", "every", "some", "reduce", "reduceRight", "toReversed", "toSorted", "toSpliced", "with"} {
+		line("case str(%q):inherited=true", k)
+	}
+	line("}}")
+	line("var value *dynamic;if read {if own {value=d.get(key)} else if inherited {panic(newTrap(\"erased prototype function reads are unsupported\"))}}")
 	line("return struct{value *dynamic;own,exists bool}{value,own,own||inherited}}")
+	e.extra.WriteString(b.String())
+	return name
+}
+
+// An interface value (OSG's ArtifactObject slot reads) holds an instance of a
+// class with every interface method. Its actual class selects that class's
+// property table; any other run-time class traps.
+func (e *emitter) interfacePropertyLookup(name string, t hir.Type) string {
+	var iface *hir.Interface
+	for _, i := range e.p.Interfaces {
+		if i.Name == t.Name {
+			iface = i
+		}
+	}
+	var cases []string
+	for _, c := range e.p.Classes {
+		if iface == nil || c.Structural || c.Abstract {
+			continue
+		}
+		complete := true
+		for _, m := range iface.Methods {
+			found := false
+			for base := c; base != nil && !found; base = e.classBy(base.Super) {
+				for _, own := range base.Methods {
+					found = found || !own.Static && own.Name == m.Name
+				}
+			}
+			complete = complete && found
+		}
+		if complete {
+			lookup := e.propertyLookup(hir.Ref(c.Name))
+			cases = append(cases, fmt.Sprintf("case &%s:return %s(castRef[%s](self),key,read)", e.name("descriptor."+c.Name), lookup, e.typ(hir.Ref(c.Name))))
+		}
+	}
+	var b strings.Builder
+	line := func(f string, args ...any) { fmt.Fprintf(&b, f+"\n", args...) }
+	line("func %s(self %s,key jsString,read bool) struct{value *dynamic;own,exists bool} {", name, e.typ(t))
+	line("if nilRef(self) {panic(newRangeFault())}")
+	line("switch classOf(self) {")
+	for _, c := range cases {
+		line("%s", c)
+	}
+	line("}")
+	line("panic(newTrap(\"property lookup on an interface value of an unlisted class\"))")
+	line("}")
 	e.extra.WriteString(b.String())
 	return name
 }

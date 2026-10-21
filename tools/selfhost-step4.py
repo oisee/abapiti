@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 """Emit, build and compare TS-HG gogen against the pinned Node step-4 driver.
 
-Usage: tools/selfhost-step4.py [--expect-ref <sha256-prefix>] [--list-traps] <abapiti-bin> <osg> <abaplint> <transpiler> <out-dir>
+Usage: tools/selfhost-step4.py [--inputs PATH] [--expect-ref <sha256-prefix>] [--list-traps] <abapiti-bin> <osg> <abaplint> <transpiler> <out-dir>
+
+--inputs stages an alternative inputs JSON for Node, replay and Go, restoring the
+captured inputs on exit, and prints its Node reference SHA256. --expect-ref is optional.
 
 --list-traps skips go build/run/cmp: from the one emission it lists every trap
 site whose source lies in code the Node reference executed (V8 block coverage)
@@ -160,26 +163,40 @@ def body_probe(text, start):
     return start
 
 
-def covered_hits(functions, offset, body=False, text=None):
+def covered_hits(functions, offset, body=False, text=None, owner_offset=None):
     """Execution count of the code at a UTF-16 offset in one V8 script.
 
     Block coverage nests: the innermost range containing the offset decides,
     so a count-0 branch inside an executed function is not executed. A body
     trap fires on entry, so it takes the count of the function V8 starts at
-    or just after the trap node (keyword, modifiers and name come first).
+    or just after MethodSource (keyword, modifiers and name come first).
+    That owner's range must also contain the trap node; an inner expression
+    can belong to an uncalled nested arrow without changing the owner count.
     Returns (count, evidence, probe offset for an entry breakpoint).
     """
     if body:
         best = None
+        start = owner_offset if owner_offset is not None else offset
+        script_length = len(text.encode('utf-16-le')) // 2 if text is not None else None
         for fn in functions:
             r = fn['ranges'][0]
-            gap = r['startOffset'] - offset
+            # V8 also records the module itself as an unnamed function. It
+            # is not the HIR method, even when its declaration starts at 0.
+            if owner_offset is not None and not fn.get('functionName') and r['startOffset'] == 0 and r['endOffset'] == script_length:
+                continue
+            gap = r['startOffset'] - start
+            # Source may itself be the declaration, including an export or
+            # modifier prefix that V8 excludes from the function range.
+            if owner_offset is not None and not start <= offset < r['endOffset']:
+                continue
             # Nearest start wins; at equal starts the innermost (shortest) range.
             if 0 <= gap < 512 and r['endOffset'] > r['startOffset'] and (best is None or (r['startOffset'], r['endOffset']) < (best['startOffset'], best['endOffset'])):
-                if text is None or not re.search(r'[{};]', text.encode('utf-16-le')[offset * 2:r['startOffset'] * 2].decode('utf-16-le', errors='ignore')):
+                if text is None or not re.search(r'[{};]', text.encode('utf-16-le')[start * 2:r['startOffset'] * 2].decode('utf-16-le', errors='ignore')):
                     best = r
         if best is not None:
             return best['count'], 'function', body_probe(text, best['startOffset']) if text is not None else best['startOffset']
+        if owner_offset is not None:
+            return None, 'owner-unmapped', None
     inner = None
     for fn in functions:
         for r in fn['ranges']:
@@ -250,14 +267,19 @@ def classify_traps(sites, osg, lint, transpiler, scripts):
                 if functions is None:
                     row.update(hits=0, evidence='unloaded')
                 elif offset is not None:
-                    hits, evidence, probe = covered_hits(functions, offset, site.get('Kind') == 'body', texts[path])
+                    # TrapSites writes m.Source as MethodSource, separately
+                    # from the refused expression's Source. Class/Method own
+                    # this location even for anonymous lifted closures.
+                    owner = site_location({'Source': site.get('MethodSource', '')}) if site.get('Kind') == 'body' else None
+                    owner_offset = utf16_offset(texts[path], owner[1], owner[2]) if owner and (osg / owner[0]).resolve() == path else None
+                    hits, evidence, probe = covered_hits(functions, offset, site.get('Kind') == 'body', texts[path], owner_offset)
                     row.update(hits=hits, evidence=evidence, url=path.as_uri(), probe=probe, text=path)
         if row['hits'] is None and site.get('Kind') != 'guard':
             unknown[side] += 1
         message = site.get('Message', '')
         m = CASCADE.search(message)
         row['root'] = 'cascade' if m and m.group(1) in trapped - {site['Method']} else 'root'
-        if row.get('text') is not None:
+        if row.get('text') is not None and row.get('probe') is not None:
             row['bp'] = utf16_line_column(texts[row['text']], row['probe'])
         rows.append(row)
     return rows, unknown['A'], unknown['G']
@@ -285,6 +307,15 @@ def write_traps(out, rows, unknown_a, unknown_g):
 
 
 def main(args):
+    inputs = None
+    if '--inputs' in args:
+        i = args.index('--inputs')
+        if i + 1 >= len(args):
+            print(__doc__, file=sys.stderr)
+            return 2
+        inputs = Path(args[i + 1]).resolve().read_bytes()
+        json.loads(inputs)  # Reject malformed JSON before changing the checkout.
+        args = args[:i] + args[i + 2:]
     expect = None
     if '--expect-ref' in args:
         i = args.index('--expect-ref')
@@ -312,6 +343,8 @@ def main(args):
     ref, actual = out / 'ref.go', out / 'gogen.go'
     driver = osg / '.local/step4/step4-driver.mjs'
     original = driver.read_bytes()
+    inputs_path = driver.with_name('step4-inputs.json')
+    original_inputs = inputs_path.read_bytes() if inputs is not None and inputs_path.exists() else None
     host_ts = driver.with_name('step4-host.ts')
     config_path = osg / 'tsconfig.selfhost-step4.json'
     temporary = [host_ts, config_path]
@@ -337,12 +370,17 @@ def main(args):
             raise RuntimeError(f'{name} failed (exit {result.returncode}); see {out / (name + ".log")}')
 
     try:
+        if inputs is not None:
+            (out / 'inputs.json').write_bytes(inputs)
+            inputs_path.write_bytes(inputs)
         # The reference executes the original driver, with coverage from that
         # exact execution. Validate before adapting any source.
         with ref.open('wb') as f:
             heavy(['node', driver], 'reference', stdout=f, extra={'NODE_V8_COVERAGE': str(out / 'v8')})
         if digest(ref) == EMPTY_SHA256:
             raise RuntimeError('Node reference is empty; see reference.log')
+        if inputs is not None:
+            print(f'step4-reference: sha256={digest(ref)}')
         if expect and not digest(ref).startswith(expect):
             raise RuntimeError(f'reference SHA256 mismatch: {digest(ref)}; expected {expect}')
         (out / 'closure.mjs').write_text(CLOSURE)
@@ -450,6 +488,11 @@ def main(args):
         print(str(error), file=sys.stderr)
         return 1
     finally:
+        if inputs is not None:
+            if original_inputs is None:
+                inputs_path.unlink(missing_ok=True)
+            else:
+                inputs_path.write_bytes(original_inputs)
         driver.write_bytes(original)
         for path in temporary:
             path.unlink(missing_ok=True)
