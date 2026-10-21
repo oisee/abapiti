@@ -47,6 +47,8 @@ type emitter struct {
 	currentNode     *hir.Node
 	valueSlots      map[string]bool
 	materialized    map[string]bool
+	// Native dispatch bodies are generated at first use to retain refusal context.
+	nativeCalls map[string]string
 	// Usage gates keep the emitted file set of programs that do not use the
 	// phase-2 machinery unchanged.
 	descriptors, regexpUsed, dynamicUsed, errorUsed bool
@@ -288,6 +290,7 @@ func emitNamed(p *hir.Program, refusals *[]error, assertionOwners map[string]boo
 	for _, c := range p.Classes {
 		e.class(c)
 	}
+	e.nativeCall0Runtime()
 	if e.unionFamilies != nil {
 		e.unionFamilyClasses()
 	}

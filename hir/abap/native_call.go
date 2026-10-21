@@ -43,6 +43,41 @@ func (b *body) nativeCall0(x *hir.Expr, n, a string) {
 		e.refuse(fmt.Errorf("node %d (%s): native call method name", x.ID, x.Source))
 		return
 	}
+	helper := e.name("runtime.native_call0")
+	member := e.member(name)
+	if e.nativeCalls == nil {
+		e.nativeCalls = map[string]string{}
+	}
+	if _, used := e.nativeCalls[name]; !used {
+		shared := &body{e: e, m: &hir.Method{Result: hir.T(hir.Dynamic)}, locals: map[string]string{}}
+		shared.nativeCall0Dispatch(name, "result", "a")
+		e.nativeCalls[name] = "METHOD " + member + ".\n" + shared.constantDeclarations() + foldTempInits(shared.code.String()) + "ENDMETHOD.\n"
+	}
+	b.line(n + " = " + helper + "=>" + member + "( " + a + " ).")
+}
+
+// nativeCall0Runtime assembles only used dispatchers in source-name order.
+func (e *emitter) nativeCall0Runtime() {
+	if len(e.nativeCalls) == 0 {
+		return
+	}
+	names := make([]string, 0, len(e.nativeCalls))
+	for name := range e.nativeCalls {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	helper, dynamic := e.name("runtime.native_call0"), e.name("runtime.dynamic")
+	var def, impl strings.Builder
+	for _, name := range names {
+		def.WriteString("CLASS-METHODS " + e.member(name) + " IMPORTING a TYPE REF TO " + dynamic + " RETURNING VALUE(result) TYPE REF TO " + dynamic + ".\n")
+		impl.WriteString(e.nativeCalls[name])
+	}
+	e.files[helper+".clas.abap"] = "CLASS " + helper + " DEFINITION PUBLIC CREATE PRIVATE.\nPUBLIC SECTION.\n" + def.String() + "PROTECTED SECTION.\nPRIVATE SECTION.\nENDCLASS.\nCLASS " + helper + " IMPLEMENTATION.\n" + impl.String() + "ENDCLASS.\n"
+}
+
+// nativeCall0Dispatch preserves the closed catalogue and most-derived-first arms.
+func (b *body) nativeCall0Dispatch(name, n, a string) {
+	e := b.e
 	e.dynamicRuntime()
 	trap := e.classRefusal()
 	b.line("IF " + a + " IS NOT BOUND.\nRAISE EXCEPTION TYPE " + trap + ".\nENDIF.")
