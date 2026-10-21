@@ -3,6 +3,7 @@ package abap
 import (
 	"fmt"
 	"os/exec"
+	"strings"
 	"testing"
 
 	"github.com/oisee/abapiti/hir"
@@ -63,4 +64,122 @@ func TestNativeCall0Fixtures(t *testing.T) {
 	unit += fmt.Sprintf("d->oval = NEW %s( ).\nCLEAR refused.\nTRY.\nv = %s=>%s( d ).\nCATCH %s.\nrefused = abap_true.\nENDTRY.\ncl_abap_unit_assert=>assert_true( refused ).\nENDMETHOD.\nENDCLASS.\n", names.Get("NativeBase"), owner, names.Get("member.missing"), names.Get("class.refusal"))
 	files[owner+".clas.testclasses.abap"] = unit
 	storageHostFixture(t, files, owner)
+}
+
+// Keep the caller in its own class so the grid compares its complete source,
+// including temporary declarations, rather than trimming away dispatch costs.
+func nativeCall0Grid(t *testing.T, classes, sites int) (map[string]string, *hir.Names) {
+	t.Helper()
+	dyn := hir.T(hir.Dynamic)
+	p := &hir.Program{}
+	for i := 0; i < classes; i++ {
+		p.Classes = append(p.Classes, &hir.Class{Name: fmt.Sprintf("GridNative%d", i), Methods: []*hir.Method{method("getName", str, ret(hir.L(str, "name")))}})
+	}
+	caller := &hir.Class{Name: "GridCaller"}
+	for i := 0; i < sites; i++ {
+		m := method(fmt.Sprintf("site%d", i), dyn, ret(rt("dynamic.call0", local("d", dyn), dyn, hir.L(str, "getName"))))
+		m.Static = true
+		m.Params = []hir.Param{{Name: "d", Type: dyn}}
+		caller.Methods = append(caller.Methods, m)
+	}
+	p.Classes = append(p.Classes, caller)
+	files, names, err := emitABAPNamed(t, p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return files, names
+}
+
+func TestNativeCall0Shared(t *testing.T) {
+	files, names := nativeCall0Grid(t, 128, 2)
+	helper := files[names.Get("runtime.native_call0")+".clas.abap"]
+	member := names.Get("member.getName")
+	if strings.Count(helper, "METHOD "+member+".") != 1 || strings.Count(helper, "CLASS-METHODS "+member+" ") != 1 {
+		t.Fatal("expected one shared method declaration and implementation")
+	}
+	caller := files[names.Get("GridCaller")+".clas.abap"]
+	if strings.Count(caller, names.Get("runtime.native_call0")+"=>"+member+"(") != 2 || strings.Contains(caller, "IS INSTANCE OF") {
+		t.Fatal("expected two helper calls without inline probes")
+	}
+	if got := strings.Count(helper, "IS INSTANCE OF"); got != 128 {
+		t.Fatalf("helper probes = %d, want 128", got)
+	}
+	for _, line := range strings.Split(helper, "\n") {
+		if len(line) > 255 || strings.HasPrefix(strings.TrimSpace(line), "*") || strings.Contains(line, `"`) {
+			t.Fatalf("invalid emitted helper line: %q", line)
+		}
+	}
+}
+
+func TestNativeCall0FixtureGrid(t *testing.T) {
+	var callers [2][2]string
+	var helpers [2][2]string
+	for c, classes := range []int{0, 128} {
+		for s, sites := range []int{1, 2} {
+			files, names := nativeCall0Grid(t, classes, sites)
+			callers[c][s] = files[names.Get("GridCaller")+".clas.abap"]
+			helpers[c][s] = files[names.Get("runtime.native_call0")+".clas.abap"]
+		}
+	}
+	for s := range callers[0] {
+		if callers[0][s] != callers[1][s] {
+			t.Fatalf("adding 128 classes changed %d-site caller", s+1)
+		}
+	}
+	for c := range helpers {
+		if helpers[c][0] != helpers[c][1] {
+			t.Fatal("second site changed helper")
+		}
+		if strings.Count(callers[c][1], "=>")-strings.Count(callers[c][0], "=>") != 1 {
+			t.Fatal("second site must add exactly one helper call")
+		}
+	}
+	if len(helpers[1][1]) <= len(helpers[0][1]) {
+		t.Fatal("additional classes must grow the helper")
+	}
+}
+
+func TestNativeCall0GridLines(t *testing.T) {
+	files, names := nativeCall0Grid(t, 128, 2)
+	caller := files[names.Get("GridCaller")+".clas.abap"]
+	helper := files[names.Get("runtime.native_call0")+".clas.abap"]
+	total := 0
+	for _, source := range files {
+		total += strings.Count(source, "\n")
+	}
+	t.Logf("2-site x 128-class fixture: caller=%d helper=%d combined=%d total=%d emitted lines", strings.Count(caller, "\n"), strings.Count(helper, "\n"), strings.Count(caller+helper, "\n"), total)
+}
+
+func TestNativeCall0HelperUsageAndOrder(t *testing.T) {
+	files, names := nativeCall0Grid(t, 128, 0)
+	if _, emitted := files[names.Get("runtime.native_call0")+".clas.abap"]; emitted {
+		t.Fatal("unused native dispatcher emitted")
+	}
+	var previous string
+	for _, order := range [][]string{{"zeta", "alpha"}, {"alpha", "zeta"}} {
+		c := &hir.Class{Name: "OrderedCalls"}
+		for _, name := range order {
+			dyn := hir.T(hir.Dynamic)
+			m := method(name, dyn, ret(rt("dynamic.call0", local("d", dyn), dyn, hir.L(str, name))))
+			m.Static = true
+			m.Params = []hir.Param{{Name: "d", Type: dyn}}
+			c.Methods = append(c.Methods, m)
+		}
+		files, names, err := emitABAPNamed(t, &hir.Program{Classes: []*hir.Class{c}})
+		if err != nil {
+			t.Fatal(err)
+		}
+		helper := files[names.Get("runtime.native_call0")+".clas.abap"]
+		for _, prefix := range []string{"CLASS-METHODS ", "METHOD "} {
+			a := strings.Index(helper, prefix+names.Get("member.alpha"))
+			z := strings.Index(helper, prefix+names.Get("member.zeta"))
+			if a < 0 || z < a {
+				t.Fatal("helper methods must be sorted by source name")
+			}
+		}
+		if previous != "" && helper != previous {
+			t.Fatal("helper changed with call-site discovery order")
+		}
+		previous = helper
+	}
 }
