@@ -7,6 +7,12 @@ import (
 )
 
 var supportedOps = map[string]bool{
+	"string.padEnd":     true,
+	"string.relativeAt": true,
+	"string.codePoints": true,
+	"string.sha256Hex":  true,
+	"path.basename":     true,
+
 	"number.isInteger":     true,
 	"number.isSafeInteger": true,
 	"number.isFinite":      true,
@@ -68,8 +74,8 @@ var unsupportedOps = map[string]bool{
 	"map.view": true, "set.view": true, "host.stderrWrite": true,
 
 	"arrayLike.length":   true,
-	"number.strictIsNaN": true, "host.getenv": true, "string.codePoints": true, "dynamic.values": true,
-	"string.padEnd": true, "string.relativeAt": true, "regexp.clone": true, "regexp.flags": true, "regexp.matchAllNext": true,
+	"number.strictIsNaN": true, "host.getenv": true, "dynamic.values": true,
+	"regexp.clone": true, "regexp.flags": true, "regexp.matchAllNext": true,
 	"string.parseFloat": true,
 	"array.spread0":     true,
 	// Common family reads need guarded payload views.
