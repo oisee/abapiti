@@ -19,7 +19,7 @@ func regexpCacheProbe() (bool, float64, float64) {
  shared:=a!=b && a.compiled==b.compiled
  construct:=testing.AllocsPerRun(100,func(){newRegExp(pattern,flags)})
  long:=str(strings.Repeat("q12z ",300)+"😀q3z")
- loop:=testing.AllocsPerRun(3,func(){r:=newRegExp(pattern,flags);n:=0;last:=int32(0);for m:=r.exec(long);m!=nil;m=r.exec(long) {n++;last=m.MatchIndex};check(n==301 && last==1502,"matches")})
+ loop:=testing.AllocsPerRun(3,func(){r:=newRegExp(pattern,flags);n:=0;last:=int32(0);for m:=r.exec(long);m!=nil;m=r.exec(long) {n++;last=m.matchIndex()};check(n==301 && last==1502,"matches")})
  return shared,construct,loop/301
 }
 `

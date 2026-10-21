@@ -170,7 +170,7 @@ func (b *body) runtime(x *hir.Expr) string {
 	case "regexp.flags":
 		code = a + ".Flags"
 	case "array.matchGroups":
-		code = a + ".MatchGroups"
+		code = a + ".matchGroups()"
 	case "string.repeat", "string.match":
 		code = a + "." + strings.Split(x.Op, ".")[1] + "(" + args[0] + ")"
 	case "array.matchIndex":
@@ -542,7 +542,8 @@ func dynSpread(d *dynamic) *array[any] {
   if rv:=reflect.ValueOf(d.Value);rv.Kind()==reflect.Pointer && !rv.IsNil() && rv.Elem().Kind()==reflect.Struct {
    e:=rv.Elem();name:=collectionTypeName(e.Type())
    if strings.HasPrefix(name,"orderedSet[") || strings.HasPrefix(name,"array[") {
-    items,missing:=e.FieldByName("Items"),e.FieldByName("Missing")
+    items,missing:=e.FieldByName("Items"),reflect.Value{}
+    if x:=e.FieldByName("extra");x.IsValid() && !x.IsNil() {missing=x.Elem().FieldByName("Missing")}
     for i:=0;i<items.Len();i++ {
      if missing.IsValid() && missing.Len()>0 && missing.MapIndex(reflect.ValueOf(int32(i))).IsValid() {out.Items=append(out.Items,nil);continue}
      out.Items=append(out.Items,box(items.Index(i).Interface()))
