@@ -2174,6 +2174,9 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 		b.e.refuse(fmt.Errorf("node %d (%s): ABAP boxed Map writes require value-based SameValueZero", x.ID, x.Source))
 		return
 	}
+	if b.mapInsertions(x, n) {
+		return
+	}
 	if b.bigintRuntime(x, n) {
 		return
 	}
