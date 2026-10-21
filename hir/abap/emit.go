@@ -848,6 +848,9 @@ type body struct {
 	// fresh holds the temps no line has mentioned since their declaration
 	// (track).
 	fresh map[string]bool
+	// expr builds destFor's value in dest instead of a new temp (into).
+	dest    string
+	destFor *hir.Expr
 }
 
 func (e *emitter) body(c *hir.Class, m *hir.Method, name string) string {
@@ -1142,6 +1145,20 @@ func (b *body) operandValue(x *hir.Expr, dst hir.Type) string {
 	return b.value(x, dst)
 }
 
+// into evaluates x into n, a temp that holds its initial value and that no
+// HIR local names yet: nothing can observe n before the statement is done,
+// so x may build its value in n directly instead of in a new temp.
+func (b *body) into(n string, x *hir.Expr, dst hir.Type) {
+	if _, ok := b.forwarded(x); ok || x.Kind == hir.FieldGet || x.Kind == hir.StaticGet || !x.Type.Equal(dst) || taggedNumber(dst) {
+		b.line(n + " = " + b.terminalValue(x, dst) + ".")
+		return
+	}
+	b.dest, b.destFor = n, x
+	if r := b.expr(x); r != n && r != "" {
+		b.line(n + " = " + r + ".")
+	}
+}
+
 // terminal is operand for a consumer that uses the result at once: nothing
 // is evaluated between this operand and its use, and the use is not a
 // method parameter (IMPORTING passes by reference, and a callee can reach
@@ -1301,6 +1318,11 @@ func (b *body) value(x *hir.Expr, dst hir.Type) string {
 	return b.convert(b.expr(x), x.Type, dst)
 }
 func (b *body) expr(x *hir.Expr) string {
+	dest := ""
+	if b.destFor == x {
+		dest = b.dest
+	}
+	b.dest, b.destFor = "", nil
 	if x == nil {
 		return ""
 	}
@@ -1349,7 +1371,10 @@ func (b *body) expr(x *hir.Expr) string {
 			return b.value(x.Z, t)
 		}
 	}
-	n := b.temp(t)
+	n := dest
+	if n == "" || b.declared[n] != e.typ(t) {
+		n = b.temp(t)
+	}
 	if b.numberStorageExpr(x, n) {
 		return n
 	}
@@ -1867,7 +1892,7 @@ func (b *body) expr(x *hir.Expr) string {
 		for _, stmt := range x.Stmt.List {
 			b.stmt(stmt)
 		}
-		b.line(n + " = " + b.value(x.Y, t) + ".")
+		b.into(n, x.Y, t)
 		b.locals = old
 	case hir.Narrow:
 		a := b.expr(x.X)
@@ -3358,7 +3383,7 @@ func (b *body) stmt(s *hir.Stmt) {
 		n := b.temp(s.Type)
 		// The temp starts initial at its evaluation point (rawTemp).
 		if s.X != nil && !b.initialLiteral(s.X, b.declared[n]) {
-			b.line(n + " = " + b.terminalValue(s.X, s.Type) + ".")
+			b.into(n, s.X, s.Type)
 		}
 		b.locals[s.Name] = n
 	case hir.Assign:
@@ -3399,6 +3424,15 @@ func (b *body) stmt(s *hir.Stmt) {
 		}
 		if s.X.Kind == hir.Local && b.initialLiteral(s.Y, b.declared[target]) {
 			b.line("CLEAR " + target + ".")
+			return
+		}
+		if s.X.Kind == hir.Local && (s.Y.Kind == hir.DirectCall || s.Y.Kind == hir.VirtualCall) && s.Y.Type.Equal(s.X.Type) && !taggedNumber(s.Y.Type) && b.declared[target] == e.typ(s.Y.Type) {
+			// A call writes its result once, after its receiver and
+			// arguments, and only when it returns normally.
+			b.dest, b.destFor = target, s.Y
+			if r := b.expr(s.Y); r != target && r != "" {
+				b.line(target + " = " + r + ".")
+			}
 			return
 		}
 		b.line(target + " = " + b.terminalValue(s.Y, s.X.Type) + ".")

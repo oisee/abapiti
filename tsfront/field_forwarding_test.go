@@ -77,21 +77,74 @@ class Probe {
 }`
 
 func TestFieldForwardingNodeOracle(t *testing.T) {
-	const want = "1:5|6|2/2|1|1,9|3,4|1,50|aga!|3,4|de-3-1|ef-2|112|4|3|d|1001"
+	all := abapOracleFixture(t, fieldForwardingProbe, "1:5|6|2/2|1|1,9|3,4|1,50|aga!|3,4|de-3-1|ef-2|112|4|3|d|1001")
+	// The probe exercises the forwarded shapes, not only their guards.
+	for _, shape := range []string{`->value = t\d+->z_member_n_`, `xsdbool\( t\d+->z_member_box_\w+->z_member_n_`, `lines\( t\d+->z_member_items_\w+->items \)`} {
+		if !regexp.MustCompile(shape).MatchString(all) {
+			t.Fatalf("no %s in the emitted ABAP:\n%s", shape, all)
+		}
+	}
+}
+
+// A declaration or an assignment from a call builds the value in the
+// variable's own storage. Nothing may observe it half-built: loops start
+// each iteration fresh, and a call that throws leaves the target as it was.
+const destinationProbe = `class Item { v: number; constructor(v: number) { this.v = v; } }
+function fail(k: number): string { if (k > 0) { throw new Error("no"); } return "ok"; }
+function twice(s: string): string { return s + s; }
+class Probe {
+  static run(): string {
+    const r: string[] = [];
+    const xs: (Item | undefined)[] = [new Item(1), undefined, new Item(3)];
+    for (const x of xs) {
+      const u = x === undefined;
+      const w = x !== undefined ? x.v : -1;
+      r.push(u ? "u" + w : "d" + w);
+    }
+    let flag = true;
+    for (const x of xs) { flag = x === undefined; r.push(flag ? "U" : "D"); }
+    let s = "a";
+    try { s = fail(1); } catch (e) { s = s + "!"; }
+    r.push(s);
+    s = fail(0);
+    r.push(s);
+    s = twice(s);
+    r.push(s);
+    let k = 0;
+    while (k < 3) { const it = new Item(k); const tag = it.v > 0 ? "p" : "z"; r.push(tag + it.v); k = k + 1; }
+    return r.join("|");
+  }
+}`
+
+func TestDestinationPassingNodeOracle(t *testing.T) {
+	all := abapOracleFixture(t, destinationProbe, "d1|u-1|d3|D|U|D|a!|ok|okok|z0|p1|p2")
+	// The loop's `const it = new Item(k)` and `s = twice(s)` write their own storage.
+	for _, shape := range []string{`(?m)^\s*(t\d+) = NEW z_probe_ts_ite_\w+\( z_param_v_\w+ = t\d+ \)\.\n\s*DATA\(t\d+\) = VALUE string`, `(?m)^\s*(t\d+) = z_probe_ts_mod_\w+=>z_member_twice_\w+\( z_param_s_\w+ = t\d+ \)\.\n\s*APPEND `} {
+		if !regexp.MustCompile(shape).MatchString(all) {
+			t.Fatalf("no %s in the emitted ABAP:\n%s", shape, all)
+		}
+	}
+}
+
+// abapOracleFixture checks source against Node and Go, emits its ABAP with
+// an ABAP Unit class that expects want from Probe.run (compiled by the
+// fixture gate; run it with osgo:unit), and returns the emitted ABAP.
+func abapOracleFixture(t *testing.T, source, want string) string {
+	t.Helper()
 	if _, err := exec.LookPath("node"); err == nil {
-		got, err := exec.Command("node", "--disable-warning=ExperimentalWarning", "-e", `eval(require("node:module").stripTypeScriptTypes(process.argv[1])+"\nconsole.log(Probe.run())")`, fieldForwardingProbe).CombinedOutput()
+		got, err := exec.Command("node", "--disable-warning=ExperimentalWarning", "-e", `eval(require("node:module").stripTypeScriptTypes(process.argv[1])+"\nconsole.log(Probe.run())")`, source).CombinedOutput()
 		if err != nil || string(got) != want+"\n" {
 			t.Fatalf("Node %q (%v), want %q", got, err, want)
 		}
 	}
-	gogenOracle(t, fieldForwardingProbe, want)
-	p := lowerStatementsProbe(t, map[string]string{"probe.ts": fieldForwardingProbe}, []string{"probe.ts"})
+	gogenOracle(t, source, want)
+	p := lowerStatementsProbe(t, map[string]string{"probe.ts": source}, []string{"probe.ts"})
 	files, names, err := emitABAPNamed(t, p)
 	if err != nil {
 		t.Fatal(err)
 	}
 	class := names.Get("probe.ts.Probe")
-	driver := []string{"CLASS ltcl_forwarding DEFINITION FOR TESTING DURATION SHORT RISK LEVEL HARMLESS.", "PRIVATE SECTION.", "METHODS run FOR TESTING.", "ENDCLASS.", "CLASS ltcl_forwarding IMPLEMENTATION.", "METHOD run.", "DATA expected TYPE string.", "DATA ch TYPE c LENGTH 1."}
+	driver := []string{"CLASS ltcl_oracle DEFINITION FOR TESTING DURATION SHORT RISK LEVEL HARMLESS.", "PRIVATE SECTION.", "METHODS run FOR TESTING.", "ENDCLASS.", "CLASS ltcl_oracle IMPLEMENTATION.", "METHOD run.", "DATA expected TYPE string.", "DATA ch TYPE c LENGTH 1."}
 	driver = append(driver, abapStringBuild("expected", "ch", want)...)
 	driver = append(driver, fmt.Sprintf("cl_abap_unit_assert=>assert_equals( act = %s=>%s( ) exp = expected ).", class, names.Get("member.run")), "ENDMETHOD.", "ENDCLASS.")
 	files[class+".clas.testclasses.abap"] = strings.Join(driver, "\n") + "\n"
@@ -101,10 +154,5 @@ func TestFieldForwardingNodeOracle(t *testing.T) {
 			all += src
 		}
 	}
-	// The probe exercises the forwarded shapes, not only their guards.
-	for _, shape := range []string{`->value = t\d+->z_member_n_`, `xsdbool\( t\d+->z_member_box_\w+->z_member_n_`, `lines\( t\d+->z_member_items_\w+->items \)`} {
-		if !regexp.MustCompile(shape).MatchString(all) {
-			t.Fatalf("no %s in the emitted ABAP:\n%s", shape, all)
-		}
-	}
+	return all
 }
