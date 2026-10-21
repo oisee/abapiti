@@ -85,7 +85,9 @@ func TestCanonicalIndexPrecheck(t *testing.T) {
 		}
 	}
 	runtime.ReadMemStats(&after)
-	if after.Mallocs != before.Mallocs {
+	// Mallocs is process-wide: background runtime work may add a few, while an
+	// allocating precheck would add at least one per lookup (1,000,000).
+	if after.Mallocs-before.Mallocs > 1000 {
 		panic("non-numeric index precheck allocated")
 	}
 	fmt.Println("ok")
