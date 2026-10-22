@@ -241,3 +241,55 @@ loop distribution and top allocations:
 ```sh
 python3 tools/site-profile-report.py out/sites.json out/go/profile.json
 ```
+
+### Embedding the Go checker
+
+```sh
+# Fresh output directory; --package still means the ABAP A4H package.
+abapiti abaplint --target go --go-package abaplint -o out-library
+# out-library/go is an importable module named zabaplint, package abaplint.
+# Link it from a consumer with a local module replace; do not copy/edit hir.go.
+```
+
+`--go-package` defaults to `main`, preserving CLI generation and its automatic
+build. Another valid Go package name uses `hir/golang.EmitPackage` and emits
+`library.go` beside the translated core, without building an executable or
+emitting the CLI/site profiler. It requires the full `core` scope. Mixing old
+CLI/library output files is refused; use separate fresh output directories.
+
+The wrapper exports:
+
+```go
+var checker abaplint.Checker
+checker.Prime([]abaplint.File{{Filename: "/src/ztest.prog.abap", Raw: "REPORT ztest."}}, nil, configJSON)
+issues := checker.Check("/src/ztest.prog.abap")
+checker.Update("/src/ztest.prog.abap", &buffer) // empty buffer is a file
+checker.Update("/src/ztest.prog.abap", nil)     // remove
+stats := checker.Stats()
+```
+
+`Prime(files, dependencies, config)` owns one persistent registry, replacing its
+previous state, and indexes lexical readers. File names and source bytes are
+preserved. `Check` resolves the owning object and uses `findIssuesObject`,
+returning ordered structured issues (`Filename`, `Key`, `Severity`, `Message`,
+`Row`, `Column`, `EndRow`, `EndColumn`), without the batch report/dump transport.
+Coordinates must be finite integers representable as int32. `Update` dirties
+transitive lexical readers using the same conservative word pattern as OSG;
+parsing stays lazy until Check. Removing an include preserves sibling readers;
+removing the last file discards the old object identity. `Stats` exposes work
+counters, not a timing or engine parity certificate.
+
+Failures panic with a cause for the host to catch and report as a refusal.
+After failed Prime/Update the host must discard or re-prime that checker.
+For an overlay, the host saves the original source (or absence), defers
+`Update(filename, original)`, installs the buffer, and calls Check. A failed
+Check may be retried after successful restoration; failed restoration requires
+discard/re-prime. Serialize that entire host transaction. The library also
+serializes individual calls across Checker instances because translated core
+globals assume sequential access. No file I/O or Node runtime is used by this
+API. Configuration and input discovery belong to the consumer.
+
+Focused wrapper/runtime test, using a small core double:
+`go test ./tsfront -run '^TestRegistryGoLibrary$' -count=1`.
+Full generated-core library compilation and consumer HTTP/performance gates are
+separate acceptance work; this test does not certify those results.

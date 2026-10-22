@@ -5,6 +5,7 @@ import (
 	"archive/zip"
 	"bytes"
 	"compress/gzip"
+	"github.com/spf13/cobra"
 	"os"
 	"path/filepath"
 	"strings"
@@ -122,7 +123,7 @@ func TestParseTargets(t *testing.T) {
 }
 
 func TestAbaplintFullCoreDefaults(t *testing.T) {
-	for flag, want := range map[string]string{"scope": "core", "assume-int": "false", "package": "$ZLNT"} {
+	for flag, want := range map[string]string{"scope": "core", "assume-int": "false", "package": "$ZLNT", "go-package": "main"} {
 		if got := abaplintCmd.Flags().Lookup(flag).DefValue; got != want {
 			t.Fatalf("--%s default %q, want %q", flag, got, want)
 		}
@@ -153,5 +154,36 @@ func TestAbaplintCommand(t *testing.T) {
 		if _, err := os.Stat(filepath.Join(out, filepath.FromSlash(f))); err != nil {
 			t.Error(err)
 		}
+	}
+}
+
+// Invalid library requests must fail before materializing/lowering the core.
+func TestAbaplintGoLibraryFlags(t *testing.T) {
+	t.Setenv("ABAPITI_NAMES", os.Getenv("ABAPITI_NAMES"))
+	t.Setenv("ABAPITI_ASSUME_INT", os.Getenv("ABAPITI_ASSUME_INT"))
+	for _, tc := range []struct{ pkg, target, scope, reason string }{
+		{"", "go", "core", "invalid Go package"},
+		{"_", "go", "core", "invalid Go package"},
+		{"for", "go", "core", "invalid Go package"},
+		{"a/b", "go", "core", "invalid Go package"},
+		{"lintlib", "all", "core", "requires --target go"},
+		{"lintlib", "go", "zabapgit", "requires --scope core"},
+	} {
+		t.Run(tc.pkg+"/"+tc.target+"/"+tc.scope, func(t *testing.T) {
+			cmd := &cobra.Command{}
+			flags := cmd.Flags()
+			for name, value := range map[string]string{"output": t.TempDir(), "target": tc.target, "scope": tc.scope, "package": "$ZLNT", "go-package": "main", "input": "", "deps": "", "config": "", "run-sha": "", "negative": ""} {
+				flags.String(name, value, "")
+			}
+			for _, name := range []string{"quiet", "assume-int", "full", "evidence"} {
+				flags.Bool(name, false, "")
+			}
+			if err := flags.Set("go-package", tc.pkg); err != nil {
+				t.Fatal(err)
+			}
+			if err := runAbaplint(cmd, nil); err == nil || !strings.Contains(err.Error(), tc.reason) {
+				t.Fatalf("got %v, want %s", err, tc.reason)
+			}
+		})
 	}
 }
