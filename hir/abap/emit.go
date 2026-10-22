@@ -214,7 +214,7 @@ func emitNamed(p *hir.Program, refusals *[]error, assertionOwners map[string]boo
 		if x.Kind == hir.RuntimeOp && x.Op == "dynamic.delete" {
 			e.recordDelete = true
 		}
-		if x.Kind == hir.RuntimeOp && (x.Op == "dynamic.keys" || x.Op == "dynamic.values" || x.Op == "dynamic.arrayView" || x.Op == "dynamic.asRef" && x.Type.Kind == hir.Array || x.Op == "dynamic.asObject" || x.Op == "dynamic.classView" || x.Op == "dynamic.delete" || strings.HasPrefix(x.Op, "lsp.") || strings.HasPrefix(x.Op, "object.") && x.X != nil && x.X.Type.Name == hir.RootObject) {
+		if x.Kind == hir.RuntimeOp && (x.Op == "dynamic.keys" || x.Op == "dynamic.values" || x.Op == "dynamic.arrayView" || x.Op == "dynamic.asRef" && x.Type.Kind == hir.Array || x.Op == "dynamic.asObject" || x.Op == "dynamic.classView" || x.Op == "dynamic.delete" || strings.HasPrefix(x.Op, "lsp.") || strings.HasPrefix(x.Op, "object.") && x.X != nil && (x.X.Type.Name == hir.RootObject || x.X.Type.Kind == hir.InterfaceRef)) {
 			e.arrayViews = true
 		}
 		findStorage(x.X)
@@ -500,7 +500,7 @@ func (e *emitter) scanUsage() {
 			e.chaiUsed = true
 			e.dynamicUsed = true
 		}
-		if x.Kind == hir.RuntimeOp && (x.Op == "dynamic.asObject" || x.Op == "dynamic.classView" || x.Op == "dynamic.arrayView" || x.Op == "dynamic.delete" || strings.HasPrefix(x.Op, "lsp.") || (strings.HasPrefix(x.Op, "object.") && x.X != nil && x.X.Type.Name == hir.RootObject)) {
+		if x.Kind == hir.RuntimeOp && (x.Op == "dynamic.asObject" || x.Op == "dynamic.classView" || x.Op == "dynamic.arrayView" || x.Op == "dynamic.delete" || strings.HasPrefix(x.Op, "lsp.") || (strings.HasPrefix(x.Op, "object.") && x.X != nil && (x.X.Type.Name == hir.RootObject || x.X.Type.Kind == hir.InterfaceRef))) {
 			e.liveRuntime()
 		}
 		if x.Kind == hir.RuntimeOp && x.Op == "json.stringifySubset" {
@@ -2753,7 +2753,7 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 		return
 	case "object.get", "object.hasOwn", "object.has":
 		if x.X.Type.Kind == hir.InterfaceRef {
-			b.e.refuse(fmt.Errorf("node %d (%s): property lookup on an interface value is not emitted on ABAP", x.ID, x.Source))
+			b.interfacePropertyLookup(x, n, a, args[0])
 			return
 		}
 		if x.X.Type.Name == hir.RootObject {

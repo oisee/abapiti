@@ -22,6 +22,7 @@ func (e *emitter) propertyLookup(t hir.Type) string {
 	type entry struct {
 		key, owner string
 		field      *hir.Field
+		getter     *hir.Method
 		tag        string
 	}
 	entries := []entry{}
@@ -44,7 +45,16 @@ func (e *emitter) propertyLookup(t hir.Type) string {
 	}
 	for base := c; base != nil; base = e.classBy(base.Super) {
 		for _, m := range base.Methods {
-			if !m.Static {
+			if m.Static {
+				continue
+			}
+			if strings.HasPrefix(m.Name, "get.") {
+				key := strings.TrimPrefix(m.Name, "get.")
+				if !seen[key] {
+					seen[key] = true
+					entries = append(entries, entry{key: key, owner: base.Name, getter: m})
+				}
+			} else {
 				add(m.Name, base.Name, "function")
 			}
 		}
@@ -69,7 +79,7 @@ func (e *emitter) propertyLookup(t hir.Type) string {
 	line("TYPES: BEGIN OF entry, key TYPE string, slot TYPE i, own TYPE abap_bool, END OF entry.")
 	line("CLASS-DATA entries TYPE HASHED TABLE OF entry WITH UNIQUE KEY key.")
 	for i, p := range entries {
-		if p.field == nil {
+		if p.field == nil && p.getter == nil {
 			line("CLASS-DATA token%d TYPE REF TO %s.", i, d)
 		}
 	}
@@ -80,7 +90,7 @@ func (e *emitter) propertyLookup(t hir.Type) string {
 			own = "abap_true"
 		}
 		line("row-key = %s.\nrow-slot = %d.\nrow-own = %s.\nINSERT row INTO TABLE entries.", "`"+strings.ReplaceAll(p.key, "`", "``")+"`", i, own)
-		if p.field == nil {
+		if p.field == nil && p.getter == nil {
 			line("CREATE OBJECT token%d.", i)
 			switch p.tag {
 			case "constructor":
@@ -138,29 +148,46 @@ func (e *emitter) propertyLookup(t hir.Type) string {
 		if e.recordDelete {
 			line("READ TABLE p0->%s WITH TABLE KEY table_line = key TRANSPORTING NO FIELDS.\nIF sy-subrc = 0.\nRETURN.\nENDIF.", e.name("record.deleted"))
 		}
-		line("READ TABLE entries WITH TABLE KEY key = key INTO row.\nIF sy-subrc <> 0.\nRETURN.\nENDIF.")
+		line("READ TABLE entries WITH TABLE KEY key = key INTO row.\nIF sy-subrc <> 0.")
+		for base := c; base != nil; base = e.classBy(base.Super) {
+			if base.FieldsDropped {
+				line("RAISE EXCEPTION TYPE %s EXPORTING reason = %s.", e.viewRefusal(), "`"+strings.ReplaceAll(fmt.Sprintf("node %d (%s): property lookup on a class whose fields were dropped by a lowering trap", base.ID, base.Source), "`", "``")+"`")
+				break
+			}
+		}
+		line("RETURN.\nENDIF.")
 		if m == "own" {
 			line("result = row-own.")
 		} else if m == "has" {
 			line("result = abap_true.")
 		} else {
 			line("CASE row-slot.")
-			b := &body{e: e, c: c, locals: map[string]string{}}
+			b := &body{e: e, c: c, locals: map[string]string{"p0": "p0"}}
 			for i, p := range entries {
 				line("WHEN %d.", i)
-				if p.field == nil {
+				if p.field == nil && p.getter == nil {
 					line("result = token%d.", i)
 					continue
 				}
 				b.code.Reset()
-				boxType := p.field.Type
+				value := "p0->" + e.member(p.key)
+				boxType := hir.Type{}
+				if p.getter != nil {
+					boxType = p.getter.Result
+					value = b.expr(&hir.Expr{Kind: hir.VirtualCall, Type: boxType, Name: p.getter.Name, X: hir.V("p0", t)})
+				} else {
+					boxType = p.field.Type
+					if e.liveClasses[p.owner] {
+						value = b.expr(&hir.Expr{Kind: hir.FieldGet, Type: boxType, Name: p.key, X: hir.V("p0", t)})
+					}
+				}
 				if boxType.Kind == hir.I64 {
 					boxType = hir.T(hir.Number)
 				}
 				if boxType.Kind == hir.Optional && boxType.Args[0].Kind == hir.I64 {
 					boxType = hir.T(hir.Optional, hir.T(hir.Number))
 				}
-				b.boxDynamic("result", "p0->"+e.member(p.field.Name), boxType)
+				b.boxDynamic("result", value, boxType)
 				s.WriteString(b.code.String())
 			}
 			line("ENDCASE.")
