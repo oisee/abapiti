@@ -27,6 +27,7 @@ func TestRegistryGoLibrary(t *testing.T) {
  import("path";"strings")
  type @Registry@ = *registryStub
  type @Object@ interface {
+  @getType@() jsString
   @getFiles@() *array[any]
   @getName@() jsString
   @setDirty@()
@@ -34,6 +35,16 @@ func TestRegistryGoLibrary(t *testing.T) {
  }
  type @File@ interface { @getRaw@() jsString; @getObjectName@() jsString }
  type @Issue@ = *issueStub
+ type @Position@ = *positionStub
+ type @AbstractToken@ interface { @getStr@() jsString; @getStart@() @Position@; @getEnd@() @Position@ }
+ type @StatementNode@ interface { @get@() any; @getFirstToken@() @AbstractToken@; @getLastToken@() @AbstractToken@; @getTokens@() *array[@AbstractToken@] }
+ type @StructureNode@ interface { @get@() any; @getFirstToken@() @AbstractToken@; @getLastToken@() @AbstractToken@; @getChildren@() *array[any] }
+ type @ABAPFile@ interface { @getFilename@() jsString; @getStructure@() @StructureNode@; @getStatements@() *array[@StatementNode@] }
+ type @ABAPObject@ interface { @getABAPFiles@() *array[@ABAPFile@]; @getMainABAPFile@() @ABAPFile@; @getSequencedFiles@() *array[@ABAPFile@] }
+ var @PragmaDescriptor@ classDescriptor
+ func(o *objectStub) @getType@() jsString { return str("CLAS") }
+ func(r *registryStub) @getObject@(typ,name optional[jsString]) @Object@ { if !typ.Has || !name.Has || typ.Value.String()!="CLAS" {return nil}; o:=r.objects[strings.ToUpper(name.Value.String())];if o==nil{return nil};return o }
+
  type fileStub struct { name, raw jsString }
  func @newFile@(name,raw jsString) *fileStub { return &fileStub{name,raw} }
  func(f *fileStub) @getRaw@() jsString { return f.raw }
@@ -84,6 +95,7 @@ func TestRegistryGoLibrary(t *testing.T) {
  func @newRun@() *harnessStub{return &harnessStub{}}
  func(h *harnessStub) @addFile@(name,raw jsString){h.files=append(h.files,@newFile@(name,raw))}
  func(h *harnessStub) @addDependency@(name,raw jsString){h.deps=append(h.deps,@newFile@(name,raw))}
+ func(r *registryStub) @parse@() { for _,o:=range r.objects{o.dirty=false} }
  func(h *harnessStub) @parse@(cfg jsString) @Registry@ {
   if cfg.String()=="throw"{panic("refused prime")}
   r:=&registryStub{files:map[string]*fileStub{},objects:map[string]*objectStub{}}
@@ -111,7 +123,11 @@ func TestRegistryGoLibrary(t *testing.T) {
   refused(t,"prime",func(){c.Check("missing")})
   c.Prime([]File{{"/zbase.clas.abap","ZBASE old"},{"/zsub.clas.abap","ZSUB ZBASE"},{"/zcall.clas.abap","ZCALL ZSUB"},{"/zcall.clas.locals_def.abap","ZBASE"},{"/zother.clas.abap","ZOTHER"}},[]File{{"/zdep.intf.abap","ZDEP"}},"{}")
   if c.Stats().IndexedObjects!=5{t.Fatal(c.Stats())}
-  issues:=c.Check("/zbase.clas.abap")
+  if issues,found:=c.CheckObject("CLAS","missing");found||issues!=nil{t.Fatal(issues,found)}
+  if files,found:=c.Tree("CLAS","missing");found||files!=nil{t.Fatal(files,found)}
+  if files,found:=c.Tree("CLAS","zbase");!found||len(files)!=0{t.Fatal(files,found)}
+  issues,found:=c.CheckObject("CLAS","zbase")
+  if !found { t.Fatal("lowercase name lookup") }
   if len(issues)!=2||issues[0]!=issues[1]||issues[0].Message!="ZBASE old"||issues[0].Row!=12||issues[0].Column!=5||issues[0].EndRow!=13||issues[0].EndColumn!=6||issues[0].Severity!="warning"{t.Fatal(issues)}
   raw:="ZBASE old";c.Update("/zbase.clas.abap",&raw)
   if c.Stats().Noops!=1||c.Stats().DirtiedObjects!=0{t.Fatal(c.Stats())}
@@ -145,6 +161,11 @@ func TestRegistryGoLibrary(t *testing.T) {
   refused(t,"refused prime",func(){c.Prime(nil,nil,"throw")})
   refused(t,"prime",func(){c.Check("/zcall.clas.abap")})
  }
+ func TestConcatTokens(t *testing.T){
+  tokens:=[]Token{{Str:"a",Start:Pos{1,1}},{Str:"##x",Start:Pos{1,2},Pragma:true},{Str:".",Start:Pos{1,2}},{Str:"😀",Start:Pos{2,1}},{Str:"x",Start:Pos{2,3}},{Str:"##literal",Start:Pos{3,1}}}
+  if got:=ConcatTokens(tokens);got!="a. 😀x ##literal"{t.Fatal(got)}
+  if ConcatTokens(nil)!=""||ConcatTokens([]Token{{Str:"",Start:Pos{1,1}},{Str:"x",Start:Pos{3,5}}})!="x"{t.Fatal("empty")}
+ }
  func TestCoordinates(t *testing.T){
   if libraryCoordinate(optional[float64]{Has:true,Value:5})!=5{t.Fatal("optional")}
   for _,n:=range []float64{math.NaN(),math.Inf(1),1.5,2147483648}{refused(t,"finite int32",func(){libraryCoordinate(n)})}
@@ -170,7 +191,7 @@ func TestRegistryGoLibrary(t *testing.T) {
 // must not make a placeholder appear to have been emitted by the package.
 func TestRegistryGoLibraryEmittedNames(t *testing.T) {
 	registry := &hir.Class{Name: "src/registry.ts.Registry"}
-	for _, name := range []string{"addFile", "addDependency", "parse", "getFileByName", "findObjectForFile", "findIssuesObject", "getFiles", "getObjects", "next", "close", "done", "value", "getRaw", "getObjectName", "getName", "setDirty", "isDirty", "updateFile", "removeFile", "getKey", "getSeverity", "getFilename", "getMessage", "getStart", "getEnd", "getRow", "getCol"} {
+	for _, name := range []string{"addFile", "addDependency", "parse", "getFileByName", "findObjectForFile", "findIssuesObject", "getFiles", "getObjects", "next", "close", "done", "value", "getRaw", "getObjectName", "getName", "setDirty", "isDirty", "updateFile", "removeFile", "getKey", "getSeverity", "getFilename", "getMessage", "getStart", "getEnd", "getRow", "getCol", "getObject", "getType", "getABAPFiles", "getMainABAPFile", "getSequencedFiles", "getStructure", "getStatements", "get", "getChildren", "getFirstStatement", "getFirstToken", "getLastToken", "getTokens", "getStr"} {
 		registry.Methods = append(registry.Methods, &hir.Method{
 			Name: name, Result: hir.T(hir.Void), Body: &hir.Stmt{Kind: hir.Block},
 		})
@@ -178,6 +199,13 @@ func TestRegistryGoLibraryEmittedNames(t *testing.T) {
 	p := &hir.Program{
 		Classes: []*hir.Class{registry,
 			{Name: "src/issue.ts.Issue"},
+			{Name: "src/objects/_abap_object.ts.ABAPObject"},
+			{Name: "src/abap/abap_file.ts.ABAPFile"},
+			{Name: "src/abap/nodes/statement_node.ts.StatementNode"},
+			{Name: "src/abap/nodes/structure_node.ts.StructureNode"},
+			{Name: "src/abap/1_lexer/tokens/abstract_token.ts.AbstractToken"},
+			{Name: "src/abap/1_lexer/tokens/pragma.ts.Pragma"},
+			{Name: "src/position.ts.Position"},
 			{Name: "harness/registry_run.ts.RegistryRun"},
 			{Name: "src/files/memory_file.ts.MemoryFile"},
 		},
@@ -214,12 +242,19 @@ func TestRegistryGoLibraryEmittedNames(t *testing.T) {
 		}
 	}
 	special := map[string]string{
-		"Registry": "ref.src/registry.ts.Registry",
-		"Object":   "ref.src/objects/_iobject.ts.IObject",
-		"File":     "ref.src/files/_ifile.ts.IFile",
-		"Issue":    "ref.src/issue.ts.Issue",
-		"newRun":   "new.harness/registry_run.ts.RegistryRun",
-		"newFile":  "new.src/files/memory_file.ts.MemoryFile",
+		"Registry":         "ref.src/registry.ts.Registry",
+		"ABAPObject":       "ref.src/objects/_abap_object.ts.ABAPObject",
+		"ABAPFile":         "ref.src/abap/abap_file.ts.ABAPFile",
+		"StatementNode":    "ref.src/abap/nodes/statement_node.ts.StatementNode",
+		"StructureNode":    "ref.src/abap/nodes/structure_node.ts.StructureNode",
+		"AbstractToken":    "ref.src/abap/1_lexer/tokens/abstract_token.ts.AbstractToken",
+		"Position":         "ref.src/position.ts.Position",
+		"PragmaDescriptor": "descriptor.src/abap/1_lexer/tokens/pragma.ts.Pragma",
+		"Object":           "ref.src/objects/_iobject.ts.IObject",
+		"File":             "ref.src/files/_ifile.ts.IFile",
+		"Issue":            "ref.src/issue.ts.Issue",
+		"newRun":           "new.harness/registry_run.ts.RegistryRun",
+		"newFile":          "new.src/files/memory_file.ts.MemoryFile",
 	}
 	marker := regexp.MustCompile(`@([A-Za-z]+)@`)
 	want := marker.ReplaceAllStringFunc(registryGoLibrary, func(placeholder string) string {
