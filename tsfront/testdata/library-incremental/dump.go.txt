@@ -3,6 +3,8 @@ package main
 import (
  "encoding/json"
  "os"
+ "fmt"
+ "reflect"
  lint "zabaplint"
 )
 type query struct{Type,Name string}
@@ -14,10 +16,24 @@ func main(){
  var input manifest;if err=json.Unmarshal(raw,&input);err!=nil{panic(err)}
  var c lint.Checker;c.Prime(input.Files,nil,input.Config)
  encoder:=json.NewEncoder(os.Stdout)
- dump:=func(label string,queries []query){for _,q:=range queries{
+ current:=append([]lint.File(nil),input.Files...)
+ apply:=func(updates []update){for _,u:=range updates{
+  c.Update(u.Filename,u.Raw)
+  at:=-1;for i,f:=range current{if f.Filename==u.Filename{at=i;break}}
+  if u.Raw==nil{if at>=0{current=append(current[:at],current[at+1:]...)}}else if at>=0{current[at].Raw=*u.Raw}else{current=append(current,lint.File{Filename:u.Filename,Raw:*u.Raw})}
+ }}
+ freshMode:=len(os.Args)>2&&os.Args[2]=="--fresh"
+ dump:=func(label string,queries []query){
+ var fresh lint.Checker
+ if freshMode{fresh.Prime(current,nil,input.Config)}
+ for _,q:=range queries{
   issues,found:=c.CheckObject(q.Type,q.Name);files,treeFound:=c.Tree(q.Type,q.Name);if treeFound!=found{panic("existence differs")}
+  if freshMode{
+   want,wf:=fresh.CheckObject(q.Type,q.Name);tree,tf:=fresh.Tree(q.Type,q.Name)
+   if found!=wf||treeFound!=tf||!reflect.DeepEqual(issues,want)||!reflect.DeepEqual(files,tree){panic(fmt.Sprintf("fresh mismatch at %s %s %s: incremental issues %v, fresh %v; tree equal %v",label,q.Type,q.Name,issues,want,reflect.DeepEqual(files,tree)))}
+  }
   if err:=encoder.Encode(struct{Label,Type,Name string;Found bool;Issues []lint.Issue;Files []lint.FileTree}{label,q.Type,q.Name,found,issues,files});err!=nil{panic(err)}
  }}
  dump("baseline",input.Queries)
- for _,s:=range input.Steps{for _,u:=range s.Updates{c.Update(u.Filename,u.Raw)};dump(s.Label,s.Queries);if len(s.After)>0{for _,u:=range s.After{c.Update(u.Filename,u.Raw)};dump(s.Label+"-restored",s.Queries)}}
+ for _,s:=range input.Steps{apply(s.Updates);dump(s.Label,s.Queries);if len(s.After)>0{apply(s.After);dump(s.Label+"-restored",s.Queries)}}
 }

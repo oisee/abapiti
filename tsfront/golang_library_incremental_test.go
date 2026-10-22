@@ -18,9 +18,10 @@ func TestRegistryGoLibraryIncremental(t *testing.T) {
 	if library == "" {
 		t.Skip("set ABAPITI_LIBRARY_INCREMENTAL_DIR, _MANIFEST and _REFERENCE for the full-core differential")
 	}
+	fresh := os.Getenv("ABAPITI_LIBRARY_INCREMENTAL_FRESH") == "1"
 	manifest, reference := os.Getenv("ABAPITI_LIBRARY_INCREMENTAL_MANIFEST"), os.Getenv("ABAPITI_LIBRARY_INCREMENTAL_REFERENCE")
-	if manifest == "" || reference == "" {
-		t.Fatal("manifest and original Node reference are required")
+	if manifest == "" || !fresh && reference == "" {
+		t.Fatal("manifest and original Node reference (or _FRESH=1) are required")
 	}
 	library, err := filepath.Abs(library)
 	if err != nil {
@@ -53,7 +54,11 @@ func TestRegistryGoLibraryIncremental(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer actual.Close()
-	command := exec.Command(binary, manifest)
+	args := []string{manifest}
+	if fresh {
+		args = append(args, "--fresh")
+	}
+	command := exec.Command(binary, args...)
 	command.Stdout = actual
 	var stderr bytes.Buffer
 	command.Stderr = &stderr
@@ -63,6 +68,23 @@ func TestRegistryGoLibraryIncremental(t *testing.T) {
 	if _, err = actual.Seek(0, 0); err != nil {
 		t.Fatal(err)
 	}
+	if fresh {
+		scan := bufio.NewScanner(actual)
+		scan.Buffer(make([]byte, 64*1024), 64*1024*1024)
+		lines := 0
+		for scan.Scan() {
+			lines++
+		}
+		if err := scan.Err(); err != nil {
+			t.Fatal(err)
+		}
+		if lines == 0 {
+			t.Fatal("empty fresh differential")
+		}
+		t.Logf("%d issue/tree snapshots equal fresh Checkers", lines)
+		return
+	}
+
 	expected, err := os.Open(reference)
 	if err != nil {
 		t.Fatal(err)

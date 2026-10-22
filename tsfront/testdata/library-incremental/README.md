@@ -56,7 +56,8 @@ Stats.ParseObjects counts pending invalidations submitted after Update. It does
 not count untouched permanently dirty no-op parser objects, initial Prime, or
 extra internal macro passes. DirtiedObjects counts unique owners per Update;
 several Updates before a parse accumulate a union in ParseObjects. No-op Updates
-retain pending invalidations. ReaderVisits counts direct index candidates.
+retain pending invalidations. ReaderVisits counts candidates visited across the reverse lexical closure.
+DirtiedObjects/ParseObjects count reparses, excluding syntax-only cache drops.
 
 The opt-in Go test accepts `ABAPITI_LIBRARY_INCREMENTAL_DIR` (emitted core),
 absolute `ABAPITI_LIBRARY_INCREMENTAL_MANIFEST` and `ABAPITI_LIBRARY_INCREMENTAL_REFERENCE`
@@ -70,3 +71,38 @@ instead of 209 MB. An isolated Checker + Tree took 16.8 ms; TreeOf took 16.0 ms
 and allocated 7.44 instead of 7.90 MB. Parsing dominates the outline, so its
 latency improvement is modest. The GC=100/200 comparison measured 668/512 ms for
 broken checks and 1.98/2.70 GiB peak RSS. All medians use 20 alternating pairs.
+
+## Transitive correctness (2026-10-22)
+
+Update now walks the reverse closure of the raw lexical-reader index, clearing
+`ABAPObject.syntaxResult` through the emitted base accessor. This is a single
+field write per ABAP consumer; parsed files, OO definitions, XML/text caches,
+and the parse dirty flag survive. Only the edited owner and direct readers
+reparse, with one macro exception: a transitive consumer containing `MacroCall`
+or `Unknown` reparses as well. ExpandMacros stores expanded statements inside
+ABAPFile; clearing syntax cannot update them. Unknown may become a macro call
+when a previously missing definition is introduced. The core's macro references
+do not completely describe nested expansions, so these potential macro consumers
+are conservatively rebuilt within the lexical closure. All operations remain
+under libraryMu; only the edited owner is unindexed/reindexed.
+
+**Node stale:** original native Node 2.120.73 retains obsolete syntax results in
+all five critic scenarios (inheritance, interface alias, INCLUDE chain, macro
+chain, type pool). Its direct-reader host policy is also stale for these
+transitive cases. `transitive.json` preserves those minimal inputs; the opt-in
+`TestRegistryGoLibraryTransitive` uses `ABAPITI_LIBRARY_TRANSITIVE_DIR` and compares
+incremental issues and trees against fresh Checkers, with and without a prior
+syntax check, and after restoration. It asserts the semantic error and that
+only two owners reparse (three for the stored macro expansion).
+
+Keep the original direct-reader Node differential as a separate compatibility
+gate. Add `--transitive` to library-incremental-manifest.mjs for the full M1
+consumer closure (48 queries, versus 14 direct queries). Run the emitted
+`dump.go.txt` consumer with `MANIFEST --fresh` to compare every baseline, edited,
+and restored query's complete issues and tree with a Checker freshly primed on
+that exact state. It exits on any mismatch and otherwise emits the usual JSONL.
+Fresh-state equality is the correctness oracle when native or host-policy Node
+retains stale caches. The same driver also supports the 41 #839 scenarios.
+
+The opt-in Go differential also accepts `ABAPITI_LIBRARY_INCREMENTAL_FRESH=1`
+in place of `_REFERENCE`, keeping the original Node comparison as the default.

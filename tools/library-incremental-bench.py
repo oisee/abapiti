@@ -18,7 +18,7 @@ root = os.path.dirname(os.path.abspath(output))
 
 
 def guard():
-    if shutil.disk_usage('/mnt/ssd-510').free < 45 * 10**9:
+    if shutil.disk_usage(root).free < 45 * 10**9:
         raise RuntimeError('less than 45 GB free')
     while os.getloadavg()[0] >= 12:
         print('waiting for load < 12', flush=True)
