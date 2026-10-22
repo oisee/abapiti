@@ -62,3 +62,21 @@ func TestAbaplint73RegExpZeroWidthAndSyntaxError(t *testing.T) {
 	}
 	storageOracleABAP(t, prog, want)
 }
+
+func TestAbaplint73NullishArrayReadsAndReferenceIncludes(t *testing.T) {
+	source := `class A { a=1; } class B { b=1; }
+ class Probe { static run(): string {
+  const rows: readonly string[] = ["first"];
+  let fallback=0;
+  const read=(i:number)=>(rows[i] ?? (fallback++, "missing"));
+  const a=new A(),b=new B(); const all=[a];
+  return [read(-1),read(0),read(4),String(fallback),String(all.includes(b as unknown as A)),String(all.includes(a as A))].join("|");
+ } }`
+	want := regexpOptionalCapturesNode(t, source)
+	prog := lowerStatementsProbe(t, map[string]string{"probe.ts": source}, []string{"probe.ts"})
+	got := runGoHIR(t, prog, fmt.Sprintf("fmt.Println(%s())", goEntry("probe.ts.Probe", "run")))
+	if got != want {
+		t.Fatalf("Go %q Node %q", got, want)
+	}
+	storageOracleABAP(t, prog, want)
+}

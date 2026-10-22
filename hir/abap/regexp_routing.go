@@ -25,6 +25,9 @@ func regexNeedsJS(x *hir.Expr) bool {
 		return false
 	}
 	p, _ := x.Args[0].Value.(string)
+	if strings.Contains(p, `[\s\S]`) || strings.Contains(p, `[\S\s]`) {
+		return true
+	}
 	if regexHasEscape(p, "bB", false) {
 		flags := ""
 		if len(x.Args) > 1 {

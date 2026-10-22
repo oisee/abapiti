@@ -627,15 +627,23 @@ i = 0.
 in_class = abap_false.
 excluded = excluded_pattern.
 normalized = class_hyphens( pattern ).
-FIND REGEX '^\(\?=[A-Za-z0-9_ ]+\)$' IN pattern.
-IF sy-subrc = 0.
-  zero_width = abap_true.
-  normalized = substring( val = pattern off = 3 len = strlen( pattern ) - 4 ).
+IF strlen( pattern ) > 4.
+  IF pattern(3) = '(?=' AND substring( val = pattern off = strlen( pattern ) - 1 ) = ')'.
+    DATA lookahead_literal TYPE string.
+    lookahead_literal = substring( val = pattern off = 3 len = strlen( pattern ) - 4 ).
+    IF lookahead_literal CO 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_ '.
+      zero_width = abap_true.
+      normalized = lookahead_literal.
+    ENDIF.
+  ENDIF.
 ENDIF.
 n = strlen( normalized ).
 WHILE i < n.
   c = normalized+i(1).
-  IF c = '\'.
+  IF i + 6 <= n AND ( normalized+i(6) = '[\s\S]' OR normalized+i(6) = '[\S\s]' ).
+    posix = posix && '[\s\S]'.
+    i = i + 5.
+  ELSEIF c = '\'.
     i = i + 1.
     IF i >= n.
       EXIT.

@@ -112,6 +112,7 @@ func regexClasses(pattern string, flags ...string) string {
 // A complemented shorthand cannot be inserted as members of a POSIX class.
 // Static emission refuses it; dynamic construction raises rather than guessing.
 func regexHasClassComplement(pattern string) bool {
+	pattern = strings.ReplaceAll(strings.ReplaceAll(pattern, `[\s\S]`, "[X]"), `[\S\s]`, "[X]")
 	return regexHasEscape(pattern, "S", true)
 }
 

@@ -2126,6 +2126,9 @@ func (l *lowerer) libraryCall(n *ast.Node, name string, recv *hir.Expr) (*hir.Ex
 		case "lastIndexOf":
 			return l.primitiveLastIndexOf(n, recv, args), true
 		case "includes":
+			if x, handled := l.referenceAssertionIncludes(n, recv, args); handled {
+				return x, true
+			}
 			x := l.dynamicSearchValue(recv, one())
 			if x != nil && l.unprunedFeatures {
 				if probe, ok := l.scalarIncludesProbe(n, recv, x); ok {
@@ -2800,7 +2803,7 @@ func (l *lowerer) binary(n *ast.Node) *hir.Expr {
 		if x == nil {
 			return nil
 		}
-		x = l.narrowedOperand(b.Left, x)
+		x = l.observedArrayIndex(l.narrowedOperand(b.Left, x))
 		erased := x.Type.Kind != hir.Optional && x.Type.Kind != hir.Dynamic
 		x = erasedAssertionOperand(b.Left, x)
 		if x.Type.Kind != hir.Optional && x.Type.Kind != hir.Dynamic && !nilCapableReference(x.Type) {
