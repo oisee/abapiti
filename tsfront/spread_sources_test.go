@@ -66,5 +66,5 @@ func TestSpreadSourcesTypedNodeOracle(t *testing.T) {
 // Non-global regexes now throw the same catchable TypeError as JavaScript.
 func TestSpreadMatchAllNonGlobalTypeError(t *testing.T) {
 	source := `class Probe {static run():string {try {const a=[..."a".matchAll(/a/)];return String(a.length);}catch(e){return e instanceof TypeError?"TypeError":"other";}}}`
-	gogenOracle(t, source, "TypeError", "regexp.clone")
+	gogenOracle(t, source, "TypeError", "regexp.matchAllNext")
 }

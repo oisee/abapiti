@@ -48,7 +48,7 @@ func TestU3SHA256(t *testing.T) {
 	high := rt("string.substring", hir.L(str, "😀"), str, lit(0), lit(1))
 	low := rt("string.substring", hir.L(str, "😀"), str, lit(1), lit(2))
 	src := u3Emit(t, rt("string.sha256Hex", hir.L(str, ""), str), rt("string.sha256Hex", hir.L(str, "é😀"), str), rt("string.sha256Hex", high, str), rt("string.sha256Hex", low, str))
-	u3Want(t, src, "cl_abap_conv_in_ce=>uccp( 'FFFD' ).", "part = text+cursor(2).", "encoding = 'UTF-8'", "calculate_hash_for_raw( EXPORTING if_algorithm = 'SHA256' if_data = bytes", "TRANSLATE result TO LOWER CASE.")
+	u3Want(t, src, "cl_abap_conv_in_ce=>uccp( 'FFFD' ).", "part = text+cursor(2).", "calculate_hash_for_char( EXPORTING if_algorithm = 'SHA256' if_data = clean IMPORTING ef_hashstring = result", "TRANSLATE result TO LOWER CASE.")
 }
 func TestU3Basename(t *testing.T) {
 	var expressions []*hir.Expr

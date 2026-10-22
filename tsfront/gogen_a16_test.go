@@ -9,7 +9,7 @@ func TestGogenA16PadEndAtNodeOracle(t *testing.T) {
  return JSON.stringify(pads)+"/"+JSON.stringify(ats);
  }}`
 	want := conversionOracle(t, source)
-	gogenOracle(t, source, want[:len(want)-1], "string.padEnd")
+	gogenImplementedABAPOracle(t, source, want[:len(want)-1])
 }
 
 func TestGogenA16MatchAllNodeOracle(t *testing.T) {
@@ -22,13 +22,13 @@ func TestGogenA16MatchAllNodeOracle(t *testing.T) {
  return out.join("|")+"/"+unicode+"/"+units+"/"+re.lastIndex+"/"+thrown;
  }}`
 	want := conversionOracle(t, source)
-	gogenOracle(t, source, want[:len(want)-1], "regexp.clone")
+	gogenOracle(t, source, want[:len(want)-1], "regexp.matchAllNext")
 }
 
 func TestGogenA16MatchGroupsNodeOracle(t *testing.T) {
 	source := `class Probe {static run():string {const out:string[]=[];for(const m of "a ab".matchAll(/(?<first>a)(?<second>b)?/g)){const groups=m.groups!;out.push(groups.first+":"+(groups.second??"missing"));out.push(JSON.stringify(groups)+":"+Object.keys(groups).join(","));}return out.join("|");}}`
 	want := conversionOracle(t, source)
-	gogenOracle(t, source, want[:len(want)-1], "regexp.clone")
+	gogenOracle(t, source, want[:len(want)-1], "regexp.matchAllNext")
 }
 
 func TestGogenA16MatchAllResumeNodeOracle(t *testing.T) {
@@ -39,14 +39,14 @@ func TestGogenA16MatchAllResumeNodeOracle(t *testing.T) {
  const plain=[..."a".matchAll(/(a)(b)?/g)];out.push(JSON.stringify(plain));out.push(String(plain[0].groups));
  return out.join("|");}}`
 	want := conversionOracle(t, source)
-	gogenOracle(t, source, want[:len(want)-1], "regexp.clone")
+	gogenOracle(t, source, want[:len(want)-1], "regexp.matchAllNext")
 }
 
 func TestGogenA16StringEvaluationNodeOracle(t *testing.T) {
 	source := `class Probe {static order="";static recv():string{Probe.order+="R";return "x";}static size():number{Probe.order+="N";return 4.9;}static fill():string{Probe.order+="F";return "ab";}
  static run():string {const padded=Probe.recv().padEnd(Probe.size(),Probe.fill());const at=Probe.recv().at(Probe.size());const nan=parseFloat("bad");const inf=parseFloat("Infinity");return JSON.stringify([padded,at,Probe.order,"abc".at(nan),"abc".at(inf),"abc".at(-inf),"x".padEnd(nan),"x".padEnd(4,undefined),"x".at(undefined)]);}}`
 	want := conversionOracle(t, source)
-	gogenOracle(t, source, want[:len(want)-1], "string.padEnd")
+	gogenImplementedABAPOracle(t, source, want[:len(want)-1])
 }
 
 func TestGogenA16UnicodeMatchesNodeOracle(t *testing.T) {
@@ -57,15 +57,15 @@ func TestGogenA16UnicodeMatchesNodeOracle(t *testing.T) {
  const long="x".repeat(1100)+"a";const tail=/a/g;tail.lastIndex=1100;for(const m of long.matchAll(tail))out.push(String(m.index));
  return out.join("|");}}`
 	want := conversionOracle(t, source)
-	gogenOracle(t, source, want[:len(want)-1], "regexp.clone")
+	gogenOracle(t, source, want[:len(want)-1], "regexp.matchAllNext")
 }
 func TestGogenA16AtABAPRefusal(t *testing.T) {
 	source := `class Probe {static run():string {return "abc".at(-1)??"missing";}}`
-	gogenOracle(t, source, "c", "string.relativeAt")
+	gogenImplementedABAPOracle(t, source, "c")
 }
 
 func TestGogenA16LabelMatchAllNodeOracle(t *testing.T) {
 	source := `class Probe {static run():string {const out:string[]=[];for(const text of ["a:b","a:=b","ab::b","one: two: three:=x","a:😀b: x:","a:\nb:",":a"]){for(const m of text.matchAll(/\b([A-Za-z_][A-Za-z_0-9]*)\s*:(?!=)/g))out.push(m.index+":"+m[0]+":"+m[1]+":"+String(m[2]));}return out.join("|");}}`
 	want := conversionOracle(t, source)
-	gogenOracle(t, source, want[:len(want)-1], "regexp.clone")
+	gogenOracle(t, source, want[:len(want)-1], "regexp.matchAllNext")
 }

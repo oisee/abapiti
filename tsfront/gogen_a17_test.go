@@ -39,7 +39,7 @@ func nodePlatformOracle(t *testing.T, source string) string {
 	return string(out)
 }
 
-func nodePlatformCheck(t *testing.T, source string) {
+func nodePlatformCheck(t *testing.T, source string, implemented ...bool) {
 	t.Helper()
 	want := nodePlatformOracle(t, source)
 	files := map[string]string{"probe.ts": source, "node.d.ts": nodePlatformStub}
@@ -47,7 +47,11 @@ func nodePlatformCheck(t *testing.T, source string) {
 	if got := runGoHIR(t, p, fmt.Sprintf("fmt.Println(%s())", goEntry("probe.ts.Probe", "run"))); got != want {
 		t.Fatalf("Go %q\nNode %q", got, want)
 	}
-	// ABAP has no host ABI for these calls: located refusal.
+	if len(implemented) > 0 && implemented[0] {
+		storageABAPProbe(t, p, "probe.ts.Probe", strings.TrimSuffix(want, "\n"), "")
+		return
+	}
+	// Filesystem operations still require a host ABI: located refusal.
 	if _, err := emitABAP(t, lowerStatementsProbe(t, files, []string{"probe.ts"})); err == nil || !strings.Contains(err.Error(), "probe.ts:") {
 		t.Fatalf("wanted located ABAP refusal, got %v", err)
 	}
@@ -67,7 +71,7 @@ class Probe {
   return [Probe.named(""), Probe.named("abc"), Probe.named("æ中😀"), Probe.spaced("a\0b"),
    Probe.legacy("abc"), Probe.untyped(JSON.stringify({k: [1, "x"]})), String(Probe.calls)].join("|");
  }
-}`)
+}`, true)
 }
 
 func TestNodePlatformBasenameNodeOracle(t *testing.T) {
@@ -78,7 +82,7 @@ class Probe {
   const cases = ["", "/", "//", "a", "a/b", "a/b/", "/a//", "/x/y.txt", "x\\y/z.txt", "dir\\file.abap", "/é/😀", "./.."] ;
   return cases.map((c) => "[" + basename(c.replaceAll("\\", "/")) + "," + path.basename(c) + "]").join("");
  }
-}`)
+}`, true)
 }
 
 func TestNodePlatformFSNodeOracle(t *testing.T) {

@@ -182,11 +182,11 @@ class Probe {
   return errors + m.has(1) + ":" + m.delete("x") + ":" + (m.get(null) === undefined) + ":" + m.get(a);
  }
 }`
-	gogenTSOracle(t, source, "weak.")
+	gogenTSImplementedABAPOracle(t, source)
 }
 
 func TestGogenWeakSetNodeOracle(t *testing.T) {
-	gogenTSOracle(t, `class Key { n = 1; } class Probe { static run(): string { const a = new Key(), b = new Key(); const s = new WeakSet<Key>(); s.add(a).add(b); return s.has(a) + ":" + s.has(new Key()) + ":" + s.delete(a) + ":" + s.delete(a) + ":" + s.has(b); } }`, "weak.")
+	gogenTSImplementedABAPOracle(t, `class Key { n = 1; } class Probe { static run(): string { const a = new Key(), b = new Key(); const s = new WeakSet<Key>(); s.add(a).add(b); return s.has(a) + ":" + s.has(new Key()) + ":" + s.delete(a) + ":" + s.delete(a) + ":" + s.has(b); } }`)
 }
 
 func gogenTSOracle(t *testing.T, source, refusal string) {

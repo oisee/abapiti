@@ -60,9 +60,34 @@ func TestCriticR1RadixCheckedDomain(t *testing.T) {
 	if got := runGoHIR(t, p, main); got != "ff\nrefused\n" {
 		t.Fatal(got)
 	}
-	if _, err := emitABAP(t, p); err == nil || !strings.Contains(err.Error(), "number.hex16") || !strings.Contains(err.Error(), "input.ts:") {
-		t.Fatalf("missing located ABAP radix refusal: %v", err)
+	files, names, err := emitABAPNamed(t, p)
+	if err != nil {
+		t.Fatal(err)
 	}
+	owner := names.Get("input.ts.Probe")
+	// ABAP now implements hex16, including the same checked integer domain.
+	files[owner+".clas.testclasses.abap"] = fmt.Sprintf(`CLASS ltcl_radix DEFINITION FOR TESTING DURATION SHORT RISK LEVEL HARMLESS.
+ PRIVATE SECTION.
+ METHODS check FOR TESTING.
+ ENDCLASS.
+ CLASS ltcl_radix IMPLEMENTATION.
+ METHOD check.
+ DATA obj TYPE REF TO %s.
+ DATA actual TYPE string.
+ DATA refused TYPE abap_bool.
+ CREATE OBJECT obj.
+ actual = obj->%s( %s = 255 ).
+ cl_abap_unit_assert=>assert_equals( act = actual exp = %s ).
+ TRY.
+ actual = obj->%s( %s = '1.5' ).
+ CATCH cx_sy_range_out_of_bounds.
+ refused = abap_true.
+ ENDTRY.
+ cl_abap_unit_assert=>assert_true( refused ).
+ ENDMETHOD.
+ ENDCLASS.
+ `, owner, names.Get("member.run"), names.Get("param.n"), "`ff`", names.Get("member.run"), names.Get("param.n"))
+	runABAPUnitFiles(t, files, owner)
 }
 
 // The original unproven assertion now has a checked Go runtime domain,

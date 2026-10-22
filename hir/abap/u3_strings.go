@@ -141,11 +141,7 @@ APPEND part TO pieces.
 cursor = cursor + width.
 ENDWHILE.
 CONCATENATE LINES OF pieces INTO clean RESPECTING BLANKS.
-DATA converter TYPE REF TO cl_abap_conv_out_ce.
-DATA bytes TYPE xstring.
-converter = cl_abap_conv_out_ce=>create( encoding = 'UTF-8' ).
-converter->convert( EXPORTING data = clean IMPORTING buffer = bytes ).
-cl_abap_message_digest=>calculate_hash_for_raw( EXPORTING if_algorithm = 'SHA256' if_data = bytes IMPORTING ef_hashstring = result ).
+cl_abap_message_digest=>calculate_hash_for_char( EXPORTING if_algorithm = 'SHA256' if_data = clean IMPORTING ef_hashstring = result ).
 TRANSLATE result TO LOWER CASE.
 `
 	case "path.basename":

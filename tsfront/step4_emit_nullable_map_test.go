@@ -6,12 +6,12 @@ import (
 )
 
 func TestStep4EmitNullableStringMapViewNodeOracle(t *testing.T) {
-	gogenTSOracle(t, `interface Item {readonly name:string;readonly parent?:string}
+	gogenTSImplementedABAPOracle(t, `interface Item {readonly name:string;readonly parent?:string}
  class Probe {
  static view(m:ReadonlyMap<string,Item>):ReadonlyMap<string|null|undefined,Item>{return m;}
  static chain(n:Item|undefined,m:ReadonlyMap<string|null|undefined,Item>):string {let out="";for(let c=n;c;c=m.get(c.parent))out+=c.name;return out;}
  static run():string{const root:Item={name:"r"},a:Item={name:"a",parent:"r"};const m=new Map<string,Item>([["r",root],["a",a]]);const view=Probe.view(m);const before=Probe.chain(a,view);const replacement:Item={name:"new"};m.set("a",replacement);return before+":"+view.get("a")!.name+":"+(view.get(null)===undefined)+":"+(view.get(undefined)===undefined)+":"+view.has(null)+":"+(view===m)+":"+(view.get("a")===replacement);}}
-`, "map.view")
+`)
 }
 
 func TestStep4EmitBoxedMapABAPRefusal(t *testing.T) {

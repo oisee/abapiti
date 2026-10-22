@@ -44,9 +44,7 @@ func TestGogenSparsePushSpread(t *testing.T) {
 			if got := conversionOracle(t, source); got != want {
 				t.Fatalf("Node %q want %q", got, want)
 			}
-			if _, err := emitABAP(t, p); err == nil || !strings.Contains(err.Error(), "array.spread0") || !strings.Contains(err.Error(), "probe.ts:") {
-				t.Fatalf("expected located ABAP spread refusal, got %v", err)
-			}
+			storageABAPProbe(t, p, "probe.ts.Probe", strings.TrimSuffix(want, "\n"), "")
 		})
 	}
 }
@@ -59,12 +57,12 @@ func TestGogenPrimitivePushSpreadRefusal(t *testing.T) {
 
 func TestGogenSparsePrimitiveSourceIntoOptionalPush(t *testing.T) {
 	source := `class Probe {static run():string {const xs:number[]=[];xs[2]=3;const copy:(number|undefined)[]=[...xs];const a:(number|undefined)[]=[];a.push(2,...xs);let visits=0;a.forEach(v=>{visits++;});return (a[1]===undefined)+":"+(copy[0]===undefined)+":"+visits;}}`
-	gogenOracle(t, source, "true:true:4", "array.spread0")
+	gogenImplementedABAPOracle(t, source, "true:true:4")
 }
 
 func TestGogenPushSpreadSnapshotsBeforeLaterArguments(t *testing.T) {
 	source := `class Probe {static change(a:(number|undefined)[]):number {a.push(9);return 3;} static run():string {const a:(number|undefined)[]=[1];a.push(2,...a,Probe.change(a));return a.length+":"+a[0]+":"+a[1]+":"+a[2]+":"+a[3]+":"+a[4];}}`
-	gogenOracle(t, source, "5:1:9:2:1:3", "array.spread0")
+	gogenImplementedABAPOracle(t, source, "5:1:9:2:1:3")
 }
 
 func TestGogenPushSetSpread(t *testing.T) {

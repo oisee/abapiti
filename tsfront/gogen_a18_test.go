@@ -63,14 +63,14 @@ func TestGogenA18MixedNativeNodeOracle(t *testing.T) {
 func TestGogenA18ObjectValuesNodeOracle(t *testing.T) {
 	source := `class Probe {static values(x:any):string{return JSON.stringify(Object.values(x));}static run():string {return Probe.values({b:2,"10":10,"2":2,a:false})+":"+Probe.values(["x","y"])+":"+Probe.values("ab");}}`
 	want := conversionOracle(t, source)
-	gogenOracle(t, source, want[:len(want)-1], "dynamic.values")
+	gogenImplementedABAPOracle(t, source, want[:len(want)-1])
 }
 
 func TestGogenA18NumericNodeOracle(t *testing.T) {
 	source := `class Probe {static check(x:any):string{return [Number.isInteger(x),Number.isFinite(x),Number.isSafeInteger(x)].join(",");}
  static run():string {const out:string[]=[];for(const x of [0,-0,1.5,NaN,Infinity,-Infinity,Number.MAX_SAFE_INTEGER,9007199254740992,"2",null,undefined,false,[],{}])out.push(Probe.check(x));return out.join("|")+":"+String(Math.abs(-0))+":"+Math.abs(-3);}}`
 	want := conversionOracle(t, source)
-	gogenOracle(t, source, want[:len(want)-1], "number.abs")
+	gogenImplementedABAPOracle(t, source, want[:len(want)-1])
 }
 
 func TestGogenA18ArrayFromNodeOracle(t *testing.T) {
@@ -82,13 +82,13 @@ func TestGogenA18ArrayFromNodeOracle(t *testing.T) {
 func TestGogenA18SegmentNodeOracle(t *testing.T) {
 	source := `class Probe {static run():string {return Array.from("a😀",c=>c.charCodeAt(0).toString(16).padStart(4,"0")).join("");}}`
 	want := conversionOracle(t, source)
-	gogenOracle(t, source, want[:len(want)-1], "number.hex16")
+	gogenImplementedABAPOracle(t, source, want[:len(want)-1])
 }
 
 func TestGogenA18DynamicSegmentNodeOracle(t *testing.T) {
 	source := `class Probe {static segment(s:any):string{return Array.from(s,c=>c.charCodeAt(0).toString(16).padStart(4,"0")).join("");}static run():string{return Probe.segment("a😀");}}`
 	want := conversionOracle(t, source)
-	gogenOracle(t, source, strings.TrimSuffix(want, "\n"), "number.hex16")
+	gogenImplementedABAPOracle(t, source, strings.TrimSuffix(want, "\n"))
 }
 
 func TestGogenA18FromEntriesSpreadNodeOracle(t *testing.T) {
@@ -121,7 +121,14 @@ func TestGogenA18EnvNodeOracle(t *testing.T) {
 	source := `declare const process: {env: {[key:string]:string|undefined}};
  class Probe {static run():string {const name="GOGEN_A18_PRESENT";return JSON.stringify([process.env[name],process.env.GOGEN_A18_EMPTY,process.env.GOGEN_A18_MISSING]);}}`
 	want := conversionOracle(t, source)
-	gogenOracle(t, source, want[:len(want)-1], "host.getenv")
+	p := lowerStatementsProbe(t, map[string]string{"probe.ts": source}, []string{"probe.ts"})
+	gogenCheck(t, p, "probe.ts", source, strings.TrimSuffix(want, "\n"))
+	// Without a declared env host capability, ABAP deliberately observes all
+	// environment lookups as undefined. Keep the Go/Node environment oracle and
+	// also pin this documented ABAP fallback rather than reading the host process.
+	if !t.Failed() {
+		storageABAPProbe(t, p, "probe.ts.Probe", "[null,null,null]", "")
+	}
 }
 
 func TestGogenA18ShadowedBuiltinsNodeOracle(t *testing.T) {

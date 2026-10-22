@@ -2893,6 +2893,15 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 			b.line("ENDLOOP.")
 			return
 		}
+		if x.X.Kind == hir.Lit && x.X.Type.Kind == hir.I64 {
+			// A proven binary64-exact literal can enter Number storage directly.
+			// Keep the checked safe-integer boundary for runtime I64 values and for
+			// constants whose conversion would lose integer precision.
+			if value, err := strconv.ParseInt(fmt.Sprint(x.X.Value), 10, 64); err == nil && strconv.FormatFloat(float64(value), 'f', 0, 64) == fmt.Sprint(value) {
+				b.boxDynamic(n, a, hir.T(hir.Number))
+				return
+			}
+		}
 		b.boxDynamic(n, a, x.X.Type)
 		return
 	case "dynamic.typeof", "dynamic.typeofValue", "dynamic.toString", "dynamic.recordString":
@@ -3082,8 +3091,15 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 		return
 	}
 	if x.Op == "map.delete" {
-		b.line("DELETE " + a + "->entries WHERE k = " + args[0] + ".")
-		b.line(n + " = xsdbool( sy-subrc = 0 ).")
+		if x.X.Type.Args[0].IsRef() {
+			// Reference identity is a table key; avoid WHERE's scalar conversion.
+			b.line("READ TABLE " + a + "->entries TRANSPORTING NO FIELDS WITH KEY k = " + args[0] + ".")
+			b.line(n + " = xsdbool( sy-subrc = 0 ).")
+			b.line("IF sy-subrc = 0.\nDELETE " + a + "->entries INDEX sy-tabix.\nENDIF.")
+		} else {
+			b.line("DELETE " + a + "->entries WHERE k = " + args[0] + ".")
+			b.line(n + " = xsdbool( sy-subrc = 0 ).")
+		}
 		return
 	}
 	if x.Op == "set.clear" && b.e.setIterationUsed() {

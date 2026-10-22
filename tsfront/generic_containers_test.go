@@ -38,8 +38,8 @@ export class Probe {
 }
 
 func TestGenericContainersWeakMapABAPRefusalNodeOracle(t *testing.T) {
-	gogenTSOracle(t, `function memo<T>(map: WeakMap<object, Map<string,T>>, owner: object): Map<string,T> | undefined { return map.get(owner) ?? map.set(owner,new Map()).get(owner); }
- class Probe { static run(): string { const owner={}; const m=new WeakMap<object,Map<string,number>>(); memo(m,owner)!.set("a",1); return String(memo(m,owner)!.get("a")); } }`, "weak.")
+	gogenTSImplementedABAPOracle(t, `function memo<T>(map: WeakMap<object, Map<string,T>>, owner: object): Map<string,T> | undefined { return map.get(owner) ?? map.set(owner,new Map()).get(owner); }
+ class Probe { static run(): string { const owner={}; const m=new WeakMap<object,Map<string,number>>(); memo(m,owner)!.set("a",1); return String(memo(m,owner)!.get("a")); } }`)
 }
 
 func TestGenericContainersNativeMapNodeOracle(t *testing.T) {

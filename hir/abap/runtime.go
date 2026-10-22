@@ -135,7 +135,11 @@ func (e *emitter) runtime(t hir.Type) {
 		if t.Args[0].Kind == hir.String {
 			method("join", "IF p0 IS BOUND AND p0->has = abap_true.\nCONCATENATE LINES OF items INTO result SEPARATED BY p0->value RESPECTING BLANKS.\nELSE.\nCONCATENATE LINES OF items INTO result SEPARATED BY `,` RESPECTING BLANKS.\nENDIF.\n")
 		} else if !t.Args[0].IsRef() && t.Args[0].Kind != hir.Optional {
-			method("join", "DATA row TYPE "+elem+".\nDATA part TYPE string.\nLOOP AT items INTO row.\npart = |{ row }|.\nIF sy-tabix = 1.\nresult = part.\nELSEIF p0 IS BOUND AND p0->has = abap_true.\nCONCATENATE result p0->value part INTO result RESPECTING BLANKS.\nELSE.\nCONCATENATE result `,` part INTO result RESPECTING BLANKS.\nENDIF.\nENDLOOP.\n")
+			part := "part = |{ row }|.\n"
+			if t.Args[0].Kind == hir.Bool {
+				part = "IF row = abap_true.\npart = `true`.\nELSE.\npart = `false`.\nENDIF.\n"
+			}
+			method("join", "DATA row TYPE "+elem+".\nDATA part TYPE string.\nLOOP AT items INTO row.\n"+part+"IF sy-tabix = 1.\nresult = part.\nELSEIF p0 IS BOUND AND p0->has = abap_true.\nCONCATENATE result p0->value part INTO result RESPECTING BLANKS.\nELSE.\nCONCATENATE result `,` part INTO result RESPECTING BLANKS.\nENDIF.\nENDLOOP.\n")
 		}
 		line("METHODS get IMPORTING p0 TYPE i RETURNING VALUE(result) TYPE " + e.typ(opt) + ".")
 		code := "IF p0 < 0.\nRETURN.\nENDIF.\nDATA(idx) = p0 + 1.\nREAD TABLE items INDEX idx INTO DATA(val).\nIF sy-subrc = 0.\n"

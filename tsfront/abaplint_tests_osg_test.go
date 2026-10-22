@@ -27,8 +27,9 @@ func TestABAPTestGapCountsSyntheticOccurrences(t *testing.T) {
 		&hir.Stmt{Kind: hir.ExprStmt, X: hir.L(hir.T(hir.Number), math.Inf(1))})}
 	lowering := &RegistryLowering{Prog: &hir.Program{Classes: []*hir.Class{{Name: "Host", Methods: []*hir.Method{m}}}}}
 	gap := MeasureABAPTestGap(lowering)
-	// Classview, Chai, JSON5 and the checked string/XML operations are admitted.
-	wantCatalogue := []string{"array.spread0", "arrayLike.length", "clock.epochMilliseconds", "collection.get", "collection.has", "container.readonlyClassView", "container.readonlyView", "dynamic.isMap", "dynamic.isSet", "dynamic.spread", "dynamic.toNumber", "dynamic.values", "fs.readText", "fs.readdirEntries", "fs.readdirNames", "host.getenv", "host.stderrWrite", "json.stringifyReplacer", "map.insertions", "map.view", "number.abs", "number.hex16", "number.isFinite", "number.isInteger", "number.isSafeInteger", "number.strictIsNaN", "path.basename", "path.join", "regexp.clone", "regexp.flags", "regexp.matchAllNext", "set.iterationValues", "set.view", "string.codePoints", "string.padEnd", "string.parseFloat", "string.relativeAt", "string.sha256Hex", "util.isDeepStrictEqual", "weak.lookupKey", "weak.writeKey"}
+	// U3/U4/C/F2 admit string, numeric, host, collection and weak operations.
+	// The two synthetic parseFloat sites and nonfinite literal remain refused.
+	wantCatalogue := []string{"arrayLike.length", "clock.epochMilliseconds", "container.readonlyClassView", "container.readonlyView", "dynamic.spread", "dynamic.toNumber", "fs.readText", "fs.readdirEntries", "fs.readdirNames", "json.stringifyReplacer", "number.strictIsNaN", "path.join", "regexp.matchAllNext", "string.parseFloat", "util.isDeepStrictEqual"}
 	if !slices.Equal(gap.UnsupportedCatalogue, wantCatalogue) || len(gap.Runtime) != 1 || gap.Runtime[0].Sites != 2 || gap.NonfiniteLiteralSites != 1 {
 		t.Fatalf("lost synthetic occurrences or ABAP limits: %+v", gap)
 	}

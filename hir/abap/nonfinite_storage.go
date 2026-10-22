@@ -95,11 +95,14 @@ func retainNonfiniteStorage(p *hir.Program) (*hir.Program, map[*hir.Expr]bool, m
 	return q, a.exprs, fields
 }
 
-// The frontend's absent numeric operand uses this checked NaN producer.
+// The frontend's NaN and Infinity constants need tagged numeric storage.
 // Other parser results acquire tagged storage only when a destination needs
 // it; a finite scalar destination keeps its explicit domain checks.
 func nanStorageBoundary(x *hir.Expr) bool {
-	return x.Kind == hir.RuntimeOp && x.Op == "string.parseFloatNumber" && x.X != nil && x.X.Kind == hir.Lit && x.X.Value == "NaN"
+	if x.Kind != hir.RuntimeOp || x.Op != "string.parseFloatNumber" || x.X == nil || x.X.Kind != hir.Lit {
+		return false
+	}
+	return x.X.Value == "NaN" || x.X.Value == "Infinity" || x.X.Value == "-Infinity"
 }
 
 func hasNaNBoundary(p *hir.Program) bool {

@@ -49,6 +49,11 @@ func abapUnitProbe(t *testing.T, p *hir.Program, ownerName, want, actual, refuse
 	}
 	fmt.Fprint(&unit, "ENDMETHOD.\nENDCLASS.\n")
 	files[owner+".clas.testclasses.abap"] = unit.String()
+	runABAPUnitFiles(t, files, owner)
+}
+
+func runABAPUnitFiles(t *testing.T, files map[string]string, owner string) {
+	t.Helper()
 	dir := t.TempDir()
 	if base := os.Getenv("ABAPITI_TEST_OUT"); base != "" {
 		dir = filepath.Join(base, t.Name())
