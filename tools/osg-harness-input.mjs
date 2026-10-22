@@ -9,6 +9,7 @@
 import {cpSync, existsSync, readFileSync, readdirSync} from 'node:fs';
 import {join} from 'node:path';
 import {execFileSync, spawnSync} from 'node:child_process';
+import {adaptExceptionDiagnostics} from './osg-exception-diagnostics.mjs';
 
 // The TS-HA driver always starts the runner with these flags (cmd/abapiti/
 // abaplint_tests_osg.go); a bridge started as `node tools/...mjs` re-execs
@@ -88,7 +89,7 @@ export function osgRefusals(program) {
 
 export async function osgEmitGo({tool, program, transform = go => go}) {
   const {emitGo} = await tool('emit-go.mjs');
-  return transform(emitGo(program, 'main', null, true));
+  return transform(adaptExceptionDiagnostics(emitGo(program, 'main', null, true)));
 }
 
 // Release gogen's registry/IR before the memory-heavy Go compiler starts.

@@ -15,404 +15,364 @@ METHOD z_member_run_71be1bca84374a.
     TRY.
         t10 = zcl_abapiti_probe_host=>read_text( file = t9 ).
       CATCH cx_static_check cx_dynamic_check INTO t11.
-        DATA(t12) = NEW z_runtime_opti_4ba3bdccd169bb( ).
-        t12->has = abap_true.
-        t12->value = t11->get_text( ).
+        DATA(t12) = NEW z_builtin_erro_e8b3bd7e8a547c(  ).
+        t12->capture_abap( t11 ).
         DATA t13 TYPE REF TO z_exception_cl_30eec8e8805d60.
         CLEAR t13.
-        DATA t14 TYPE REF TO z_builtin_erro_e8b3bd7e8a547c.
-        CLEAR t14.
-        DATA(t15) = CAST z_runtime_opti_4ba3bdccd169bb( t12 ).
-        t14 = NEW z_builtin_erro_e8b3bd7e8a547c( z_param_messag_26cb69beb0eed4 = t15 ).
+        DATA(t14) = CAST z_builtin_erro_e8b3bd7e8a547c( t12 ).
         t13 = NEW #( ).
         t13->payload = t14.
         RAISE EXCEPTION t13.
     ENDTRY.
-    DATA(t16) = CONV string( |\|| ).
-    DATA(t17) = CONV i( strlen( t10 ) ).
-    t7 = |{ t10 }{ t16 }|.
-    DATA(t18) = VALUE string( ).
-    DATA(t19) = CONV abap_bool( abap_true ).
-    DATA(t20) = CONV abap_bool( t19 ).
-    DATA(t21) = VALUE abap_bool( ).
-    DATA t22 TYPE REF TO cx_root.
-    CLEAR t22.
+    DATA(t15) = CONV string( |\|| ).
+    DATA(t16) = CONV i( strlen( t10 ) ).
+    t7 = |{ t10 }{ t15 }|.
+    DATA(t17) = VALUE string( ).
+    DATA(t18) = CONV abap_bool( abap_true ).
+    DATA(t19) = CONV abap_bool( t18 ).
+    DATA(t20) = VALUE abap_bool( ).
+    DATA t21 TYPE REF TO cx_root.
+    CLEAR t21.
     TRY.
-        t21 = zcl_abapiti_probe_host=>flip( x = t20 ).
-      CATCH cx_static_check cx_dynamic_check INTO t22.
-        DATA(t23) = NEW z_runtime_opti_4ba3bdccd169bb( ).
-        t23->has = abap_true.
-        t23->value = t22->get_text( ).
-        DATA t24 TYPE REF TO z_exception_cl_30eec8e8805d60.
-        CLEAR t24.
-        DATA t25 TYPE REF TO z_builtin_erro_e8b3bd7e8a547c.
-        CLEAR t25.
-        DATA(t26) = CAST z_runtime_opti_4ba3bdccd169bb( t23 ).
-        t25 = NEW z_builtin_erro_e8b3bd7e8a547c( z_param_messag_26cb69beb0eed4 = t26 ).
-        t24 = NEW #( ).
-        t24->payload = t25.
-        RAISE EXCEPTION t24.
+        t20 = zcl_abapiti_probe_host=>flip( x = t19 ).
+      CATCH cx_static_check cx_dynamic_check INTO t21.
+        DATA(t22) = NEW z_builtin_erro_e8b3bd7e8a547c(  ).
+        t22->capture_abap( t21 ).
+        DATA t23 TYPE REF TO z_exception_cl_30eec8e8805d60.
+        CLEAR t23.
+        DATA(t24) = CAST z_builtin_erro_e8b3bd7e8a547c( t22 ).
+        t23 = NEW #( ).
+        t23->payload = t24.
+        RAISE EXCEPTION t23.
     ENDTRY.
-    IF t21 = abap_true.
-      DATA(t27) = CONV string( |true| ).
-      t18 = t27.
+    IF t20 = abap_true.
+      DATA(t25) = CONV string( |true| ).
+      t17 = t25.
     ELSE.
-      DATA(t28) = CONV string( |false| ).
-      t18 = t28.
+      DATA(t26) = CONV string( |false| ).
+      t17 = t26.
     ENDIF.
-    DATA(t29) = CONV i( strlen( t7 ) ).
-    t6 = |{ t7 }{ t18 }|.
-    DATA(t30) = CONV string( |\|| ).
-    DATA(t31) = CONV i( strlen( t6 ) ).
-    t5 = |{ t6 }{ t30 }|.
-    DATA(t32) = VALUE string( ).
-    DATA(t33) = CONV f( 40 ).
+    DATA(t27) = CONV i( strlen( t7 ) ).
+    t6 = |{ t7 }{ t17 }|.
+    DATA(t28) = CONV string( |\|| ).
+    DATA(t29) = CONV i( strlen( t6 ) ).
+    t5 = |{ t6 }{ t28 }|.
+    DATA(t30) = VALUE string( ).
+    DATA(t31) = CONV f( 40 ).
+    DATA(t32) = CONV f( t31 ).
+    DATA(t33) = CONV f( 2 ).
     DATA(t34) = CONV f( t33 ).
-    DATA(t35) = CONV f( 2 ).
-    DATA(t36) = CONV f( t35 ).
-    DATA(t37) = VALUE f( ).
-    DATA t38 TYPE REF TO cx_root.
-    CLEAR t38.
+    DATA(t35) = VALUE f( ).
+    DATA t36 TYPE REF TO cx_root.
+    CLEAR t36.
     TRY.
-        t37 = zcl_abapiti_probe_host=>add( x = t34 y = t36 ).
-      CATCH cx_static_check cx_dynamic_check INTO t38.
-        DATA(t39) = NEW z_runtime_opti_4ba3bdccd169bb( ).
-        t39->has = abap_true.
-        t39->value = t38->get_text( ).
-        DATA t40 TYPE REF TO z_exception_cl_30eec8e8805d60.
-        CLEAR t40.
-        DATA t41 TYPE REF TO z_builtin_erro_e8b3bd7e8a547c.
-        CLEAR t41.
-        DATA(t42) = CAST z_runtime_opti_4ba3bdccd169bb( t39 ).
-        t41 = NEW z_builtin_erro_e8b3bd7e8a547c( z_param_messag_26cb69beb0eed4 = t42 ).
-        t40 = NEW #( ).
-        t40->payload = t41.
-        RAISE EXCEPTION t40.
+        t35 = zcl_abapiti_probe_host=>add( x = t32 y = t34 ).
+      CATCH cx_static_check cx_dynamic_check INTO t36.
+        DATA(t37) = NEW z_builtin_erro_e8b3bd7e8a547c(  ).
+        t37->capture_abap( t36 ).
+        DATA t38 TYPE REF TO z_exception_cl_30eec8e8805d60.
+        CLEAR t38.
+        DATA(t39) = CAST z_builtin_erro_e8b3bd7e8a547c( t37 ).
+        t38 = NEW #( ).
+        t38->payload = t39.
+        RAISE EXCEPTION t38.
     ENDTRY.
-    IF t37 <> trunc( t37 ) OR t37 > range_safe_integer OR t37 < 0 - range_safe_integer.
+    IF t35 <> trunc( t35 ) OR t35 > range_safe_integer OR t35 < 0 - range_safe_integer.
       RAISE EXCEPTION TYPE cx_sy_range_out_of_bounds.
     ENDIF.
-    DATA(t43) = CONV int8( t37 ).
-    t32 = |{ t43 }|.
-    DATA(t44) = CONV i( strlen( t5 ) ).
-    t4 = |{ t5 }{ t32 }|.
-    DATA(t45) = CONV string( |\|| ).
-    DATA(t46) = CONV i( strlen( t4 ) ).
-    t3 = |{ t4 }{ t45 }|.
-    DATA(t47) = VALUE string( ).
-    DATA t48 TYPE REF TO z_runtime_arra_8ecd6afe19e0a5.
-    CLEAR t48.
-    DATA t49 TYPE REF TO z_runtime_arra_8ecd6afe19e0a5.
-    CLEAR t49.
-    DATA t50 TYPE REF TO z_runtime_arra_8ecd6afe19e0a5.
-    CLEAR t50.
-    CREATE OBJECT t50.
-    t49 = t50.
-    DATA(t51) = CAST z_runtime_arra_8ecd6afe19e0a5( t49 ).
-    DATA(t52) = CONV string( |a| ).
-    APPEND t52 TO t51->items.
-    DATA(t53) = CAST z_runtime_arra_8ecd6afe19e0a5( t49 ).
-    DATA(t54) = CONV string( |b| ).
-    APPEND t54 TO t53->items.
-    DATA(t55) = CAST z_runtime_arra_8ecd6afe19e0a5( t49 ).
-    t48 = t55.
-    DATA t56 TYPE string_table.
-    CLEAR t56.
-    t48->dense( ).
-    t56 = t48->items.
-    DATA t57 TYPE string_table.
-    CLEAR t57.
-    DATA t58 TYPE REF TO cx_root.
-    CLEAR t58.
+    DATA(t40) = CONV int8( t35 ).
+    t30 = |{ t40 }|.
+    DATA(t41) = CONV i( strlen( t5 ) ).
+    t4 = |{ t5 }{ t30 }|.
+    DATA(t42) = CONV string( |\|| ).
+    DATA(t43) = CONV i( strlen( t4 ) ).
+    t3 = |{ t4 }{ t42 }|.
+    DATA(t44) = VALUE string( ).
+    DATA t45 TYPE REF TO z_runtime_arra_8ecd6afe19e0a5.
+    CLEAR t45.
+    DATA t46 TYPE REF TO z_runtime_arra_8ecd6afe19e0a5.
+    CLEAR t46.
+    DATA t47 TYPE REF TO z_runtime_arra_8ecd6afe19e0a5.
+    CLEAR t47.
+    CREATE OBJECT t47.
+    t46 = t47.
+    DATA(t48) = CAST z_runtime_arra_8ecd6afe19e0a5( t46 ).
+    DATA(t49) = CONV string( |a| ).
+    APPEND t49 TO t48->items.
+    DATA(t50) = CAST z_runtime_arra_8ecd6afe19e0a5( t46 ).
+    DATA(t51) = CONV string( |b| ).
+    APPEND t51 TO t50->items.
+    DATA(t52) = CAST z_runtime_arra_8ecd6afe19e0a5( t46 ).
+    t45 = t52.
+    DATA t53 TYPE string_table.
+    CLEAR t53.
+    t45->dense( ).
+    t53 = t45->items.
+    DATA t54 TYPE string_table.
+    CLEAR t54.
+    DATA t55 TYPE REF TO cx_root.
+    CLEAR t55.
     TRY.
-        t57 = zcl_abapiti_probe_host=>strings( x = t56 ).
-      CATCH cx_static_check cx_dynamic_check INTO t58.
-        DATA(t59) = NEW z_runtime_opti_4ba3bdccd169bb( ).
-        t59->has = abap_true.
-        t59->value = t58->get_text( ).
-        DATA t60 TYPE REF TO z_exception_cl_30eec8e8805d60.
-        CLEAR t60.
-        DATA t61 TYPE REF TO z_builtin_erro_e8b3bd7e8a547c.
-        CLEAR t61.
-        DATA(t62) = CAST z_runtime_opti_4ba3bdccd169bb( t59 ).
-        t61 = NEW z_builtin_erro_e8b3bd7e8a547c( z_param_messag_26cb69beb0eed4 = t62 ).
-        t60 = NEW #( ).
-        t60->payload = t61.
-        RAISE EXCEPTION t60.
+        t54 = zcl_abapiti_probe_host=>strings( x = t53 ).
+      CATCH cx_static_check cx_dynamic_check INTO t55.
+        DATA(t56) = NEW z_builtin_erro_e8b3bd7e8a547c(  ).
+        t56->capture_abap( t55 ).
+        DATA t57 TYPE REF TO z_exception_cl_30eec8e8805d60.
+        CLEAR t57.
+        DATA(t58) = CAST z_builtin_erro_e8b3bd7e8a547c( t56 ).
+        t57 = NEW #( ).
+        t57->payload = t58.
+        RAISE EXCEPTION t57.
     ENDTRY.
-    DATA t63 TYPE REF TO z_runtime_arra_8ecd6afe19e0a5.
-    CLEAR t63.
-    CREATE OBJECT t63.
-    t63->items = t57.
-    DATA(t64) = CONV string( |,| ).
-    DATA(t65) = NEW z_runtime_opti_4ba3bdccd169bb( ).
-    t65->has = abap_true.
-    t65->value = t64.
-    t47 = t63->join( p0 = t65 ).
-    DATA(t66) = CONV i( strlen( t3 ) ).
-    t2 = |{ t3 }{ t47 }|.
+    DATA t59 TYPE REF TO z_runtime_arra_8ecd6afe19e0a5.
+    CLEAR t59.
+    CREATE OBJECT t59.
+    t59->items = t54.
+    DATA(t60) = CONV string( |,| ).
+    DATA(t61) = NEW z_runtime_opti_4ba3bdccd169bb( ).
+    t61->has = abap_true.
+    t61->value = t60.
+    t44 = t59->join( p0 = t61 ).
+    DATA(t62) = CONV i( strlen( t3 ) ).
+    t2 = |{ t3 }{ t44 }|.
     t1 = t2.
+    DATA(t63) = VALUE string( ).
+    DATA(t64) = CONV string( t1 ).
+    DATA(t65) = VALUE string( ).
+    DATA(t66) = VALUE string( ).
     DATA(t67) = VALUE string( ).
-    DATA(t68) = CONV string( t1 ).
+    DATA(t68) = VALUE string( ).
     DATA(t69) = VALUE string( ).
-    DATA(t70) = VALUE string( ).
-    DATA(t71) = VALUE string( ).
-    DATA(t72) = VALUE string( ).
-    DATA(t73) = VALUE string( ).
-    DATA(t74) = CONV string( |\|| ).
-    DATA t75 TYPE string_table.
+    DATA(t70) = CONV string( |\|| ).
+    DATA t71 TYPE string_table.
+    CLEAR t71.
+    DATA(t72) = CONV string( |a| ).
+    APPEND t72 TO t71.
+    DATA t73 TYPE REF TO z_runtime_arra_8ecd6afe19e0a5.
+    CLEAR t73.
+    DATA t74 TYPE REF TO z_runtime_arra_8ecd6afe19e0a5.
+    CLEAR t74.
+    DATA t75 TYPE REF TO z_runtime_arra_8ecd6afe19e0a5.
     CLEAR t75.
-    DATA(t76) = CONV string( |a| ).
-    APPEND t76 TO t75.
-    DATA t77 TYPE REF TO z_runtime_arra_8ecd6afe19e0a5.
-    CLEAR t77.
-    DATA t78 TYPE REF TO z_runtime_arra_8ecd6afe19e0a5.
-    CLEAR t78.
-    DATA t79 TYPE REF TO z_runtime_arra_8ecd6afe19e0a5.
-    CLEAR t79.
-    CREATE OBJECT t79.
-    t78 = t79.
-    DATA(t80) = CAST z_runtime_arra_8ecd6afe19e0a5( t78 ).
-    DATA(t81) = CONV string( |b| ).
-    APPEND t81 TO t80->items.
-    DATA(t82) = CAST z_runtime_arra_8ecd6afe19e0a5( t78 ).
-    t77 = t82.
-    t77->dense( ).
-    APPEND LINES OF t77->items TO t75.
-    DATA(t83) = VALUE string( ).
-    DATA t84 TYPE REF TO cx_root.
-    CLEAR t84.
+    CREATE OBJECT t75.
+    t74 = t75.
+    DATA(t76) = CAST z_runtime_arra_8ecd6afe19e0a5( t74 ).
+    DATA(t77) = CONV string( |b| ).
+    APPEND t77 TO t76->items.
+    DATA(t78) = CAST z_runtime_arra_8ecd6afe19e0a5( t74 ).
+    t73 = t78.
+    t73->dense( ).
+    APPEND LINES OF t73->items TO t71.
+    DATA(t79) = VALUE string( ).
+    DATA t80 TYPE REF TO cx_root.
+    CLEAR t80.
     TRY.
-        t83 = zcl_abapiti_probe_host=>join( parts = t75 ).
-      CATCH cx_static_check cx_dynamic_check INTO t84.
-        DATA(t85) = NEW z_runtime_opti_4ba3bdccd169bb( ).
-        t85->has = abap_true.
-        t85->value = t84->get_text( ).
-        DATA t86 TYPE REF TO z_exception_cl_30eec8e8805d60.
-        CLEAR t86.
-        DATA t87 TYPE REF TO z_builtin_erro_e8b3bd7e8a547c.
-        CLEAR t87.
-        DATA(t88) = CAST z_runtime_opti_4ba3bdccd169bb( t85 ).
-        t87 = NEW z_builtin_erro_e8b3bd7e8a547c( z_param_messag_26cb69beb0eed4 = t88 ).
-        t86 = NEW #( ).
-        t86->payload = t87.
-        RAISE EXCEPTION t86.
+        t79 = zcl_abapiti_probe_host=>join( parts = t71 ).
+      CATCH cx_static_check cx_dynamic_check INTO t80.
+        DATA(t81) = NEW z_builtin_erro_e8b3bd7e8a547c(  ).
+        t81->capture_abap( t80 ).
+        DATA t82 TYPE REF TO z_exception_cl_30eec8e8805d60.
+        CLEAR t82.
+        DATA(t83) = CAST z_builtin_erro_e8b3bd7e8a547c( t81 ).
+        t82 = NEW #( ).
+        t82->payload = t83.
+        RAISE EXCEPTION t82.
     ENDTRY.
-    DATA(t89) = CONV i( strlen( t74 ) ).
-    t73 = |{ t74 }{ t83 }|.
-    DATA(t90) = CONV string( |\|| ).
-    DATA(t91) = CONV i( strlen( t73 ) ).
-    t72 = |{ t73 }{ t90 }|.
-    DATA t92 TYPE string_table.
-    CLEAR t92.
-    DATA(t93) = VALUE string( ).
-    DATA t94 TYPE REF TO cx_root.
-    CLEAR t94.
+    DATA(t84) = CONV i( strlen( t70 ) ).
+    t69 = |{ t70 }{ t79 }|.
+    DATA(t85) = CONV string( |\|| ).
+    DATA(t86) = CONV i( strlen( t69 ) ).
+    t68 = |{ t69 }{ t85 }|.
+    DATA t87 TYPE string_table.
+    CLEAR t87.
+    DATA(t88) = VALUE string( ).
+    DATA t89 TYPE REF TO cx_root.
+    CLEAR t89.
     TRY.
-        t93 = zcl_abapiti_probe_host=>join( parts = t92 ).
-      CATCH cx_static_check cx_dynamic_check INTO t94.
-        DATA(t95) = NEW z_runtime_opti_4ba3bdccd169bb( ).
-        t95->has = abap_true.
-        t95->value = t94->get_text( ).
-        DATA t96 TYPE REF TO z_exception_cl_30eec8e8805d60.
-        CLEAR t96.
-        DATA t97 TYPE REF TO z_builtin_erro_e8b3bd7e8a547c.
-        CLEAR t97.
-        DATA(t98) = CAST z_runtime_opti_4ba3bdccd169bb( t95 ).
-        t97 = NEW z_builtin_erro_e8b3bd7e8a547c( z_param_messag_26cb69beb0eed4 = t98 ).
-        t96 = NEW #( ).
-        t96->payload = t97.
-        RAISE EXCEPTION t96.
+        t88 = zcl_abapiti_probe_host=>join( parts = t87 ).
+      CATCH cx_static_check cx_dynamic_check INTO t89.
+        DATA(t90) = NEW z_builtin_erro_e8b3bd7e8a547c(  ).
+        t90->capture_abap( t89 ).
+        DATA t91 TYPE REF TO z_exception_cl_30eec8e8805d60.
+        CLEAR t91.
+        DATA(t92) = CAST z_builtin_erro_e8b3bd7e8a547c( t90 ).
+        t91 = NEW #( ).
+        t91->payload = t92.
+        RAISE EXCEPTION t91.
     ENDTRY.
-    DATA(t99) = CONV i( strlen( t72 ) ).
-    t71 = |{ t72 }{ t93 }|.
-    DATA(t100) = CONV string( |\|| ).
-    DATA(t101) = CONV i( strlen( t71 ) ).
-    t70 = |{ t71 }{ t100 }|.
-    DATA(t102) = VALUE string( ).
-    DATA(t103) = VALUE abap_bool( ).
-    DATA t104 TYPE REF TO z_runtime_opti_4ba3bdccd169bb.
-    CLEAR t104.
-    DATA(t105) = CONV abap_bool( abap_false ).
-    DATA(t106) = CONV abap_bool( t105 ).
-    DATA t107 TYPE REF TO string.
-    CLEAR t107.
-    DATA t108 TYPE REF TO cx_root.
+    DATA(t93) = CONV i( strlen( t68 ) ).
+    t67 = |{ t68 }{ t88 }|.
+    DATA(t94) = CONV string( |\|| ).
+    DATA(t95) = CONV i( strlen( t67 ) ).
+    t66 = |{ t67 }{ t94 }|.
+    DATA(t96) = VALUE string( ).
+    DATA(t97) = VALUE abap_bool( ).
+    DATA t98 TYPE REF TO z_runtime_opti_4ba3bdccd169bb.
+    CLEAR t98.
+    DATA(t99) = CONV abap_bool( abap_false ).
+    DATA(t100) = CONV abap_bool( t99 ).
+    DATA t101 TYPE REF TO string.
+    CLEAR t101.
+    DATA t102 TYPE REF TO cx_root.
+    CLEAR t102.
+    TRY.
+        t101 = zcl_abapiti_probe_host=>maybe( x = t100 ).
+      CATCH cx_static_check cx_dynamic_check INTO t102.
+        DATA(t103) = NEW z_builtin_erro_e8b3bd7e8a547c(  ).
+        t103->capture_abap( t102 ).
+        DATA t104 TYPE REF TO z_exception_cl_30eec8e8805d60.
+        CLEAR t104.
+        DATA(t105) = CAST z_builtin_erro_e8b3bd7e8a547c( t103 ).
+        t104 = NEW #( ).
+        t104->payload = t105.
+        RAISE EXCEPTION t104.
+    ENDTRY.
+    DATA t106 TYPE REF TO z_runtime_opti_4ba3bdccd169bb.
+    CLEAR t106.
+    FIELD-SYMBOLS <t107> TYPE string.
+    IF t101 IS BOUND.
+      ASSIGN t101->* TO <t107>.
+      t106 = NEW #( ).
+      t106->has = abap_true.
+      t106->value = <t107>.
+    ENDIF.
+    t98 = t106.
+    DATA t108 TYPE REF TO z_runtime_dyna_a429568d5be89e.
     CLEAR t108.
-    TRY.
-        t107 = zcl_abapiti_probe_host=>maybe( x = t106 ).
-      CATCH cx_static_check cx_dynamic_check INTO t108.
-        DATA(t109) = NEW z_runtime_opti_4ba3bdccd169bb( ).
-        t109->has = abap_true.
-        t109->value = t108->get_text( ).
-        DATA t110 TYPE REF TO z_exception_cl_30eec8e8805d60.
-        CLEAR t110.
-        DATA t111 TYPE REF TO z_builtin_erro_e8b3bd7e8a547c.
-        CLEAR t111.
-        DATA(t112) = CAST z_runtime_opti_4ba3bdccd169bb( t109 ).
-        t111 = NEW z_builtin_erro_e8b3bd7e8a547c( z_param_messag_26cb69beb0eed4 = t112 ).
-        t110 = NEW #( ).
-        t110->payload = t111.
-        RAISE EXCEPTION t110.
-    ENDTRY.
-    DATA t113 TYPE REF TO z_runtime_opti_4ba3bdccd169bb.
-    CLEAR t113.
-    FIELD-SYMBOLS <t114> TYPE string.
-    IF t107 IS BOUND.
-      ASSIGN t107->* TO <t114>.
-      t113 = NEW #( ).
-      t113->has = abap_true.
-      t113->value = <t114>.
+    DATA t109 TYPE REF TO z_runtime_dyna_a429568d5be89e.
+    CLEAR t109.
+    t108 = t109.
+    DATA(t110) = VALUE abap_bool( ).
+    DATA(t111) = CAST z_runtime_opti_4ba3bdccd169bb( t98 ).
+    IF t111 IS INITIAL.
+      t110 = abap_true.
+    ELSEIF t111->has = abap_false.
+      t110 = abap_true.
     ENDIF.
-    t104 = t113.
-    DATA t115 TYPE REF TO z_runtime_dyna_a429568d5be89e.
-    CLEAR t115.
-    DATA t116 TYPE REF TO z_runtime_dyna_a429568d5be89e.
-    CLEAR t116.
-    t115 = t116.
-    DATA(t117) = VALUE abap_bool( ).
-    DATA(t118) = CAST z_runtime_opti_4ba3bdccd169bb( t104 ).
-    IF t118 IS INITIAL.
-      t117 = abap_true.
-    ELSEIF t118->has = abap_false.
-      t117 = abap_true.
-    ENDIF.
-    t103 = t117.
-    IF t103 = abap_true.
-      DATA(t119) = CONV string( |true| ).
-      t102 = t119.
+    t97 = t110.
+    IF t97 = abap_true.
+      DATA(t112) = CONV string( |true| ).
+      t96 = t112.
     ELSE.
-      DATA(t120) = CONV string( |false| ).
-      t102 = t120.
+      DATA(t113) = CONV string( |false| ).
+      t96 = t113.
     ENDIF.
-    DATA(t121) = CONV i( strlen( t70 ) ).
-    t69 = |{ t70 }{ t102 }|.
-    DATA(t122) = CONV i( strlen( t68 ) ).
-    t67 = |{ t68 }{ t69 }|.
-    t1 = t67.
-    DATA(t123) = VALUE string( ).
-    DATA(t124) = CONV string( t1 ).
-    DATA(t125) = VALUE string( ).
-    DATA(t126) = CONV string( |\|| ).
-    DATA(t127) = CONV string( |.| ).
-    DATA(t128) = CONV string( t127 ).
-    DATA t129 TYPE zcl_abapiti_probe_host=>ty_pairs.
-    CLEAR t129.
-    DATA t130 TYPE REF TO cx_root.
-    CLEAR t130.
+    DATA(t114) = CONV i( strlen( t66 ) ).
+    t65 = |{ t66 }{ t96 }|.
+    DATA(t115) = CONV i( strlen( t64 ) ).
+    t63 = |{ t64 }{ t65 }|.
+    t1 = t63.
+    DATA(t116) = VALUE string( ).
+    DATA(t117) = CONV string( t1 ).
+    DATA(t118) = VALUE string( ).
+    DATA(t119) = CONV string( |\|| ).
+    DATA(t120) = CONV string( |.| ).
+    DATA(t121) = CONV string( t120 ).
+    DATA t122 TYPE zcl_abapiti_probe_host=>ty_pairs.
+    CLEAR t122.
+    DATA t123 TYPE REF TO cx_root.
+    CLEAR t123.
     TRY.
-        t129 = zcl_abapiti_probe_host=>list_entries( dir = t128 ).
-      CATCH cx_static_check cx_dynamic_check INTO t130.
-        DATA(t131) = NEW z_runtime_opti_4ba3bdccd169bb( ).
-        t131->has = abap_true.
-        t131->value = t130->get_text( ).
-        DATA t132 TYPE REF TO z_exception_cl_30eec8e8805d60.
-        CLEAR t132.
-        DATA t133 TYPE REF TO z_builtin_erro_e8b3bd7e8a547c.
-        CLEAR t133.
-        DATA(t134) = CAST z_runtime_opti_4ba3bdccd169bb( t131 ).
-        t133 = NEW z_builtin_erro_e8b3bd7e8a547c( z_param_messag_26cb69beb0eed4 = t134 ).
-        t132 = NEW #( ).
-        t132->payload = t133.
-        RAISE EXCEPTION t132.
+        t122 = zcl_abapiti_probe_host=>list_entries( dir = t121 ).
+      CATCH cx_static_check cx_dynamic_check INTO t123.
+        DATA(t124) = NEW z_builtin_erro_e8b3bd7e8a547c(  ).
+        t124->capture_abap( t123 ).
+        DATA t125 TYPE REF TO z_exception_cl_30eec8e8805d60.
+        CLEAR t125.
+        DATA(t126) = CAST z_builtin_erro_e8b3bd7e8a547c( t124 ).
+        t125 = NEW #( ).
+        t125->payload = t126.
+        RAISE EXCEPTION t125.
     ENDTRY.
-    DATA t135 TYPE REF TO z_runtime_arra_c22708faf2e354.
+    DATA t127 TYPE REF TO z_runtime_arra_c22708faf2e354.
+    CLEAR t127.
+    CREATE OBJECT t127.
+    DATA t128 TYPE zcl_abapiti_probe_host=>ty_pair.
+    CLEAR t128.
+    DATA(t129) = VALUE string( ).
+    DATA(t130) = VALUE abap_bool( ).
+    LOOP AT t122 INTO t128.
+      t129 = t128-f0.
+      t130 = t128-f1.
+      DATA t131 TYPE REF TO z_tuple_473287_a916122beffb27.
+      CLEAR t131.
+      DATA(t132) = CONV string( t129 ).
+      DATA(t133) = CONV abap_bool( t130 ).
+      t131 = NEW z_tuple_473287_a916122beffb27( z_param_f0_b357f25272b1ea = t132 z_param_f1_e1757e56961aff = t133 ).
+      APPEND t131 TO t127->items.
+    ENDLOOP.
+    DATA t134 TYPE zcl_abapiti_probe_host=>ty_pairs.
+    CLEAR t134.
+    t127->dense( ).
+    DATA t135 TYPE REF TO object.
     CLEAR t135.
-    CREATE OBJECT t135.
-    DATA t136 TYPE zcl_abapiti_probe_host=>ty_pair.
+    DATA t136 TYPE REF TO z_tuple_473287_a916122beffb27.
     CLEAR t136.
-    DATA(t137) = VALUE string( ).
-    DATA(t138) = VALUE abap_bool( ).
-    LOOP AT t129 INTO t136.
-      t137 = t136-f0.
-      t138 = t136-f1.
-      DATA t139 TYPE REF TO z_tuple_473287_a916122beffb27.
-      CLEAR t139.
-      DATA(t140) = CONV string( t137 ).
-      DATA(t141) = CONV abap_bool( t138 ).
-      t139 = NEW z_tuple_473287_a916122beffb27( z_param_f0_b357f25272b1ea = t140 z_param_f1_e1757e56961aff = t141 ).
-      APPEND t139 TO t135->items.
+    LOOP AT t127->items INTO t135.
+      t136 ?= t135.
+      DATA(t137) = VALUE string( ).
+      DATA(t138) = CAST z_tuple_473287_a916122beffb27( t136 ).
+      t137 = t138->z_member_f0_a2fdf5a7948b8c.
+      DATA(t139) = VALUE abap_bool( ).
+      DATA(t140) = CAST z_tuple_473287_a916122beffb27( t136 ).
+      t139 = t140->z_member_f1_6569237ea50625.
+      APPEND VALUE #( f0 = t137 f1 = t139 ) TO t134.
     ENDLOOP.
-    DATA t142 TYPE zcl_abapiti_probe_host=>ty_pairs.
+    DATA(t141) = VALUE string( ).
+    DATA t142 TYPE REF TO cx_root.
     CLEAR t142.
-    t135->dense( ).
-    DATA t143 TYPE REF TO object.
-    CLEAR t143.
-    DATA t144 TYPE REF TO z_tuple_473287_a916122beffb27.
-    CLEAR t144.
-    LOOP AT t135->items INTO t143.
-      t144 ?= t143.
-      DATA(t145) = VALUE string( ).
-      DATA(t146) = CAST z_tuple_473287_a916122beffb27( t144 ).
-      t145 = t146->z_member_f0_a2fdf5a7948b8c.
-      DATA(t147) = VALUE abap_bool( ).
-      DATA(t148) = CAST z_tuple_473287_a916122beffb27( t144 ).
-      t147 = t148->z_member_f1_6569237ea50625.
-      APPEND VALUE #( f0 = t145 f1 = t147 ) TO t142.
-    ENDLOOP.
-    DATA(t149) = VALUE string( ).
-    DATA t150 TYPE REF TO cx_root.
-    CLEAR t150.
     TRY.
-        t149 = zcl_abapiti_probe_host=>tuples( x = t142 ).
-      CATCH cx_static_check cx_dynamic_check INTO t150.
-        DATA(t151) = NEW z_runtime_opti_4ba3bdccd169bb( ).
-        t151->has = abap_true.
-        t151->value = t150->get_text( ).
-        DATA t152 TYPE REF TO z_exception_cl_30eec8e8805d60.
-        CLEAR t152.
-        DATA t153 TYPE REF TO z_builtin_erro_e8b3bd7e8a547c.
-        CLEAR t153.
-        DATA(t154) = CAST z_runtime_opti_4ba3bdccd169bb( t151 ).
-        t153 = NEW z_builtin_erro_e8b3bd7e8a547c( z_param_messag_26cb69beb0eed4 = t154 ).
-        t152 = NEW #( ).
-        t152->payload = t153.
-        RAISE EXCEPTION t152.
+        t141 = zcl_abapiti_probe_host=>tuples( x = t134 ).
+      CATCH cx_static_check cx_dynamic_check INTO t142.
+        DATA(t143) = NEW z_builtin_erro_e8b3bd7e8a547c(  ).
+        t143->capture_abap( t142 ).
+        DATA t144 TYPE REF TO z_exception_cl_30eec8e8805d60.
+        CLEAR t144.
+        DATA(t145) = CAST z_builtin_erro_e8b3bd7e8a547c( t143 ).
+        t144 = NEW #( ).
+        t144->payload = t145.
+        RAISE EXCEPTION t144.
     ENDTRY.
-    DATA(t155) = CONV i( strlen( t126 ) ).
-    t125 = |{ t126 }{ t149 }|.
-    DATA(t156) = CONV i( strlen( t124 ) ).
-    t123 = |{ t124 }{ t125 }|.
-    t1 = t123.
-    DATA t157 TYPE REF TO z_exception_cl_30eec8e8805d60.
-    CLEAR t157.
+    DATA(t146) = CONV i( strlen( t119 ) ).
+    t118 = |{ t119 }{ t141 }|.
+    DATA(t147) = CONV i( strlen( t117 ) ).
+    t116 = |{ t117 }{ t118 }|.
+    t1 = t116.
+    DATA t148 TYPE REF TO z_exception_cl_30eec8e8805d60.
+    CLEAR t148.
     TRY.
-        DATA(t158) = CONV string( |x| ).
-        DATA(t159) = CONV string( t158 ).
-        DATA t160 TYPE REF TO cx_root.
-        CLEAR t160.
+        DATA(t149) = CONV string( |x| ).
+        DATA(t150) = CONV string( t149 ).
+        DATA t151 TYPE REF TO cx_root.
+        CLEAR t151.
         TRY.
-            zcl_abapiti_probe_host=>write_stdout( text = t159 ).
-          CATCH cx_static_check cx_dynamic_check INTO t160.
-            DATA(t161) = NEW z_runtime_opti_4ba3bdccd169bb( ).
-            t161->has = abap_true.
-            t161->value = t160->get_text( ).
-            DATA t162 TYPE REF TO z_exception_cl_30eec8e8805d60.
-            CLEAR t162.
-            DATA t163 TYPE REF TO z_builtin_erro_e8b3bd7e8a547c.
-            CLEAR t163.
-            DATA(t164) = CAST z_runtime_opti_4ba3bdccd169bb( t161 ).
-            t163 = NEW z_builtin_erro_e8b3bd7e8a547c( z_param_messag_26cb69beb0eed4 = t164 ).
-            t162 = NEW #( ).
-            t162->payload = t163.
-            RAISE EXCEPTION t162.
+            zcl_abapiti_probe_host=>write_stdout( text = t150 ).
+          CATCH cx_static_check cx_dynamic_check INTO t151.
+            DATA(t152) = NEW z_builtin_erro_e8b3bd7e8a547c(  ).
+            t152->capture_abap( t151 ).
+            DATA t153 TYPE REF TO z_exception_cl_30eec8e8805d60.
+            CLEAR t153.
+            DATA(t154) = CAST z_builtin_erro_e8b3bd7e8a547c( t152 ).
+            t153 = NEW #( ).
+            t153->payload = t154.
+            RAISE EXCEPTION t153.
         ENDTRY.
-      CATCH z_exception_cl_30eec8e8805d60 INTO t157.
-        DATA(t165) = CAST z_builtin_erro_e8b3bd7e8a547c( t157->payload ).
-        DATA(t166) = VALUE string( ).
-        DATA(t167) = CONV string( t1 ).
-        DATA(t168) = VALUE string( ).
-        DATA(t169) = CONV string( |\|| ).
-        DATA(t170) = VALUE string( ).
-        DATA(t171) = CAST z_builtin_erro_e8b3bd7e8a547c( t165 ).
-        t170 = t171->z_member_messa_25cbf99bd157aa.
-        DATA(t172) = CONV i( strlen( t169 ) ).
-        t168 = |{ t169 }{ t170 }|.
-        DATA(t173) = CONV i( strlen( t167 ) ).
-        t166 = |{ t167 }{ t168 }|.
-        t1 = t166.
+      CATCH z_exception_cl_30eec8e8805d60 INTO t148.
+        DATA(t155) = CAST z_builtin_erro_e8b3bd7e8a547c( t148->payload ).
+        DATA(t156) = VALUE string( ).
+        DATA(t157) = CONV string( t1 ).
+        DATA(t158) = VALUE string( ).
+        DATA(t159) = CONV string( |\|| ).
+        DATA(t160) = VALUE string( ).
+        DATA(t161) = CAST z_builtin_erro_e8b3bd7e8a547c( t155 ).
+        t160 = t161->z_member_messa_25cbf99bd157aa.
+        DATA(t162) = CONV i( strlen( t159 ) ).
+        t158 = |{ t159 }{ t160 }|.
+        DATA(t163) = CONV i( strlen( t157 ) ).
+        t156 = |{ t157 }{ t158 }|.
+        t1 = t156.
     ENDTRY.
-    DATA(t174) = CONV string( t1 ).
-    result = t174.
+    DATA(t164) = CONV string( t1 ).
+    result = t164.
     RETURN.
   

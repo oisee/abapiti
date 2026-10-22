@@ -148,3 +148,41 @@ class Probe {static run():string {const x:ValueExpr={e:'num',value:7,type:{k:'nu
 		t.Fatalf("the unemittable body must be a named stub that raises at runtime, found none among %d files", len(entries))
 	}
 }
+
+// Export the same runtime-CX fixture used by abap-cx-diag-osg-smoke.sh into
+// the compile gate. Refuse silent lowering traps in its catch/rethrow paths.
+func TestEmitABAPExceptionDiagnostics(t *testing.T) {
+	project, err := filepath.Abs("testdata/abap-cx-diag")
+	if err != nil {
+		t.Fatal(err)
+	}
+	out := t.TempDir()
+	emit := newEmitABAPCmd()
+	emit.SetArgs([]string{"--tsconfig", filepath.Join(project, "tsconfig.json"), "--externs", filepath.Join(project, "externs.json"),
+		"--initialize", filepath.Join(project, "initialization.json"), "-o", out, "main.ts", "host.ts", "cx.ts"})
+	if err := emit.Execute(); err != nil {
+		t.Fatal(err)
+	}
+	traps, err := os.ReadFile(filepath.Join(out, "evidence", "trap-sites.json"))
+	if err != nil || strings.TrimSpace(string(traps)) != "null" {
+		t.Fatalf("diagnostic fixture must execute without lowering traps: %v %s", err, traps)
+	}
+	src := filepath.Join(out, "src")
+	for _, name := range []string{"zcl_abapiti_diag_host.clas.abap", "zcx_abapiti_diag.clas.abap"} {
+		text, err := os.ReadFile(filepath.Join(project, name))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(src, name), text, 0644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	host, err := os.ReadFile("../../extern/hostio/abap/zcl_abapiti_hostio.clas.abap")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(src, "zcl_abapiti_hostio.clas.abap"), host, 0644); err != nil {
+		t.Fatal(err)
+	}
+	abapfixture.CollectDir(t, "cmd/abapiti", src)
+}

@@ -4,8 +4,8 @@
 // Writes OUT/osg-refusals.json (frontend diagnostics, missing objects, stubs).
 // With --build it also emits Go and runs `go build` (empty main) into OUT/go;
 // --main makes main call ZCL_ABAPITI_MAIN=>RUN (emit-abap --initialize) and
-// report an ABAP exception or Go panic with its host location and the
-// exception's string attributes (a located trap's source_location), exit 3.
+// report an ABAP exception or Go panic with its host location, original CX
+// diagnostics and previous chain (also through a JS Error payload), exit 3.
 // Before RUN, --main configures ZCL_ABAPITI_HOSTIO with absolute snapshot and
 // stdout paths (defaults OUT/fs-snapshot.json and OUT/gogen.go; override with
 // --snapshot FILE and --stdout FILE). These paths are fixed at build time.
@@ -66,7 +66,7 @@ func exceptionAttributes(x any) string {
   if v.Kind()!=reflect.Struct||depth>8 {return}
   for i:=0;i<v.NumField();i++ {
    f,fv:=v.Type().Field(i),v.Field(i)
-   if f.Anonymous||strings.EqualFold(f.Name,"payload")||strings.Contains(strings.ToLower(f.Name),"message") {walk(fv,depth+1)}
+   if f.Anonymous||strings.EqualFold(f.Name,"payload")||strings.EqualFold(f.Name,"oval")||strings.Contains(strings.ToLower(f.Name),"message") {walk(fv,depth+1)}
    if f.Anonymous {continue}
    s:=""
    if fv.Kind()==reflect.String {s=fv.String()} else if located.MatchString(f.Name)&&fv.CanInterface() {s=fmt.Sprint(fv.Interface())}
@@ -76,12 +76,84 @@ func exceptionAttributes(x any) string {
  walk(reflect.ValueOf(r.Obj),0)
  return strings.Join(parts,"; ")
 }
+// Diagnostic methods can themselves be unavailable on a particular host.
+// Keep their failures local so they cannot replace the original exception.
+func diagnostic(f func()) (failure string) {
+ defer func(){if x:=recover();x!=nil {failure=strings.SplitN(fmt.Sprint(x),"\\n",2)[0]}}()
+ f()
+ return
+}
+func exceptionChain(s *abap.Session,x any) []string {
+ var root *abap.Exception
+ if r,ok:=abap.AsRaised(x);ok {root=abap.CaughtException(r)
+ } else if _,ok:=abap.AsError(x);ok {root=abap.CaughtException(x)
+ } else {return nil}
+ var lines []string
+ seen:=map[any]bool{}
+ var walk func(e *abap.Exception,label string)
+ walk=func(e *abap.Exception,label string){
+  if e==nil {return}
+  if e.Obj!=nil {
+   v:=reflect.ValueOf(e.Obj)
+   if (v.Kind()==reflect.Pointer||v.Kind()==reflect.Interface)&&v.IsNil() {return}
+   if v.Type().Comparable() {
+    if seen[e.Obj] {lines=append(lines,label+": [already reported]");return}
+    seen[e.Obj]=true
+   }
+  }
+  text:=""
+  failure:=diagnostic(func(){text=e.TextOf(s)})
+  if failure!="" {text="[unavailable: "+failure+"]"}
+  position:="unavailable"
+  if p,ok:=e.Obj.(interface{GET_SOURCE_POSITION(*abap.Session,*string,*string,*int32)});ok {
+   var program,include string;var line int32
+   failure=diagnostic(func(){p.GET_SOURCE_POSITION(s,&program,&include,&line)})
+   if failure!="" {position="unavailable: "+failure
+   } else if strings.TrimSpace(program)!=""||strings.TrimSpace(include)!=""||line!=0 {
+    position=fmt.Sprintf("%s/%s:%d",strings.TrimSpace(program),strings.TrimSpace(include),line)
+   }
+  }
+  attrs:=""
+  if e.Obj!=nil {attrs=exceptionAttributes(abap.Raise(e.Obj,e.Class))}
+  lines=append(lines,fmt.Sprintf("%s: class=%s text=%s position=%s %s",label,e.Class,text,position,attrs))
+  // The generated JS exception contains a payload. Its retained ABAP origin
+  // survives source catch/rethrow even when user code edits Error.message.
+  next:=e.Obj
+  payloads:=map[any]bool{}
+  for {
+   v:=reflect.ValueOf(next)
+   if !v.IsValid()||((v.Kind()==reflect.Pointer||v.Kind()==reflect.Interface)&&v.IsNil()) {break}
+   if v.Type().Comparable() {
+    if payloads[next] {break}
+    payloads[next]=true
+   }
+   carrier,ok:=next.(interface{AbapDiagnosticNext() any})
+   if !ok {break}
+   next=carrier.AbapDiagnosticNext()
+   if next==nil {break}
+   if class:=abap.ClassOf(next);abap.IsA(class,"CX_ROOT") {
+    walk(&abap.Exception{Class:class,Obj:next},"ABAP origin")
+    break
+   }
+  }
+  if e.Obj!=nil {
+   if _,ok:=e.Obj.(interface{ExceptionPrevious() any});ok {
+    var previous *abap.Exception
+    failure=diagnostic(func(){previous=abap.ExceptionPrevious(e)})
+    if failure!="" {lines=append(lines,"previous: [unavailable: "+failure+"]")
+    } else {walk(previous,"previous")}
+   }
+  }
+ }
+ walk(root,"exception")
+ return lines
+}
 func main(){
+ session:=&abap.Session{}
  defer func(){if x:=recover();x!=nil {
   fmt.Fprintf(os.Stderr,"step4b: run failed: %s (at %s)\\n",strings.SplitN(fmt.Sprint(x),"\\n",2)[0],hostLocation())
-  if a:=exceptionAttributes(x);a!="" {fmt.Fprintf(os.Stderr,"step4b: exception: %s\\n",a)}
+  for _,line:=range exceptionChain(session,x) {fmt.Fprintf(os.Stderr,"step4b: %s\\n",line)}
   os.Exit(3)}}()
- session:=&abap.Session{}
  ZCL_ABAPITI_HOSTIO_CONFIGURE(session, ${JSON.stringify(snapshot)}, ${JSON.stringify(stdout)}, "X", "X")
  ZCL_ABAPITI_MAIN_RUN(session)
 }

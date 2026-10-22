@@ -52,6 +52,7 @@ type emitter struct {
 	// Usage gates keep the emitted file set of programs that do not use the
 	// phase-2 machinery unchanged.
 	descriptors, regexpUsed, dynamicUsed, errorUsed bool
+	abapErrors                                      bool
 	matchUsed, execUsed, jsRegexpUsed               bool
 	isArrayUsed                                     bool
 	descIndex                                       map[string]descRef

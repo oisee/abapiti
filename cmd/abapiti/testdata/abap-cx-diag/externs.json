@@ -1,0 +1,1 @@
+{"modules":[{"file":"host.ts","goImport":"github.com/oisee/abapiti/extern/hostio","goDir":"../../../../extern/hostio","abapClass":"ZCL_ABAPITI_HOSTIO"},{"file":"cx.ts","goImport":"github.com/oisee/abapiti/extern/hostio","goDir":"../../../../extern/hostio","abapClass":"ZCL_ABAPITI_DIAG_HOST"}]}

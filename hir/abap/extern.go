@@ -16,7 +16,7 @@ import (
 // (STANDARD TABLE OF a structure with f0 TYPE string and f1 TYPE abap_bool);
 // a string | undefined result to REF TO string (unbound is undefined). A host
 // exception that is not CX_NO_CHECK becomes a catchable builtin Error with
-// get_text( ) as its message.
+// its original CX object and diagnostics retained on the payload.
 var externABAPName = regexp.MustCompile(`^[a-z][a-z0-9_]{0,29}$`)
 
 func externABAPIdentifier(name string) string {
@@ -121,13 +121,13 @@ func (b *body) externCall(x *hir.Expr) string {
 	b.line("TRY.")
 	b.line(call + ".")
 	b.line("CATCH cx_static_check cx_dynamic_check INTO " + failure + ".")
-	message := b.temp(hir.T(hir.Optional, hir.T(hir.String)))
-	b.line(message + " = NEW #( ).")
-	b.line(message + "->has = abap_true.")
-	b.line(message + "->value = " + failure + "->get_text( ).")
-	local := fmt.Sprintf("extern.message.%d", b.serial)
-	b.locals[local] = message
-	b.stmt(&hir.Stmt{Kind: hir.Throw, Node: x.Node, X: &hir.Expr{Kind: hir.New, Node: x.Node, Type: hir.Ref("builtin.Error"), Args: []*hir.Expr{hir.V(local, hir.T(hir.Optional, hir.T(hir.String)))}}})
+	e.abapErrors = true
+	errorType := hir.Ref("builtin.Error")
+	payload := b.expr(&hir.Expr{Kind: hir.New, Node: x.Node, Type: errorType})
+	b.line(payload + "->capture_abap( " + failure + " ).")
+	local := fmt.Sprintf("extern.error.%d", b.serial)
+	b.locals[local] = payload
+	b.stmt(&hir.Stmt{Kind: hir.Throw, Node: x.Node, X: hir.V(local, errorType)})
 	delete(b.locals, local)
 	b.line("ENDTRY.")
 	if result == "" {

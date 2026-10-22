@@ -328,6 +328,11 @@ func (e *emitter) support() {
 			impl = "METHOD " + e.name("builtin.classOf") + ".\nresult = " + e.descriptorOf("builtin.Error") + ".\nENDMETHOD.\nMETHOD " + e.name("runtime.described") + "~" + e.name("builtin.classOf") + ".\nresult = me->" + e.name("builtin.classOf") + "( ).\nENDMETHOD.\n"
 			impl += "METHOD " + e.name("builtin.nativeConstructor") + ".\nresult = " + e.descriptorOf("builtin.Error") + ".\nENDMETHOD.\nMETHOD " + e.name("runtime.described") + "~" + e.name("builtin.nativeConstructor") + ".\nresult = me->" + e.name("builtin.nativeConstructor") + "( ).\nENDMETHOD.\n"
 		}
+		if e.abapErrors {
+			decl, methods := e.abapErrorDiagnostics()
+			hidden += decl
+			impl += methods
+		}
 		e.files[name+".clas.abap"] = "CLASS " + name + " DEFINITION PUBLIC CREATE PUBLIC.\nPUBLIC SECTION.\n" + hidden + "DATA " + e.member("message") + " TYPE string.\nMETHODS constructor IMPORTING " + e.param("message") + " TYPE " + opt + " OPTIONAL.\nPROTECTED SECTION.\nPRIVATE SECTION.\nENDCLASS.\nCLASS " + name + " IMPLEMENTATION.\nMETHOD constructor.\nIF " + e.param("message") + " IS BOUND.\n" + e.member("message") + " = " + e.param("message") + "->value.\nENDIF.\nENDMETHOD.\n" + impl + "ENDCLASS.\n"
 	}
 	if e.regexpUsed {

@@ -63,6 +63,7 @@ if (cacheRoot) {
   resume:readFileSync(new URL('./osg-runner-resume.mjs',import.meta.url),'utf8'),
   main:readFileSync(new URL('./osg-runner-main.mjs',import.meta.url),'utf8'),
   input:readFileSync(new URL('./osg-harness-input.mjs',import.meta.url),'utf8'),
+  exceptionDiagnostics:readFileSync(new URL('./osg-exception-diagnostics.mjs',import.meta.url),'utf8'),
   // Invocation-local IR/Go adaptations change the emitted frontend output.
   boundaries:readFileSync(new URL('./osgo-test-boundaries.mjs',import.meta.url),'utf8'),
   regex:readFileSync(new URL('./osgo-test-regex.mjs',import.meta.url),'utf8'),
