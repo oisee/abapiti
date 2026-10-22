@@ -716,3 +716,30 @@ func (l *lowerer) sinkArrayType(d *ast.Node, typ hir.Type) (hir.Type, bool) {
 	walk(body)
 	return found, ok && !bad
 }
+
+// erasedAssertionOperand returns the optional value under a type assertion
+// that only erased absence (`x!`, `x as T`, `/** @type {T} */ (x)` over
+// T | undefined). JS checks nothing there, so a following `??` still has to
+// test the value it would have tested without the assertion.
+func erasedAssertionOperand(n *ast.Node, x *hir.Expr) *hir.Expr {
+	switch ast.SkipParentheses(n).Kind {
+	case ast.KindAsExpression, ast.KindTypeAssertionExpression, ast.KindNonNullExpression:
+	default:
+		return x
+	}
+	if (x.Kind == hir.Narrow || x.Kind == hir.Cast) && x.X.Type.Kind == hir.Optional && x.X.Type.Args[0].Equal(x.Type) {
+		return x.X
+	}
+	return x
+}
+
+// nilCapableReference reports a reference whose storage can hold an absent
+// value behind a non-optional type: an unchecked assertion views
+// T | undefined as T without a check, as JS does.
+func nilCapableReference(t hir.Type) bool {
+	switch t.Kind {
+	case hir.ClassRef, hir.InterfaceRef, hir.UnionRef, hir.Array, hir.OrderedMap, hir.OrderedSet:
+		return true
+	}
+	return false
+}

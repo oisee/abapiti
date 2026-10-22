@@ -2796,7 +2796,9 @@ func (l *lowerer) binary(n *ast.Node) *hir.Expr {
 			return nil
 		}
 		x = l.narrowedOperand(b.Left, x)
-		if x.Type.Kind != hir.Optional && x.Type.Kind != hir.Dynamic {
+		erased := x.Type.Kind != hir.Optional && x.Type.Kind != hir.Dynamic
+		x = erasedAssertionOperand(b.Left, x)
+		if x.Type.Kind != hir.Optional && x.Type.Kind != hir.Dynamic && !nilCapableReference(x.Type) {
 			// The checker proves absence impossible; do not evaluate the RHS.
 			return x
 		}
@@ -2822,6 +2824,11 @@ func (l *lowerer) binary(n *ast.Node) *hir.Expr {
 		result := y.Type
 		if !base.Equal(y.Type) {
 			result = l.mapCheckerType(n, l.ck.GetTypeAtLocation(n))
+		}
+		if erased && !l.conditionalConvertible(b.Right, y, result) {
+			// The checker typed the result as the left operand alone, since
+			// the assertion erased its absence; the fallback joins it here.
+			result = l.mapCheckerType(n, l.ck.GetUnionType([]*checker.Type{l.ck.GetTypeAtLocation(n), l.ck.GetTypeAtLocation(b.Right)}))
 		}
 		if target, ok := nullableReferenceJoin(left, y, hint); ok {
 			result = target
