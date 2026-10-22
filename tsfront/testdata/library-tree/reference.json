@@ -1,0 +1,29 @@
+{
+  "baseCommit": "c03a1fb1f2ff480ddfe74368f5dc5448614bcb73",
+  "coreVersion": "2.120.73",
+  "upstreamPin": "9f7f098c21e93b8b534fff0f0148f0a900d29d16",
+  "osgPin": "0171e92b2974854153a5ab4d645f0e53b6f27092",
+  "mainFiles": 2785,
+  "dependencyFiles": 0,
+  "inputsSHA256": "f56c900570498bbbefb38867f26530584270853959772ec8473bff191d20c9a8",
+  "counts": {
+    "Objects": 2210,
+    "ABAPFiles": 1437,
+    "FileStatements": 174546,
+    "FileTokens": 1118357,
+    "PragmaTokens": 0,
+    "Structures": 153137,
+    "StructureStatements": 154078,
+    "StructureTokens": 1097889,
+    "EmptyStructures": 0,
+    "MissingStructures": 0,
+    "FirstStatementOverrides": 0,
+    "Issues": 82
+  },
+  "abapObjects": 1361,
+  "jsonlBytes": 272272964,
+  "jsonlSHA256": "37b0fc10c8856bc65d545e7260c95eb77cb9f2fcfc80625809f72d82a3ad8a07",
+  "smallJSONLSHA256": "f752a55549aa1a4f0b2856a089a135369ab7f28a6f3781c2501eb141f5d35994",
+  "defaultHIRSHA256": "970bd64bd0721c37db0ffbbcead311841a06e10945dc41ae2768f483df392138",
+  "defaultSitesSHA256": "e32df9a686e08ce14ba4b3481c9c6f77abefb4ca478911abcfd302b575b5413e"
+}
