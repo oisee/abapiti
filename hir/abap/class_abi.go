@@ -115,7 +115,8 @@ func (e *emitter) argumentFactoryABAP() ([]factoryCase, string, string) {
 			continue
 		}
 		// CASE entries can share a leaf method: retain distinct local names.
-		b := &body{e: e, c: c, m: &hir.Method{Result: hir.T(hir.Void)}, locals: map[string]string{}, serial: serial}
+		// An entry is one WHEN branch outside any loop: it runs at most once.
+		b := &body{e: e, c: c, m: &hir.Method{Result: hir.T(hir.Void)}, locals: map[string]string{}, serial: serial, wholeMethod: true}
 		args := []string{}
 		if ctor != nil {
 			for i, p := range ctor.Params {
@@ -222,7 +223,7 @@ func (e *emitter) wideArgumentFactory(c *hir.Class, ctor *hir.Method, index int)
 	for start := 0; start < len(ctor.Params); start += chunk {
 		name := fmt.Sprintf("args_decode_%d_%d", index, start/chunk)
 		fmt.Fprintf(&defs, "CLASS-METHODS %s IMPORTING p1 TYPE %s CHANGING frame TYPE %s.\n", name, e.typ(hir.T(hir.Array, hir.T(hir.Dynamic))), frameType)
-		part := &body{e: e, c: c, m: b.m, locals: locals}
+		part := &body{e: e, c: c, m: b.m, locals: locals, wholeMethod: true}
 		for i := start; i < len(ctor.Params) && i < start+chunk; i++ {
 			p := ctor.Params[i]
 			d := part.temp(hir.T(hir.Dynamic))
@@ -243,7 +244,7 @@ func (e *emitter) wideArgumentFactory(c *hir.Class, ctor *hir.Method, index int)
 	for start := 0; start < len(ctor.Body.List); start += chunk {
 		name := fmt.Sprintf("args_write_%d_%d", index, start/chunk)
 		fmt.Fprintf(&defs, "CLASS-METHODS %s IMPORTING instance TYPE REF TO %s frame TYPE %s.\n", name, e.name(c.Name), frameType)
-		part := &body{e: e, c: c, m: b.m, locals: locals}
+		part := &body{e: e, c: c, m: b.m, locals: locals, wholeMethod: true}
 		for i := start; i < len(ctor.Body.List) && i < start+chunk; i++ {
 			s := ctor.Body.List[i]
 			if s.Y.Kind == hir.Narrow && s.Y.X.Type.Kind == hir.Optional && !s.X.Type.IsRef() {

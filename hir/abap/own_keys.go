@@ -253,7 +253,7 @@ func (e *emitter) refuseInheritedOwnAdapter(out *strings.Builder, c *hir.Class) 
 func (e *emitter) ownClassImplementation(out *strings.Builder, c *hir.Class) {
 	d, storage := e.name("runtime.dynamic"), e.name("view.storage")
 	makeBody := func(name string) *body {
-		return &body{e: e, c: c, m: &hir.Method{Result: hir.T(hir.Void)}, implemented: name, locals: map[string]string{}}
+		return &body{e: e, c: c, m: &hir.Method{Result: hir.T(hir.Void)}, implemented: name, locals: map[string]string{}, wholeMethod: true}
 	}
 	emit := func(name string, b *body) {
 		fmt.Fprintf(out, "METHOD %s.\n%s%sENDMETHOD.\n", name, b.constantDeclarations(), foldTempInits(b.code.String()))
