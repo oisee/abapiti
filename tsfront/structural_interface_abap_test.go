@@ -102,6 +102,67 @@ class Probe {
 }`)
 }
 
+// An Identifier-to-method view also emits dispatch for the event sibling.
+// Its array result must not be assigned directly to the method's parameter
+// interface, even when this execution only calls the method sibling.
+func TestStructuralInterfaceSiblingResultABAPNodeOracle(t *testing.T) {
+	structuralInterfaceOracle(t, `interface MethodParams {size():number;}
+interface MethodView {getParameters():MethodParams;}
+class Identifier {}
+class MethodParameters {size():number {return 2;}}
+class MethodDefinition extends Identifier {getParameters():MethodParameters {return new MethodParameters();}}
+class EventDefinition extends Identifier {getParameters():string[] {return ["event"];}}
+class Probe {
+ static view(value:Identifier):MethodView {return value as MethodView;}
+ static run():string {return "parameters:"+Probe.view(new MethodDefinition()).getParameters().size();}
+}`)
+}
+
+func TestStructuralInterfaceAdapterConversionsABAPNodeOracle(t *testing.T) {
+	structuralInterfaceOracle(t, `interface Conversions {
+ round(values?:string[]):string[]|undefined;
+ text(value?:string):string|undefined;
+ wide(values:string[]):any[];
+ narrow(values:any[]):string[];
+}
+class Converter {
+ round(values?:any):any {return values;}
+ text(value?:any):any {return value;}
+ wide(values:any[]):any[] {return values;}
+ narrow(values:string[]):string[] {return values;}
+}
+class Probe {
+ static same(left:any,right:any):boolean {return left===right;}
+ static run():string {
+  const converter=new Converter() as Conversions;
+  const original=["first"];
+  const round=converter.round(original);
+  const wide=converter.wide(original);
+  const narrow=converter.narrow(wide);
+  wide.push("second");
+  narrow.push("third");
+  return (converter.round()===undefined)+":"+(converter.text()===undefined)+":"+(converter.text("")==="")+":"+converter.text("text")+":"+round.join(",")+":"+narrow.join(",")+":"+Probe.same(round,original)+":"+Probe.same(wide,original)+":"+Probe.same(narrow,original);
+ }
+}`)
+}
+
+func TestStructuralInterfaceAdapterUnionABAPNodeOracle(t *testing.T) {
+	structuralInterfaceOracle(t, `type Item={kind:"text";value:string}|{kind:"count";value:number};
+interface Conversions {round(value?:Item):Item|undefined; values(value?:Item[]):Item[]|undefined;}
+class Converter {round(value?:any):any {return value;} values(value?:any):any {return value;}}
+class Probe {
+ static same(left:any,right:any):boolean {return left===right;}
+ static run():string {
+  const converter=new Converter() as Conversions;
+  const item:Item={kind:"text",value:"union"};
+  const original:Item[]=[item];
+  const round=converter.round(item);
+  const values=converter.values(original);
+  return (converter.round()===undefined)+":"+(converter.values()===undefined)+":"+round.kind+":"+values[0].kind+":"+Probe.same(round,item)+":"+Probe.same(values,original)+":"+Probe.same(values[0],item);
+ }
+}`)
+}
+
 func TestStructuralInterfaceVoidResultABAPNodeOracle(t *testing.T) {
 	structuralInterfaceOracle(t, `interface Reader {read():any;}
 class ReaderImpl {calls:number=0; read():void {this.calls++;}}

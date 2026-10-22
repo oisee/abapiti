@@ -252,7 +252,11 @@ func emitNamed(p *hir.Program, refusals *[]error, assertionOwners map[string]boo
 			}
 		}
 	}
-	if e.arrayViews || mapViews {
+	// Adapter-only array conversions need live storage too. Plan their ABI
+	// before any runtime declaration (including own-key helper arrays).
+	e.promoteValueSlots()
+	e.collectInterfaceAdmissions()
+	if e.arrayViews || mapViews || e.hasInterfaceAdapters() {
 		e.liveRuntime()
 		if e.types["runtime.mapView"] {
 			e.mapStorageRuntime()
@@ -271,8 +275,6 @@ func emitNamed(p *hir.Program, refusals *[]error, assertionOwners map[string]boo
 	}
 	e.findStaticConstants()
 	e.findConstSets()
-	e.promoteValueSlots()
-	e.collectInterfaceAdmissions()
 	if e.descriptors {
 		n := e.name("runtime.described")
 		e.files[n+".intf.abap"] = "INTERFACE " + n + " PUBLIC.\nMETHODS " + e.name("builtin.classOf") + " RETURNING VALUE(result) TYPE REF TO " + e.name("runtime.classvalue") + ".\nMETHODS " + e.name("builtin.nativeConstructor") + " RETURNING VALUE(result) TYPE REF TO " + e.name("runtime.classvalue") + ".\nENDINTERFACE.\n"
