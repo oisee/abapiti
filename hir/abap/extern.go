@@ -53,9 +53,12 @@ func externABAPType(class string, t hir.Type) string {
 }
 
 // externTemp declares a host-typed temporary, cleared on every execution.
-// OSGo refuses VALUE with the DDIC table type string_table.
+// OSGo refuses VALUE with the DDIC table type string_table and CAST string
+// for a data reference. Keep these declarations out of assignment folding: a
+// REF TO string host result must remain a data reference until externResult
+// reads it through a field symbol.
 func (b *body) externTemp(typ string) string {
-	if !strings.Contains(typ, "_table") && !strings.Contains(typ, "=>") {
+	if typ != "REF TO string" && !strings.Contains(typ, "_table") && !strings.Contains(typ, "=>") {
 		return b.rawTemp(typ)
 	}
 	b.serial++

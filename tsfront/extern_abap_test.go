@@ -163,3 +163,50 @@ func TestExternABAPReferenceHost(t *testing.T) {
 		}
 	}
 }
+
+// Exported to the ABAP fixture compile gate with the real host class. Ambient
+// process.env uses the env extern capability through host.getenv; exercise
+// that path as well as ordinary optional-string extern calls.
+func TestExternABAPOptionalStringConsumers(t *testing.T) {
+	host, err := os.ReadFile("../extern/hostio/abap/zcl_abapiti_hostio.clas.abap")
+	if err != nil {
+		t.Fatal(err)
+	}
+	r, _, _ := externProjectABAP(t, `import * as io from './host';
+ declare const process:{env:{[key:string]:string|undefined}};
+ class Probe {
+  static pass(value:string|undefined):string {return value??"unset";}
+  static run():string {
+   let out="";
+   for (const name of ["ABAPITI_SMOKE","ABAPITI_SMOKE_UNSET"]) {
+    const value:string|undefined=io.env(name);
+    out+=Probe.pass(value)+"|"+(io.env(name)??"unset");
+    out+="|"+(io.env(name)===undefined)+"|"+Probe.pass(io.env(name));
+    out+="|"+io.basename(io.env(name)??"unset");
+    out+="|"+Probe.pass(io.gitHead(name))+"|"+(io.gitHead(name)??"no-git");
+    const ambient:string|undefined=process.env[name];
+    out+="|"+Probe.pass(ambient)+"|"+(process.env[name]??"unset");
+    out+="|"+(process.env[name]===undefined)+"|"+Probe.pass(process.env[name]);
+    out+="|"+io.basename(process.env[name]??"unset");
+   }
+   return out+"|"+(io.env("ABAPITI_SMOKE")==="on");
+  }
+ }`, `export function env(name:string):string|undefined{return undefined;}
+ export function gitHead(cwd:string):string|undefined{return undefined;}
+ export function basename(file:string):string{return file;}`, "ZCL_ABAPITI_HOSTIO")
+	requireExternClean(t, r)
+	files, names, err := emitABAPNamed(t, r.Prog)
+	if err != nil {
+		t.Fatal(err)
+	}
+	files["zcl_abapiti_hostio.clas.abap"] = string(host)
+	src := files[names.Get("probe.ts.Probe")+".clas.abap"]
+	for _, want := range []string{"=>env( name = ", "=>git_head( cwd = ", "IS BOUND.", "->* TO <", "->has = abap_true."} {
+		if !strings.Contains(src, want) {
+			t.Errorf("missing %q", want)
+		}
+	}
+	if strings.Contains(src, "CAST string(") {
+		t.Fatal("optional extern string cast as an object")
+	}
+}
