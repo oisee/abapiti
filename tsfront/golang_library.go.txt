@@ -270,9 +270,44 @@ func (c *Checker) Tree(typ, name string) ([]FileTree, bool) {
  c.countParse()
  c.registry.@parse@()
  clear(c.pending)
+ return libraryTree(obj), true
+}
+
+// TreeOf builds an isolated outline from the supplied files using the core's
+// default configuration. INCLUDEs and macros in objects outside files are absent.
+// Use TreeOfWithConfig to match a Checker's release and global macro settings.
+func TreeOf(files []File, typ, name string) ([]FileTree, bool) {
+ return TreeOfWithConfig(files, typ, name, "{}")
+}
+
+// TreeOfWithConfig is TreeOf with the same configuration accepted by Prime.
+// No baseline or reader index is built. Core access and snapshot copying remain
+// serialised with all Checkers, and returned slices never alias the registry.
+func TreeOfWithConfig(files []File, typ, name, config string) ([]FileTree, bool) {
+ libraryMu.Lock(); defer libraryMu.Unlock()
+ registry := @newRegistry@(@newConfig@(str(config)))
+ for _, file := range files { registry.@addFile@(@newFile@(str(file.Filename), str(file.Raw))) }
+ @clearParsingPerformance@()
+ // The outline needs parsing and cross-include macros, but not global OO/DDIC
+ // type discovery. Use the pinned registry's own per-object parser/configuration.
+ objects := registry.@getObjects@()
+ defer objects.@close@()
+ for {
+  next := objects.@next@()
+  if next.@done@ { break }
+  registry.@parsePrivate@(next.@value@)
+ }
+ @newCrossIncludeMacros@(registry).@run@()
+ obj := registry.@getObject@(present(str(typ)), present(str(name)))
+ if obj == nil { return nil, false }
+ return libraryTree(obj), true
+}
+
+// Caller holds libraryMu and has parsed the owning registry.
+func libraryTree(obj @Object@) []FileTree {
  out := make([]FileTree, 0)
  abap, ok := obj.(@ABAPObject@)
- if !ok { return out, true }
+ if !ok { return out }
  files := abap.@getABAPFiles@()
  ordered := make([]@ABAPFile@, 0, libraryLength(files))
  if obj.@getType@().String() == "CLAS" || obj.@getType@().String() == "INTF" {
@@ -291,7 +326,7 @@ func (c *Checker) Tree(typ, name string) ([]FileTree, bool) {
   for i := int32(0); i < libraryLength(statements); i++ { tree.Statements = append(tree.Statements, libraryStatement(libraryUnwrap(libraryAt(statements, i)).(@StatementNode@))) }
   out = append(out, tree)
  }
- return out, true
+ return out
 }
 
 // Expression copies CDS expression nodes, omitting TokenNode children. Bounds

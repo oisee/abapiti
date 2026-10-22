@@ -273,12 +273,15 @@ previous state, and indexes lexical readers. File names and source bytes are
 preserved. `Check` resolves the owning object and uses `findIssuesObject`,
 returning ordered structured issues (`Filename`, `Key`, `Severity`, `Message`,
 `Row`, `Column`, `EndRow`, `EndColumn`), without the batch report/dump transport.
-Coordinates must be finite integers representable as int32. `Update` dirties
-transitive lexical readers using the same conservative word pattern as OSG;
+Coordinates must be finite integers representable as int32. `Update` dirties the edited owner and its
+direct lexical readers using the same conservative word pattern as OSG;
 parsing stays lazy until Check, CheckObject, Tree, CDS, DDIC or Files.
 Removing an include preserves sibling readers;
 removing the last file discards the old object identity. `Stats` exposes work
-counters, not a timing or engine parity certificate.
+counters, not a timing or engine parity certificate. `ParseRuns`/`ParseObjects`
+count pending invalidations submitted after Update, excluding the core's inert
+objects whose no-op parsers leave them permanently dirty. Several Updates before
+parsing accumulate a union; no-op Updates retain that pending state.
 
 Failures panic with a cause for the host to catch and report as a refusal.
 After failed Prime/Update the host must discard or re-prime that checker.
@@ -313,6 +316,16 @@ non-ABAP object returns an empty file slice from `Tree`. `CheckObject` preserves
 and returned trees contain Go values that callers may retain or edit after the
 lock is released. Trees contain statement and structure nodes only; expressions
 are represented by their statement's flattened `getTokens()` list.
+
+For an isolated outline without priming a baseline, use
+`abaplint.TreeOf(files, "CLAS", "ZCL_EXAMPLE")`. It builds a temporary registry
+from just those files, parses them and expands macros, and copies the same
+`FileTree` values. It skips reader indexing and global type-definition discovery.
+`TreeOfWithConfig(files, typ, name, config)` accepts the same configuration as
+`Prime`; `TreeOf` uses the core defaults. Supply the same release/global-macro
+settings for parity with an existing Checker. INCLUDEs and macros from objects
+outside the supplied files are absent. `Checker.Tree` keeps its existing full
+registry semantics. All variants hold `libraryMu` through snapshot copying.
 
 `Node.Kind` uses the core's constructor descriptor name. `Pos` contains raw,
 one-based row/column coordinates, and token ends come directly from

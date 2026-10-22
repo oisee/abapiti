@@ -92,6 +92,16 @@ func TestRegistryGoLibrary(t *testing.T) {
   issue:=&issueStub{file:file}
   return &array[any]{Items:[]any{issue,issue}}
  }
+ func @clearParsingPerformance@() {}
+ type macroStub struct{}
+ func @newCrossIncludeMacros@(r @Registry@) *macroStub {return &macroStub{}}
+ func(m *macroStub) @run@() {}
+ func(r *registryStub) @parsePrivate@(o @Object@) {o.(*objectStub).dirty=false}
+ func @newConfig@(raw jsString) jsString {return raw}
+ func @newRegistry@(cfg jsString) @Registry@ {
+  if cfg.String()=="throw"{panic("refused prime")}
+  return &registryStub{files:map[string]*fileStub{},objects:map[string]*objectStub{}}
+ }
  type harnessStub struct{ files,deps []*fileStub }
  func @newRun@() *harnessStub{return &harnessStub{}}
  func(h *harnessStub) @addFile@(name,raw jsString){h.files=append(h.files,@newFile@(name,raw))}
@@ -168,6 +178,9 @@ func TestRegistryGoLibrary(t *testing.T) {
   c.Update("/znew.prog.abap",nil)
   refused(t,"not in the registry",func(){c.Check("/znew.prog.abap")})
   c.Check("/zcall.clas.abap")
+  if f,found:=TreeOf([]File{{"/zmini.clas.abap","ZMINI"}},"CLAS","zmini");!found||f==nil||len(f)!=0{t.Fatal(f,found)}
+  if f,found:=TreeOf(nil,"CLAS","missing");found||f!=nil{t.Fatal(f,found)}
+  refused(t,"refused prime",func(){TreeOfWithConfig(nil,"CLAS","missing","throw")})
   // Failed prime never exposes the old corpus.
   refused(t,"refused prime",func(){c.Prime(nil,nil,"throw")})
   refused(t,"prime",func(){c.Check("/zcall.clas.abap")})
@@ -202,7 +215,7 @@ func TestRegistryGoLibrary(t *testing.T) {
 // must not make a placeholder appear to have been emitted by the package.
 func TestRegistryGoLibraryEmittedNames(t *testing.T) {
 	registry := &hir.Class{Name: "src/registry.ts.Registry"}
-	for _, name := range []string{"addFile", "addDependency", "parse", "getFileByName", "findObjectForFile", "findIssuesObject", "getFiles", "getObjects", "next", "close", "done", "value", "getRaw", "getObjectName", "getName", "setDirty", "isDirty", "updateFile", "removeFile", "getKey", "getSeverity", "getFilename", "getMessage", "getStart", "getEnd", "getRow", "getCol", "getObject", "getType", "getABAPFiles", "getMainABAPFile", "getSequencedFiles", "getStructure", "getStatements", "get", "getChildren", "getFirstStatement", "getFirstToken", "getLastToken", "getTokens", "getStr", "getTree", "getSQLViewName", "concatTokens", "parseType", "listKeys", "getComponents", "name"} {
+	for _, name := range []string{"parsePrivate", "run", "addFile", "addDependency", "parse", "getFileByName", "findObjectForFile", "findIssuesObject", "getFiles", "getObjects", "next", "close", "done", "value", "getRaw", "getObjectName", "getName", "setDirty", "isDirty", "updateFile", "removeFile", "getKey", "getSeverity", "getFilename", "getMessage", "getStart", "getEnd", "getRow", "getCol", "getObject", "getType", "getABAPFiles", "getMainABAPFile", "getSequencedFiles", "getStructure", "getStatements", "get", "getChildren", "getFirstStatement", "getFirstToken", "getLastToken", "getTokens", "getStr", "getTree", "getSQLViewName", "concatTokens", "parseType", "listKeys", "getComponents", "name"} {
 		registry.Methods = append(registry.Methods, &hir.Method{
 			Name: name, Result: hir.T(hir.Void), Body: &hir.Stmt{Kind: hir.Block},
 		})
@@ -215,6 +228,9 @@ func TestRegistryGoLibraryEmittedNames(t *testing.T) {
 			{Name: "src/objects/view.ts.View"},
 			{Name: "src/abap/types/basic/structure_type.ts.StructureType"},
 			{Name: "src/abap/types/basic/_abstract_type.ts.AbstractType"},
+			{Name: "src/config.ts.Config"},
+			{Name: "src/registry.ts.ParsingPerformance", Methods: []*hir.Method{{Name: "clear", Static: true, Result: hir.T(hir.Void), Body: &hir.Stmt{Kind: hir.Block}}}},
+			{Name: "src/abap/cross_include_macros.ts.CrossIncludeMacros"},
 			{Name: "src/issue.ts.Issue"},
 			{Name: "src/objects/_abap_object.ts.ABAPObject"},
 			{Name: "src/abap/abap_file.ts.ABAPFile"},
@@ -260,26 +276,30 @@ func TestRegistryGoLibraryEmittedNames(t *testing.T) {
 		}
 	}
 	special := map[string]string{
-		"ExpressionNode":   "ref.src/abap/nodes/expression_node.ts.ExpressionNode",
-		"DataDefinition":   "ref.src/objects/data_definition.ts.DataDefinition",
-		"Table":            "ref.src/objects/table.ts.Table",
-		"View":             "ref.src/objects/view.ts.View",
-		"StructureType":    "ref.src/abap/types/basic/structure_type.ts.StructureType",
-		"AbstractType":     "ref.src/abap/types/basic/_abstract_type.ts.AbstractType",
-		"Component":        "ref.src/abap/types/basic/structure_type.ts.IStructureComponent",
-		"Registry":         "ref.src/registry.ts.Registry",
-		"ABAPObject":       "ref.src/objects/_abap_object.ts.ABAPObject",
-		"ABAPFile":         "ref.src/abap/abap_file.ts.ABAPFile",
-		"StatementNode":    "ref.src/abap/nodes/statement_node.ts.StatementNode",
-		"StructureNode":    "ref.src/abap/nodes/structure_node.ts.StructureNode",
-		"AbstractToken":    "ref.src/abap/1_lexer/tokens/abstract_token.ts.AbstractToken",
-		"Position":         "ref.src/position.ts.Position",
-		"PragmaDescriptor": "descriptor.src/abap/1_lexer/tokens/pragma.ts.Pragma",
-		"Object":           "ref.src/objects/_iobject.ts.IObject",
-		"File":             "ref.src/files/_ifile.ts.IFile",
-		"Issue":            "ref.src/issue.ts.Issue",
-		"newRun":           "new.harness/registry_run.ts.RegistryRun",
-		"newFile":          "new.src/files/memory_file.ts.MemoryFile",
+		"ExpressionNode":          "ref.src/abap/nodes/expression_node.ts.ExpressionNode",
+		"DataDefinition":          "ref.src/objects/data_definition.ts.DataDefinition",
+		"Table":                   "ref.src/objects/table.ts.Table",
+		"View":                    "ref.src/objects/view.ts.View",
+		"StructureType":           "ref.src/abap/types/basic/structure_type.ts.StructureType",
+		"AbstractType":            "ref.src/abap/types/basic/_abstract_type.ts.AbstractType",
+		"Component":               "ref.src/abap/types/basic/structure_type.ts.IStructureComponent",
+		"Registry":                "ref.src/registry.ts.Registry",
+		"ABAPObject":              "ref.src/objects/_abap_object.ts.ABAPObject",
+		"ABAPFile":                "ref.src/abap/abap_file.ts.ABAPFile",
+		"StatementNode":           "ref.src/abap/nodes/statement_node.ts.StatementNode",
+		"StructureNode":           "ref.src/abap/nodes/structure_node.ts.StructureNode",
+		"AbstractToken":           "ref.src/abap/1_lexer/tokens/abstract_token.ts.AbstractToken",
+		"Position":                "ref.src/position.ts.Position",
+		"PragmaDescriptor":        "descriptor.src/abap/1_lexer/tokens/pragma.ts.Pragma",
+		"Object":                  "ref.src/objects/_iobject.ts.IObject",
+		"File":                    "ref.src/files/_ifile.ts.IFile",
+		"Issue":                   "ref.src/issue.ts.Issue",
+		"clearParsingPerformance": "body.src/registry.ts.ParsingPerformance.clear",
+		"newCrossIncludeMacros":   "new.src/abap/cross_include_macros.ts.CrossIncludeMacros",
+		"newRegistry":             "new.src/registry.ts.Registry",
+		"newConfig":               "new.src/config.ts.Config",
+		"newRun":                  "new.harness/registry_run.ts.RegistryRun",
+		"newFile":                 "new.src/files/memory_file.ts.MemoryFile",
 	}
 	marker := regexp.MustCompile(`@([A-Za-z]+)@`)
 	want := marker.ReplaceAllStringFunc(registryGoLibrary, func(placeholder string) string {
