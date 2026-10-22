@@ -15,13 +15,16 @@ import time
 
 before, after, manifest, output = sys.argv[1:5]
 root = os.path.dirname(os.path.abspath(output))
+max_load = float(os.environ.get('ABAPITI_BENCH_MAX_LOAD', '12'))
+if not 0 < max_load < float('inf'):
+    raise ValueError('ABAPITI_BENCH_MAX_LOAD must be positive and finite')
 
 
 def guard():
     if shutil.disk_usage(root).free < 45 * 10**9:
         raise RuntimeError('less than 45 GB free')
-    while os.getloadavg()[0] >= 12:
-        print('waiting for load < 12', flush=True)
+    while os.getloadavg()[0] >= max_load:
+        print(f'waiting for load < {max_load:g}', flush=True)
         time.sleep(10)
 
 

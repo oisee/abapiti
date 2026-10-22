@@ -106,3 +106,16 @@ retains stale caches. The same driver also supports the 41 #839 scenarios.
 
 The opt-in Go differential also accepts `ABAPITI_LIBRARY_INCREMENTAL_FRESH=1`
 in place of `_REFERENCE`, keeping the original Node comparison as the default.
+
+For a container without systemd, use its memory cgroup and limit heavy Go
+processes explicitly. The i10 run used GOMAXPROCS=2, scratch TMPDIR/GOCACHE,
+and GOMEMLIMIT=12GiB for the short suite. If scratch temporary directories sit
+inside this Git checkout, set `GIT_CEILING_DIRECTORIES` to that temporary root
+so isolated host-I/O probes do not discover the parent repository. With Node 26,
+`NODE_OPTIONS=--disable-warning=MODULE_TYPELESS_PACKAGE_JSON` keeps module-type
+warnings out of CombinedOutput-based oracle comparisons. The benchmark disk
+guard now checks its output filesystem instead of a host-specific mount.
+
+The load guard defaults to 12. On an already busy shared host, an explicit
+`ABAPITI_BENCH_MAX_LOAD` can raise that limit; preserve the raw sampled Load
+values and qualify the resulting medians as shared-host measurements.
