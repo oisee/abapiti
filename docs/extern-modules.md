@@ -64,7 +64,9 @@ On OSGo, datasets are sandboxed: set `OSD_DATASET_HOME` to the working directory
 
 Keys of `dirs` and `gitHead` are `path.resolve` of the argument; the host resolves its argument against `cwd` with the same POSIX rules. Entries keep Node's native order and `Dirent.isDirectory()`. `env` holds only the names the program read (`null`: absent). `stdout` comes from `FS_SNAPSHOT_STDOUT` and is optional. The first observation of a key wins. JSON escapes are the ones `JSON.stringify` writes.
 
-`tools/selfhost-step4.py --abap` records the snapshot in its Node reference run and binds both extern modules to `ZCL_ABAPITI_HOSTIO`. `tools/extern-abap-osg-smoke.sh ABAPITI OSG OUT` runs `cmd/abapiti/testdata/extern-abap` under Node and, via `emit-abap --initialize` and `tools/selfhost-step4b-osg.mjs --build --main`, on OSGo, and compares the two outputs byte for byte.
+`tools/selfhost-step4.py --abap` records the snapshot in its Node reference run and binds both extern modules to `ZCL_ABAPITI_HOSTIO`. `tools/extern-abap-osg-smoke.sh ABAPITI OSG OUT` runs `cmd/abapiti/testdata/extern-abap` under Node and, via `emit-abap --initialize` and `tools/selfhost-step4b-osg.mjs --build --main`, on OSGo, and compares the two outputs byte for byte, running the binary from a different directory. It also checks that an uncaught JS Error reports its payload message and exits with status 3.
+
+`--main` calls `ZCL_ABAPITI_HOSTIO=>configure` before `RUN` with absolute paths fixed at build time: `OUT/fs-snapshot.json` and `OUT/gogen.go` by default. Pass `--snapshot /abs/run/fs-snapshot.json --stdout /abs/run/gogen.go` when the bridge output is a separate directory. Set `OSD_DATASET_HOME` to the Node reference working directory, `OSD_DATASET_READ` to cover the OSG checkout, lib folders and snapshot, and `OSD_DATASET_WRITE` to cover stdout and any other host writes.
 
 The host module has its own `go.mod`. To run root and nested-module tests together, use a temporary Go workspace containing the repository root and `extern/hostio`, or test the two modules separately.
 

@@ -49,3 +49,8 @@ function lines(): string[] {
 
 io.writeStdout(lines().join("\n") + "\n");
 io.writeStdout("second write\n");
+
+// The smoke harness replays a second snapshot to test uncaught Error payloads.
+if (io.env("ABAPITI_SMOKE_THROW") === "on") {
+  throw new Error("extern smoke payload message");
+}
