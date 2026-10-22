@@ -202,5 +202,8 @@ ENDMETHOD.
 		end = strings.Index(text, "METHOD unit_text.\n")
 	}
 	text = text[:start] + replacement + text[end:]
+	for _, method := range []string{"match", "replace", "match_test"} {
+		text = strings.Replace(text, "METHOD "+method+".\n", "METHOD "+method+".\nIF zero_width = abap_true.\nRAISE EXCEPTION TYPE cx_sy_range_out_of_bounds.\nENDIF.\n", 1)
+	}
 	e.files[file] = text
 }

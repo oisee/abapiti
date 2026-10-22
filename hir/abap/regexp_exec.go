@@ -103,6 +103,9 @@ IF cursor_base > 0.
     ENDIF.
   ENDLOOP.
 ENDIF.
+IF zero_width = abap_true.
+ hit-length = 0.
+ENDIF.
 IF source = '^(-?)0+(?=\d)'.
  hit-length = hit-length - 1.
  DELETE groups INDEX lines( groups ).

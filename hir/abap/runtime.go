@@ -565,6 +565,7 @@ func (e *emitter) buildRegexpRuntime(id string, js bool) {
 PUBLIC SECTION.
 DATA source TYPE string.
 DATA flags TYPE string.
+DATA zero_width TYPE abap_bool.
 DATA posix TYPE string.
 DATA excluded TYPE string.
 DATA ignore_case TYPE abap_bool.
@@ -626,6 +627,11 @@ i = 0.
 in_class = abap_false.
 excluded = excluded_pattern.
 normalized = class_hyphens( pattern ).
+FIND REGEX '^\(\?=[A-Za-z0-9_ ]+\)$' IN pattern.
+IF sy-subrc = 0.
+  zero_width = abap_true.
+  normalized = substring( val = pattern off = 3 len = strlen( pattern ) - 4 ).
+ENDIF.
 n = strlen( normalized ).
 WHILE i < n.
   c = normalized+i(1).

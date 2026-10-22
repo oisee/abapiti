@@ -43,3 +43,22 @@ class Probe {
 	}
 	storageOracleABAP(t, prog, want)
 }
+
+func TestAbaplint73RegExpZeroWidthAndSyntaxError(t *testing.T) {
+	source := `class Probe { static run(): string {
+  const pattern = "(?=TODO)";
+  const r = new RegExp(pattern,"gi");
+  const out: string[] = [];
+  for (;;) { const m=r.exec("TODO todo"); if(m===null)break; out.push(m.index+":"+m[0].length);r.lastIndex++; }
+  const bad="[";
+  try { new RegExp(bad,"gi"); } catch(e) { out.push(String(e instanceof SyntaxError)); out.push((e as Error).message); }
+  return out.join("|");
+ } }`
+	want := regexpOptionalCapturesNode(t, source)
+	prog := lowerStatementsProbe(t, map[string]string{"probe.ts": source}, []string{"probe.ts"})
+	got := runGoHIR(t, prog, fmt.Sprintf("fmt.Println(%s())", goEntry("probe.ts.Probe", "run")))
+	if got != want {
+		t.Fatalf("Go %q Node %q", got, want)
+	}
+	storageOracleABAP(t, prog, want)
+}

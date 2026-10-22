@@ -83,6 +83,9 @@ func regexMayHaveState(x *hir.Expr) bool {
 func (e *emitter) regexpLegacyRuntime(name string) {
 	file := name + ".clas.abap"
 	text := e.files[file]
+	for _, method := range []string{"test", "match_test", "match", "replace"} {
+		text = strings.Replace(text, "METHOD "+method+".\n", "METHOD "+method+".\nIF zero_width = abap_true.\nRAISE EXCEPTION TYPE cx_sy_range_out_of_bounds.\nENDIF.\n", 1)
+	}
 	if e.jsRegexpUsed {
 		// Mixed programs share the feature array ABI, but never the PCRE
 		// engine in this base class.
@@ -109,6 +112,7 @@ func (e *emitter) regexpJSSubclass() {
 	file := name + ".clas.abap"
 	text := e.files[file]
 	text = strings.Replace(text, "DEFINITION PUBLIC CREATE PUBLIC.", "DEFINITION PUBLIC INHERITING FROM "+base+" CREATE PUBLIC.", 1)
+	text = strings.Replace(text, "DATA zero_width TYPE abap_bool.\n", "", 1)
 	for _, field := range []string{"source", "flags", "posix", "excluded"} {
 		text = strings.Replace(text, "DATA "+field+" TYPE string.\n", "", 1)
 	}

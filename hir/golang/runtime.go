@@ -1013,6 +1013,7 @@ func compareBigInt(x,y jsBigInt) float64 {
 func dynBigInt(d *dynamic) jsBigInt {if d==nil||d.Tag!=11 {panic(newTrap("expected bigint"))};return d.Value.(jsBigInt)}
 
 type jsRegExp struct {
+ zeroWidth bool
 	Source, Flags jsString
 	compiled      *regexp.Regexp
  denied *regexp.Regexp
@@ -1026,7 +1027,7 @@ var literalAlternativePattern=regexp.MustCompile("^\\^[A-Za-z0-9_|()?]+\\$?$")
 // shares the immutable programs and keeps a fresh object with its own
 // lastIndex. Failures are not cached, so they trap again on every call.
 type jsRegExpKey struct{pattern, flags string}
-type jsRegExpProgram struct{source jsString; compiled, denied *regexp.Regexp}
+type jsRegExpProgram struct{source jsString; compiled, denied *regexp.Regexp; zeroWidth bool}
 type jsRegExpWrapKey struct{re *regexp.Regexp; prefix string; sticky bool}
 var jsRegExpCache struct {
  sync.Mutex
@@ -1046,7 +1047,7 @@ func newRegExp(pattern, flags jsString) *jsRegExp {
   jsRegExpCache.Unlock()
  }
  source,compiled,denied:=program.source,program.compiled,program.denied
- return &jsRegExp{Source:source,Flags:flags,compiled:compiled,denied:denied}
+ return &jsRegExp{Source:source,Flags:flags,compiled:compiled,denied:denied,zeroWidth:program.zeroWidth}
 }
 // wrappedRegExp is "\\A"+prefix+scan+"("+re+")", compiled once per variant.
 func wrappedRegExp(re *regexp.Regexp, prefix string, sticky bool) *regexp.Regexp {
@@ -1072,7 +1073,7 @@ func compileRegExpProgram(p, f string) *jsRegExpProgram {
  if !ok {panic(newTrap("unreviewed JavaScript regexp /" + p + "/" + f))}
  var denied *regexp.Regexp
  if spec[1]!="" {denied=regexp.MustCompile(spec[1])}
- return &jsRegExpProgram{source:jsRegExpSource(p),compiled:compileCheckedRegexp(spec[0],p,f),denied:denied}
+ return &jsRegExpProgram{source:jsRegExpSource(p),compiled:compileCheckedRegexp(spec[0],p,f),denied:denied,zeroWidth:strings.HasPrefix(p,"(?=")}
 
 }
 // jsRegExpSource is RegExp.prototype.source as V8 escapes it: "/" outside a
@@ -1138,6 +1139,7 @@ func (r *jsRegExp) exec(s jsString) *array[jsString] {
  m:=re.FindStringSubmatchIndex(searchInput)
  if m==nil {if stateful {r.LastIndex=0};return nil}
  if wrapped {m=m[2:];for i:=range m {if m[i]>=0 {m[i]+=byteBase}}}
+ if r.zeroWidth {m[1]=m[0]}
  if r.Source==str("^(-?)0+(?=\\d)") {m[1]--;m=m[:len(m)-2]}
  out:=matchArray(int32(utf8.RuneCountInString(input[:m[0]])))
  if stateful {r.LastIndex=int32(utf8.RuneCountInString(input[:m[1]]))}

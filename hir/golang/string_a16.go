@@ -24,7 +24,7 @@ func (e *emitter) stringA16Runtime(runtime string) string {
 		runtime = mustReplace(runtime, "type jsRegExp struct {", "type jsRegExp struct { labelGuard bool;", "regexp label guard field")
 		// The constructor literal; the program-cache literal further down
 		// also ends in denied:denied} and must stay untouched.
-		runtime = mustReplace(runtime, "&jsRegExp{Source:source,Flags:flags,compiled:compiled,denied:denied}", "&jsRegExp{Source:source,Flags:flags,compiled:compiled,denied:denied,labelGuard:p=="+strconv.Quote(jsregex.IteratorLabelPattern)+"}", "regexp label guard init")
+		runtime = mustReplace(runtime, "&jsRegExp{Source:source,Flags:flags,compiled:compiled,denied:denied,zeroWidth:program.zeroWidth}", "&jsRegExp{Source:source,Flags:flags,compiled:compiled,denied:denied,zeroWidth:program.zeroWidth,labelGuard:p=="+strconv.Quote(jsregex.IteratorLabelPattern)+"}", "regexp label guard init")
 		runtime = mustReplace(runtime, "HasMatchIndex bool; Missing", "HasMatchIndex bool; MatchGroups *dynamic; Missing", "regexp match groups field")
 		runtime += "\nfunc (a *array[T]) matchGroups() *dynamic {if a.extra==nil {return nil};return a.extra.MatchGroups}\n"
 		start := mustIndex(runtime, "func (r *jsRegExp) exec(s jsString)", "A16 exec")
@@ -104,6 +104,7 @@ func (r *jsRegExp) exec(s jsString) *array[jsString] {
  if m==nil{if stateful{r.LastIndex=0};return nil}
  if wrapped{m=m[2:];for i:=range m{if m[i]>=0{m[i]+=byteBase}}}
  if r.labelGuard{m=m[2:]}
+ if r.zeroWidth {m[1]=m[0]}
  if r.Source==str("^(-?)0+(?=\\d)"){m[1]--;m=m[:len(m)-2]}
  out:=matchArray(offsets[m[0]])
  if stateful{r.LastIndex=offsets[m[1]]}

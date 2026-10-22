@@ -236,7 +236,7 @@ func emitPackage(p *hir.Program, pkg string, profile bool) (map[string]string, *
 		runtime += regexSplitRuntimeSource
 		if e.regexA16 {
 			runtime = mustReplace(runtime, "func (s jsString) splitRegex(pattern *jsRegExp, limit float64) *array[jsString] {", `func (s jsString) splitRegex(pattern *jsRegExp, limit float64) *array[jsString] {
- if pattern.Flags.indexOf(str("u"))>=0 || pattern.labelGuard {panic(newTrap("regexp split is outside the checked split grammar"))}`, "regex split A16 guard")
+ if pattern.Flags.indexOf(str("u"))>=0 || pattern.labelGuard || pattern.zeroWidth {panic(newTrap("regexp split is outside the checked split grammar"))}`, "regex split A16 guard")
 		}
 	}
 	if e.extraRuntimeKeys {

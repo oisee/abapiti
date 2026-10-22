@@ -605,6 +605,7 @@ func (l *lowerer) newRegExp(n *ast.Node) (*hir.Expr, bool) {
 	if flags, ok := argv[1].Value.(string); argv[1].Kind == hir.Lit && ok && !l.regexFlags(n, flags) {
 		return nil, true
 	}
+	l.guardRegexpSyntax(n, argv)
 	l.diagf(n, "note-regex", "new RegExp(...) lowered to the RegExp runtime (dynamic pattern)")
 	x := &hir.Expr{Kind: hir.New, Node: l.node(n), Type: hir.T(hir.RegExp), Args: argv}
 	// Dynamic full-closure construction opts into the extended checked grammar;

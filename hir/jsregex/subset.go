@@ -36,6 +36,16 @@ func TranslateSubset(pattern, flags string) (string, bool) {
 	if pattern == `^(-?)0+(?=\d)` && flags == "" {
 		return `^(-?)0+([0-9])`, true
 	}
+	if len(pattern) > 4 && pattern[:3] == "(?=" && pattern[len(pattern)-1] == ')' {
+		literal := pattern[3 : len(pattern)-1]
+		valid := true
+		for _, c := range literal {
+			valid = valid && (c >= 'A' && c <= 'Z' || c >= 'a' && c <= 'z' || c >= '0' && c <= '9' || c == '_' || c == ' ')
+		}
+		if valid {
+			return TranslateSubset(literal, flags)
+		}
+	}
 	p := subsetParser{pattern: pattern, insensitive: insensitive}
 	out, _, ok := p.expression(false)
 	return out, ok && p.pos == len(pattern)

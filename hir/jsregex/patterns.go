@@ -6,6 +6,14 @@ package jsregex
 // Reviewed maps pattern/flags to a compiled language and an optional whole-input
 // exclusion. Do not mutate: both target emitters and the Go runtime use it.
 var Reviewed = map[string][2]string{
+	// Configurable forbidden-text rules use these literal/word/line languages.
+	`TODO/gi`:        {`[Tt][Oo][Dd][Oo]`, ""},
+	`BREAK-POINT/gi`: {`[Bb][Rr][Ee][Aa][Kk]-[Pp][Oo][Ii][Nn][Tt]`, ""},
+	`\bTODO\b/gi`:    {`\b[Tt][Oo][Dd][Oo]\b`, ""},
+	`^\* TODO$/gi`:   {`^\* [Tt][Oo][Dd][Oo]\z`, ""},
+	`$/gi`:           {`\z`, ""},
+	`(?=TODO)/gi`:    {`[Tt][Oo][Dd][Oo]`, ""},
+
 	// These non-u naming classes use a literal hyphen adjacent to \\d.
 	// Review the exact languages, not arbitrary legacy class ranges.
 	`^(\/[A-Z_\d]{3,8}\/)?[A-Z_-\d<> ]+$/i`: {`^(/[A-Za-z_0-9]{3,8}/)?[A-Za-z_0-9<> \-]+\z`, ""},
