@@ -300,6 +300,14 @@ HIR graph and its name table:
 The opt-in full-core fixture test below checks the actual pinned parser;
 consumer HTTP/performance gates remain separate acceptance work.
 
+Hosts can select a process-wide GC setting before `Prime`, for example
+`debug.SetGCPercent(200)` or `GOGC=200`. On the frozen M1 workload, 20 alternating
+u7 pairs measured broken checks at 668 → 512 ms with GOGC=100/200, while peak RSS
+rose from 1.98 to 2.70 GiB. The library leaves GC policy to the host; select it
+with the process memory budget in mind. See the
+[measurements](evidence/library-incremental-u7.json) and
+[reproduction](../tsfront/testdata/library-incremental/README.md).
+
 The library also exports object checks and detached outline snapshots:
 
 ```go

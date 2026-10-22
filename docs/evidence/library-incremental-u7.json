@@ -1,0 +1,547 @@
+{
+  "Host": "u7",
+  "Date": "2026-10-22",
+  "Base": "f6568f61",
+  "Implementation": "f6770cf2",
+  "CoreVersion": "2.120.73",
+  "GOMAXPROCS": 2,
+  "DefaultGOGC": 100,
+  "RunsPerVariantAndOperation": 20,
+  "Ordering": "Two warmups, then balanced alternating AB/BA pairs; independent persistent registries. Previous lazy restoration finishes before timing.",
+  "BuildFlags": [
+    "-p=1",
+    "-gcflags=-N"
+  ],
+  "MaxMeasuredLoad": 5.87939453125,
+  "Main": [
+    {
+      "Variant": "before",
+      "Command": "broken",
+      "Runs": 20,
+      "MedianMS": 1183.449013,
+      "MedianAllocBytes": 471580764.0,
+      "MedianMallocs": 11596754.0,
+      "TotalGCs": 10,
+      "Parts": [],
+      "Stats": {
+        "Updates": 2,
+        "Noops": 0,
+        "IndexedObjects": 2,
+        "ReaderVisits": 496,
+        "DirtiedObjects": 96,
+        "ParseRuns": 1,
+        "ParseObjects": 896
+      }
+    },
+    {
+      "Variant": "before",
+      "Command": "clean",
+      "Runs": 20,
+      "MedianMS": 15.0527885,
+      "MedianAllocBytes": 3573120.0,
+      "MedianMallocs": 43590.0,
+      "TotalGCs": 0,
+      "Parts": [],
+      "Stats": {
+        "Updates": 0,
+        "Noops": 0,
+        "IndexedObjects": 0,
+        "ReaderVisits": 0,
+        "DirtiedObjects": 0,
+        "ParseRuns": 1,
+        "ParseObjects": 849
+      }
+    },
+    {
+      "Variant": "before",
+      "Command": "tree",
+      "Runs": 20,
+      "MedianMS": 15.197835,
+      "MedianAllocBytes": 3787904.0,
+      "MedianMallocs": 59305.0,
+      "TotalGCs": 0,
+      "Parts": [],
+      "Stats": {
+        "Updates": 0,
+        "Noops": 0,
+        "IndexedObjects": 0,
+        "ReaderVisits": 0,
+        "DirtiedObjects": 0,
+        "ParseRuns": 1,
+        "ParseObjects": 849
+      }
+    },
+    {
+      "Variant": "before",
+      "Command": "snapshot",
+      "Runs": 20,
+      "MedianMS": 16.755193,
+      "MedianAllocBytes": 7895360.0,
+      "MedianMallocs": 186809.0,
+      "TotalGCs": 0,
+      "Parts": [],
+      "Stats": {
+        "Updates": 0,
+        "Noops": 0,
+        "IndexedObjects": 0,
+        "ReaderVisits": 0,
+        "DirtiedObjects": 0,
+        "ParseRuns": 0,
+        "ParseObjects": 0
+      }
+    },
+    {
+      "Variant": "before",
+      "Command": "outline",
+      "Runs": 20,
+      "MedianMS": 16.461983500000002,
+      "MedianAllocBytes": 7895104.0,
+      "MedianMallocs": 186808.0,
+      "TotalGCs": 0,
+      "Parts": [],
+      "Stats": {
+        "Updates": 0,
+        "Noops": 0,
+        "IndexedObjects": 0,
+        "ReaderVisits": 0,
+        "DirtiedObjects": 0,
+        "ParseRuns": 0,
+        "ParseObjects": 0
+      }
+    },
+    {
+      "Variant": "before",
+      "Command": "probe",
+      "Runs": 20,
+      "MedianMS": 1110.8529724999999,
+      "MedianAllocBytes": 474573968.0,
+      "MedianMallocs": 11635155.5,
+      "TotalGCs": 7,
+      "Parts": [
+        10.0448315,
+        1070.5959335,
+        16.686145,
+        10.1859365
+      ],
+      "Stats": {
+        "Updates": 2,
+        "Noops": 0,
+        "IndexedObjects": 2,
+        "ReaderVisits": 496,
+        "DirtiedObjects": 96,
+        "ParseRuns": 2,
+        "ParseObjects": 1745
+      }
+    },
+    {
+      "Variant": "after",
+      "Command": "broken",
+      "Runs": 20,
+      "MedianMS": 655.0556475000001,
+      "MedianAllocBytes": 208840820.0,
+      "MedianMallocs": 5091907.0,
+      "TotalGCs": 14,
+      "Parts": [],
+      "Stats": {
+        "Updates": 2,
+        "Noops": 0,
+        "IndexedObjects": 2,
+        "ReaderVisits": 28,
+        "DirtiedObjects": 28,
+        "ParseRuns": 1,
+        "ParseObjects": 14
+      }
+    },
+    {
+      "Variant": "after",
+      "Command": "clean",
+      "Runs": 20,
+      "MedianMS": 13.465579,
+      "MedianAllocBytes": 3573120.0,
+      "MedianMallocs": 43590.0,
+      "TotalGCs": 0,
+      "Parts": [],
+      "Stats": {
+        "Updates": 0,
+        "Noops": 0,
+        "IndexedObjects": 0,
+        "ReaderVisits": 0,
+        "DirtiedObjects": 0,
+        "ParseRuns": 0,
+        "ParseObjects": 0
+      }
+    },
+    {
+      "Variant": "after",
+      "Command": "tree",
+      "Runs": 20,
+      "MedianMS": 14.691467,
+      "MedianAllocBytes": 3787904.0,
+      "MedianMallocs": 59305.0,
+      "TotalGCs": 0,
+      "Parts": [],
+      "Stats": {
+        "Updates": 0,
+        "Noops": 0,
+        "IndexedObjects": 0,
+        "ReaderVisits": 0,
+        "DirtiedObjects": 0,
+        "ParseRuns": 0,
+        "ParseObjects": 0
+      }
+    },
+    {
+      "Variant": "after",
+      "Command": "snapshot",
+      "Runs": 20,
+      "MedianMS": 16.842207,
+      "MedianAllocBytes": 7895152.0,
+      "MedianMallocs": 186809.0,
+      "TotalGCs": 0,
+      "Parts": [],
+      "Stats": {
+        "Updates": 0,
+        "Noops": 0,
+        "IndexedObjects": 0,
+        "ReaderVisits": 0,
+        "DirtiedObjects": 0,
+        "ParseRuns": 0,
+        "ParseObjects": 0
+      }
+    },
+    {
+      "Variant": "after",
+      "Command": "outline",
+      "Runs": 20,
+      "MedianMS": 16.040802499999998,
+      "MedianAllocBytes": 7437248.0,
+      "MedianMallocs": 183472.0,
+      "TotalGCs": 0,
+      "Parts": [],
+      "Stats": {
+        "Updates": 0,
+        "Noops": 0,
+        "IndexedObjects": 0,
+        "ReaderVisits": 0,
+        "DirtiedObjects": 0,
+        "ParseRuns": 0,
+        "ParseObjects": 0
+      }
+    },
+    {
+      "Variant": "after",
+      "Command": "probe",
+      "Runs": 20,
+      "MedianMS": 485.6036735,
+      "MedianAllocBytes": 211839528.0,
+      "MedianMallocs": 5130305.0,
+      "TotalGCs": 0,
+      "Parts": [
+        10.183545500000001,
+        445.3740555,
+        16.2634145,
+        9.9797075
+      ],
+      "Stats": {
+        "Updates": 2,
+        "Noops": 0,
+        "IndexedObjects": 2,
+        "ReaderVisits": 28,
+        "DirtiedObjects": 28,
+        "ParseRuns": 1,
+        "ParseObjects": 14
+      }
+    }
+  ],
+  "GCSensitivity": [
+    {
+      "Variant": "gc100",
+      "Command": "broken",
+      "Runs": 20,
+      "MedianMS": 668.3886365000001,
+      "ProcessPeakRSSKiB": 2077232,
+      "MedianAllocBytes": 208840656.0,
+      "MedianMallocs": 5091902.5,
+      "TotalGCs": 14,
+      "Parts": [],
+      "Stats": {
+        "Updates": 2,
+        "Noops": 0,
+        "IndexedObjects": 2,
+        "ReaderVisits": 28,
+        "DirtiedObjects": 28,
+        "ParseRuns": 1,
+        "ParseObjects": 14
+      }
+    },
+    {
+      "Variant": "gc100",
+      "Command": "clean",
+      "Runs": 20,
+      "MedianMS": 14.490342,
+      "ProcessPeakRSSKiB": 2077232,
+      "MedianAllocBytes": 3573120.0,
+      "MedianMallocs": 43590.0,
+      "TotalGCs": 0,
+      "Parts": [],
+      "Stats": {
+        "Updates": 0,
+        "Noops": 0,
+        "IndexedObjects": 0,
+        "ReaderVisits": 0,
+        "DirtiedObjects": 0,
+        "ParseRuns": 0,
+        "ParseObjects": 0
+      }
+    },
+    {
+      "Variant": "gc100",
+      "Command": "tree",
+      "Runs": 20,
+      "MedianMS": 14.988098,
+      "ProcessPeakRSSKiB": 2077232,
+      "MedianAllocBytes": 3787904.0,
+      "MedianMallocs": 59305.0,
+      "TotalGCs": 0,
+      "Parts": [],
+      "Stats": {
+        "Updates": 0,
+        "Noops": 0,
+        "IndexedObjects": 0,
+        "ReaderVisits": 0,
+        "DirtiedObjects": 0,
+        "ParseRuns": 0,
+        "ParseObjects": 0
+      }
+    },
+    {
+      "Variant": "gc100",
+      "Command": "snapshot",
+      "Runs": 20,
+      "MedianMS": 18.076608999999998,
+      "ProcessPeakRSSKiB": 2077232,
+      "MedianAllocBytes": 7895152.0,
+      "MedianMallocs": 186809.0,
+      "TotalGCs": 0,
+      "Parts": [],
+      "Stats": {
+        "Updates": 0,
+        "Noops": 0,
+        "IndexedObjects": 0,
+        "ReaderVisits": 0,
+        "DirtiedObjects": 0,
+        "ParseRuns": 0,
+        "ParseObjects": 0
+      }
+    },
+    {
+      "Variant": "gc100",
+      "Command": "outline",
+      "Runs": 20,
+      "MedianMS": 15.839342,
+      "ProcessPeakRSSKiB": 2077232,
+      "MedianAllocBytes": 7437248.0,
+      "MedianMallocs": 183472.0,
+      "TotalGCs": 0,
+      "Parts": [],
+      "Stats": {
+        "Updates": 0,
+        "Noops": 0,
+        "IndexedObjects": 0,
+        "ReaderVisits": 0,
+        "DirtiedObjects": 0,
+        "ParseRuns": 0,
+        "ParseObjects": 0
+      }
+    },
+    {
+      "Variant": "gc100",
+      "Command": "probe",
+      "Runs": 20,
+      "MedianMS": 518.4183290000001,
+      "ProcessPeakRSSKiB": 2077232,
+      "MedianAllocBytes": 211838824.0,
+      "MedianMallocs": 5130304.0,
+      "TotalGCs": 0,
+      "Parts": [
+        10.3446325,
+        477.7151395,
+        17.182223,
+        10.283211999999999
+      ],
+      "Stats": {
+        "Updates": 2,
+        "Noops": 0,
+        "IndexedObjects": 2,
+        "ReaderVisits": 28,
+        "DirtiedObjects": 28,
+        "ParseRuns": 1,
+        "ParseObjects": 14
+      }
+    },
+    {
+      "Variant": "gc200",
+      "Command": "broken",
+      "Runs": 20,
+      "MedianMS": 511.79293100000007,
+      "ProcessPeakRSSKiB": 2826388,
+      "MedianAllocBytes": 208840104.0,
+      "MedianMallocs": 5091898.0,
+      "TotalGCs": 3,
+      "Parts": [],
+      "Stats": {
+        "Updates": 2,
+        "Noops": 0,
+        "IndexedObjects": 2,
+        "ReaderVisits": 28,
+        "DirtiedObjects": 28,
+        "ParseRuns": 1,
+        "ParseObjects": 14
+      }
+    },
+    {
+      "Variant": "gc200",
+      "Command": "clean",
+      "Runs": 20,
+      "MedianMS": 14.182726,
+      "ProcessPeakRSSKiB": 2826388,
+      "MedianAllocBytes": 3573120.0,
+      "MedianMallocs": 43590.0,
+      "TotalGCs": 0,
+      "Parts": [],
+      "Stats": {
+        "Updates": 0,
+        "Noops": 0,
+        "IndexedObjects": 0,
+        "ReaderVisits": 0,
+        "DirtiedObjects": 0,
+        "ParseRuns": 0,
+        "ParseObjects": 0
+      }
+    },
+    {
+      "Variant": "gc200",
+      "Command": "tree",
+      "Runs": 20,
+      "MedianMS": 14.74353,
+      "ProcessPeakRSSKiB": 2826388,
+      "MedianAllocBytes": 3787904.0,
+      "MedianMallocs": 59305.0,
+      "TotalGCs": 0,
+      "Parts": [],
+      "Stats": {
+        "Updates": 0,
+        "Noops": 0,
+        "IndexedObjects": 0,
+        "ReaderVisits": 0,
+        "DirtiedObjects": 0,
+        "ParseRuns": 0,
+        "ParseObjects": 0
+      }
+    },
+    {
+      "Variant": "gc200",
+      "Command": "snapshot",
+      "Runs": 20,
+      "MedianMS": 16.8535875,
+      "ProcessPeakRSSKiB": 2826388,
+      "MedianAllocBytes": 7895152.0,
+      "MedianMallocs": 186809.0,
+      "TotalGCs": 0,
+      "Parts": [],
+      "Stats": {
+        "Updates": 0,
+        "Noops": 0,
+        "IndexedObjects": 0,
+        "ReaderVisits": 0,
+        "DirtiedObjects": 0,
+        "ParseRuns": 0,
+        "ParseObjects": 0
+      }
+    },
+    {
+      "Variant": "gc200",
+      "Command": "outline",
+      "Runs": 20,
+      "MedianMS": 15.6087645,
+      "ProcessPeakRSSKiB": 2826388,
+      "MedianAllocBytes": 7437248.0,
+      "MedianMallocs": 183472.0,
+      "TotalGCs": 0,
+      "Parts": [],
+      "Stats": {
+        "Updates": 0,
+        "Noops": 0,
+        "IndexedObjects": 0,
+        "ReaderVisits": 0,
+        "DirtiedObjects": 0,
+        "ParseRuns": 0,
+        "ParseObjects": 0
+      }
+    },
+    {
+      "Variant": "gc200",
+      "Command": "probe",
+      "Runs": 20,
+      "MedianMS": 536.186284,
+      "ProcessPeakRSSKiB": 2826388,
+      "MedianAllocBytes": 211839088.0,
+      "MedianMallocs": 5130307.0,
+      "TotalGCs": 1,
+      "Parts": [
+        10.225432999999999,
+        497.4711935,
+        17.4422295,
+        10.679021
+      ],
+      "Stats": {
+        "Updates": 2,
+        "Noops": 0,
+        "IndexedObjects": 2,
+        "ReaderVisits": 28,
+        "DirtiedObjects": 28,
+        "ParseRuns": 1,
+        "ParseObjects": 14
+      }
+    }
+  ],
+  "Differentials": {
+    "tree-small": {
+      "SHA256": "f752a55549aa1a4f0b2856a089a135369ab7f28a6f3781c2501eb141f5d35994",
+      "Bytes": 53015,
+      "Snapshots": 7
+    },
+    "tree-m1": {
+      "SHA256": "37b0fc10c8856bc65d545e7260c95eb77cb9f2fcfc80625809f72d82a3ad8a07",
+      "Bytes": 272272964,
+      "Snapshots": 2210
+    },
+    "data-m1": {
+      "SHA256": "549468ac2096f0f9e5d6c2fbf0949fb7ce4994996b8b63fb622a28598683bb38",
+      "Bytes": 1288895,
+      "Snapshots": 295
+    },
+    "data-fixtures": {
+      "SHA256": "eaffbac0b834134902bccb8aedec82805c989c9c11ccd209a8d5a4f8c2fb590b",
+      "Bytes": 8145,
+      "Snapshots": 13
+    },
+    "data-scenarios": {
+      "SHA256": "8e6906dd6beb0d3deef0708872eed6f3ade27d1a9d5d069368e8ee72ae8d9d4b",
+      "Bytes": 88472,
+      "Snapshots": 64
+    }
+  },
+  "DefaultOutputHashes": {
+    "sites.json": "e32df9a686e08ce14ba4b3481c9c6f77abefb4ca478911abcfd302b575b5413e",
+    "go/site_profile_off.go": "4f07dc8fd8b26ff04fb5ee339e0a081aa7d5aa728025ca2e86bea99fbedff2fc",
+    "go/hir_profile.go": "9cdc73e264e0992dd99b616388e266ab6de6d8b13a4f04906b0b3ed96f3146a7",
+    "go/main.go": "e61c5bda72a4fd630958b290882ab5e8a11003b85ddf92a7c52cc1fed90d7de6",
+    "go/promise.go": "ee8b201aeef05a11f8f1122325ce1589538aa8cac087d14440827d63b4766309",
+    "go/go.mod": "1e0591999faff09d57e9f1743365dcde5bfb8ca9633e871ce0263614b061e905",
+    "go/hir.go": "970bd64bd0721c37db0ffbbcead311841a06e10945dc41ae2768f483df392138",
+    "go/literals.go": "54d7e1da37a52a5cb494a69db825a27be393a6f6c3269c1b52e595da4dce7d17",
+    "go/runtime.go": "a8a51312b1b83a201085be91241725707aaa289c5c74fd2487e468aff9516dc0",
+    "go/site_profile.go": "fcdf5c6096f0188377346b2e1c5793348c1cd3ed5d44effc778de39853c61b0e"
+  }
+}
