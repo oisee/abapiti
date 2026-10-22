@@ -153,7 +153,10 @@ async function main() {
  if (target === 'osg') plan.target = target;
  const targetArgs = target === 'osg' ? ['--target','osg','--osg-home',process.env.ABAPITI_OSG_HOME,'--osg-runner',join(tools,'abaplint-tests-osg.mjs')] : [];
  const oneBuild = target === 'osg' && process.env.ABAPITI_OSG_ONE_BUILD !== '0';
- const groups = oneBuild ? buildGroups(plan.shards, process.env.ABAPITI_OSG_SHARDS_PER_BUILD === undefined ? undefined : Number(process.env.ABAPITI_OSG_SHARDS_PER_BUILD)) : [];
+ const separateRules = oneBuild && process.env.ABAPITI_TESTS_RULES_MEMORY_MAX;
+ const sharedShards = separateRules ? plan.shards.filter(shard => shard.name !== 'rules') : plan.shards;
+ const groups = oneBuild ? buildGroups(sharedShards, process.env.ABAPITI_OSG_SHARDS_PER_BUILD === undefined ? undefined : Number(process.env.ABAPITI_OSG_SHARDS_PER_BUILD)) : [];
+ if (separateRules && plan.shards.some(shard => shard.name === 'rules')) groups.unshift(plan.shards.filter(shard => shard.name === 'rules'));
  const env = {...process.env, GOCACHE:process.env.GOCACHE ?? join(process.env.HOME, '.cache/go-build'), GOTOOLCHAIN:'go1.26.0', GOFLAGS:`${process.env.GOFLAGS ?? ''} -p=2 -buildvcs=false`};
  function command(command, args, options = {}) {
   return execFileSync(command, args, {cwd:repository, env, maxBuffer:128*1024*1024, ...options});
@@ -186,7 +189,9 @@ async function main() {
     const {manifests} = materializeShardedClosure(built.closure, upstream, group, join(repository,'tsfront/testdata/abaplint-tests/runtime'));
     built.manifests = manifests;
     await waitForResources();
-    const buildEnv = {...env, ABAPITI_OSG_BUILD_ONLY:'1'};
+    const buildEnv = {...env, ABAPITI_OSG_BUILD_ONLY:'1', ...(group.some(shard => shard.name === 'rules') && env.ABAPITI_TESTS_RULES_MEMORY_MAX
+     ? {ABAPITI_OSG_MEMORY_MAX:env.ABAPITI_TESTS_RULES_MEMORY_MAX,
+        ...(env.ABAPITI_TESTS_RULES_NODE_OPTIONS ? {NODE_OPTIONS:env.ABAPITI_TESTS_RULES_NODE_OPTIONS} : {})} : {})};
     const step = heavyCommand(join(run,'abapiti'), ['abaplint-tests', built.closure, '-o', built.build, ...targetArgs], buildEnv);
     await promisify(execFile)(step.command, step.args, {cwd:repository, env:buildEnv, encoding:'utf8', maxBuffer:128*1024*1024});
    } catch (error) { built.error = error; }
