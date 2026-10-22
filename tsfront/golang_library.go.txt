@@ -17,8 +17,8 @@ type Issue struct {
  Filename, Key, Severity, Message string
  Row, Column, EndRow, EndColumn int32
 }
-// ParseObjects counts invalidated objects submitted to parsing after Update,
-// excluding inert core objects which remain dirty even after a successful parse.
+// ParseRuns/ParseObjects count pending invalidations submitted after Update.
+// Untouched inert objects are excluded even if the core never clears their dirty flag.
 type Stats struct {
  Updates, Noops, IndexedObjects, ReaderVisits, DirtiedObjects, ParseRuns, ParseObjects int32
 }

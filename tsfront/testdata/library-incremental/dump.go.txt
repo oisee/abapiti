@@ -1,0 +1,23 @@
+package main
+
+import (
+ "encoding/json"
+ "os"
+ lint "zabaplint"
+)
+type query struct{Type,Name string}
+type update struct{Filename string;Raw *string}
+type step struct{Label string;Updates []update;Queries []query;After []update}
+type manifest struct{Files []lint.File;Config string;Queries []query;Steps []step}
+func main(){
+ raw,err:=os.ReadFile(os.Args[1]);if err!=nil{panic(err)}
+ var input manifest;if err=json.Unmarshal(raw,&input);err!=nil{panic(err)}
+ var c lint.Checker;c.Prime(input.Files,nil,input.Config)
+ encoder:=json.NewEncoder(os.Stdout)
+ dump:=func(label string,queries []query){for _,q:=range queries{
+  issues,found:=c.CheckObject(q.Type,q.Name);files,treeFound:=c.Tree(q.Type,q.Name);if treeFound!=found{panic("existence differs")}
+  if err:=encoder.Encode(struct{Label,Type,Name string;Found bool;Issues []lint.Issue;Files []lint.FileTree}{label,q.Type,q.Name,found,issues,files});err!=nil{panic(err)}
+ }}
+ dump("baseline",input.Queries)
+ for _,s:=range input.Steps{for _,u:=range s.Updates{c.Update(u.Filename,u.Raw)};dump(s.Label,s.Queries);if len(s.After)>0{for _,u:=range s.After{c.Update(u.Filename,u.Raw)};dump(s.Label+"-restored",s.Queries)}}
+}

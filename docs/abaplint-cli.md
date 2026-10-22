@@ -279,7 +279,7 @@ parsing stays lazy until Check, CheckObject, Tree, CDS, DDIC or Files.
 Removing an include preserves sibling readers;
 removing the last file discards the old object identity. `Stats` exposes work
 counters, not a timing or engine parity certificate. `ParseRuns`/`ParseObjects`
-count pending invalidations submitted after Update, excluding the core's inert
+count pending invalidations submitted after Update, excluding untouched inert
 objects whose no-op parsers leave them permanently dirty. Several Updates before
 parsing accumulate a union; no-op Updates retain that pending state.
 
