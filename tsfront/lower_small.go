@@ -31,6 +31,17 @@ func optionalNumber(t hir.Type) bool {
 // number reads through ToNumeric (undefined is NaN); the postfix result is
 // that numeric old value, never undefined, and the stored value is present.
 func (l *lowerer) updateTarget(n *ast.Node, target *hir.Expr, op string, prefix bool) *hir.Expr {
+	if target.Kind == hir.RuntimeOp && target.Op == "regexp.setLastIndex" {
+		receiver := l.tempInit(n, target.X.Type, target.X)
+		number := hir.T(hir.Number)
+		previous := l.tempInit(n, number, l.coerce(l.rtOp("regexp.lastIndex", receiver, hir.T(hir.I32)), number))
+		next := l.tempInit(n, number, &hir.Expr{Kind: hir.Binary, Node: l.node(n), Type: number, Op: op, X: previous, Y: hir.L(number, 1)})
+		l.pendStmt(&hir.Stmt{Kind: hir.ExprStmt, Node: l.node(n), X: l.rtOp("regexp.setLastIndex", receiver, hir.T(hir.Void), next)})
+		if prefix {
+			return next
+		}
+		return previous
+	}
 	if optionalNumber(target.Type) {
 		number := hir.T(hir.Number)
 		switch target.Kind {

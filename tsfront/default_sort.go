@@ -12,7 +12,7 @@ import (
 // tuples, and checked arrays/data records have certified string conversions.
 func (l *lowerer) defaultSortKey(at *ast.Node, x *hir.Expr, tupleElement bool) *hir.Expr {
 	str := hir.T(hir.String)
-	if tupleElement && x.Type.Kind == hir.Optional {
+	if x.Type.Kind == hir.Optional {
 		key := l.defaultSortKey(at, &hir.Expr{Kind: hir.Narrow, Node: l.node(at), Type: x.Type.Args[0], X: x}, true)
 		if key == nil {
 			return nil
@@ -86,7 +86,15 @@ func (l *lowerer) defaultSortCompare(at *ast.Node, left, right *hir.Expr) *hir.E
 		assign(index, binary("+", index, hir.L(i, 1), i)))
 	l.pendStmt(&hir.Stmt{Kind: hir.While, Node: l.node(at), X: cond, Body: loop})
 	l.pendStmt(&hir.Stmt{Kind: hir.If, Node: l.node(at), X: binary("==", result, hir.L(i, 0), b), Body: hir.B(assign(result, binary("-", al, zl, i)))})
-	return &hir.Expr{Kind: hir.Seq, Node: l.node(at), Type: num, Stmt: hir.B(l.pend...), Y: l.coerce(result, num)}
+	value := l.coerce(result, num)
+	if left.Type.Kind == hir.Optional && right.Type.Kind == hir.Optional {
+		lu := &hir.Expr{Kind: hir.IsUndefined, Type: b, X: left}
+		ru := &hir.Expr{Kind: hir.IsUndefined, Type: b, X: right}
+		value = &hir.Expr{Kind: hir.Conditional, Type: num, X: lu,
+			Y: &hir.Expr{Kind: hir.Conditional, Type: num, X: ru, Y: hir.L(num, 0), Z: hir.L(num, 1)},
+			Z: &hir.Expr{Kind: hir.Conditional, Type: num, X: ru, Y: hir.L(num, -1), Z: value}}
+	}
+	return &hir.Expr{Kind: hir.Seq, Node: l.node(at), Type: num, Stmt: hir.B(l.pend...), Y: value}
 }
 
 // Boxed map-entry rows retain actual array storage. Convert only primitives

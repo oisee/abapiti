@@ -376,13 +376,8 @@ func (l *lowerer) propertySignature(m *ast.Node, c *hir.Class) {
 	case m.Type() != nil:
 		typ = l.mapTypeNode(m.Type())
 	case m.Initializer() != nil:
-		if l.isNewCollection(m.Initializer()) {
-			l.diagf(m, "unsupported-member", "field %s with collection initializer needs an annotation", name)
-			typ = hir.T(hir.Void)
-		} else {
-			l.hint = hir.Type{}
-			typ = l.mapCheckerType(m, l.ck.GetTypeAtLocation(m.Initializer()))
-		}
+		l.hint = hir.Type{}
+		typ = l.mapCheckerType(m, l.ck.GetTypeAtLocation(m.Initializer()))
 	default:
 		if sym := m.Symbol(); sym != nil {
 			typ = l.mapCheckerType(m, l.ck.GetTypeOfSymbol(sym))

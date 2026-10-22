@@ -560,7 +560,7 @@ func (l *lowerer) expressionStatement(n *ast.Node) *hir.Stmt {
 			if u.Operator == ast.KindMinusMinusToken {
 				op = "-"
 			}
-			if optionalNumber(target.Type) {
+			if optionalNumber(target.Type) || target.Kind == hir.RuntimeOp && target.Op == "regexp.setLastIndex" {
 				x := l.updateTarget(n, target, op, false)
 				if x == nil {
 					return nil

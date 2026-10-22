@@ -806,6 +806,10 @@ func (a *array[T]) join(sep optional[jsString]) jsString {
 		if i > 0 {
 			b.WriteString(string(s))
 		}
+		if value, ok := any(v).(optional[jsString]); ok {
+			if value.Has { b.WriteString(string(value.Value)) }
+			continue
+		}
 		b.WriteString(string(primitiveString(v)))
 	}
 	return jsString(b.String())

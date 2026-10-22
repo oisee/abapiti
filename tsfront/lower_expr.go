@@ -2784,6 +2784,11 @@ func (l *lowerer) binary(n *ast.Node) *hir.Expr {
 				}
 			}
 		}
+		if l.unprunedFeatures && !l.integerOptions.AssumeOnlyIntegerCalculations {
+			// Finite binary64 arithmetic checks zero/nonfinite results at
+			// the runtime boundary, just as for the other numeric operators.
+			return l.arithmetic(n, b, "/")
+		}
 		l.diagf(n, "unsupported-number", "Number division requires a non-zero literal divisor")
 		return nil
 	case ast.KindInKeyword:

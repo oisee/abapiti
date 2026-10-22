@@ -1202,9 +1202,6 @@ func (b *body) expr(x *hir.Expr) string {
 			}
 		}
 		if t.Kind == hir.Number && (x.Op == "+" || x.Op == "-" || x.Op == "*" || x.Op == "/") {
-			if x.Op == "/" && (x.Y.Kind != hir.Lit || numberLiteral(x.Y.Value) == 0) {
-				e.unsupported(x.Node, "Number division requires a non-zero literal divisor")
-			}
 			if !e.nonfiniteNumbers {
 				code = "finite(" + code + ")"
 			}
