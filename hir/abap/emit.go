@@ -1903,52 +1903,6 @@ func (b *body) parseInt10(n, a, length string) {
 	b.line("ENDIF.")
 }
 
-// localeCompareNames implements a.localeCompare(b) for strings over the
-// ABAP object-name alphabet. ICU root collation orders these code units as
-// "_/0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ" (verified against Node's
-// Intl.Collator); a shorter prefix sorts first. Any other code unit in
-// either operand raises cx_sy_range_out_of_bounds instead of guessing.
-func (b *body) localeCompareNames(n, a, other, length string) {
-	const alphabet = "_/0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-	rank := func(s, out string) {
-		b.line("IF " + s + " = ``.")
-		b.line(out + " = -1.")
-		b.line("ELSE.")
-		b.line("FIND " + s + " IN `" + alphabet + "` MATCH OFFSET " + out + ".")
-		b.line("IF sy-subrc <> 0.")
-		b.line("RAISE EXCEPTION TYPE cx_sy_range_out_of_bounds.")
-		b.line("ENDIF.")
-		b.line("ENDIF.")
-	}
-	olen := b.temp(hir.T(hir.I32))
-	idx := b.temp(hir.T(hir.I32))
-	ca := b.temp(hir.T(hir.String))
-	cb := b.temp(hir.T(hir.String))
-	ra := b.temp(hir.T(hir.I32))
-	rb := b.temp(hir.T(hir.I32))
-	b.line(olen + " = strlen( " + other + " ).")
-	b.line(idx + " = 0.")
-	b.line(n + " = 0.")
-	b.line("WHILE " + n + " = 0 AND ( " + idx + " < " + length + " OR " + idx + " < " + olen + " ).")
-	b.line("CLEAR " + ca + ".")
-	b.line("CLEAR " + cb + ".")
-	b.line("IF " + idx + " < " + length + ".")
-	b.line(ca + " = " + a + "+" + idx + "(1).")
-	b.line("ENDIF.")
-	b.line("IF " + idx + " < " + olen + ".")
-	b.line(cb + " = " + other + "+" + idx + "(1).")
-	b.line("ENDIF.")
-	rank(ca, ra)
-	rank(cb, rb)
-	b.line("IF " + ra + " < " + rb + ".")
-	b.line(n + " = -1.")
-	b.line("ELSEIF " + ra + " > " + rb + ".")
-	b.line(n + " = 1.")
-	b.line("ENDIF.")
-	b.line(idx + " = " + idx + " + 1.")
-	b.line("ENDWHILE.")
-}
-
 func (b *body) codeUnit(target, ch string) {
 	unit := b.rawTemp("c LENGTH 1")
 	bytes := b.rawTemp("xstring")
@@ -2665,7 +2619,8 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 		case "string.parseInt10", "string.parseInt10i64":
 			b.parseInt10(n, a, length)
 		case "string.localeCompareNames":
-			b.localeCompareNames(n, a, args[0], length)
+			b.e.localeCompareRuntime()
+			b.line(n + " = " + b.e.name("runtime.localeCompare") + "=>compare( p0 = " + a + " p1 = " + args[0] + " ).")
 		default:
 			// A new verified HIR string op is not automatically implemented
 			// on every target. Never leave its result silently initial.
