@@ -1759,7 +1759,13 @@ func (b *body) expr(x *hir.Expr) string {
 			e.refuse(fmt.Errorf("node %d (%s): Number remainder requires an IEEE runtime", x.ID, x.Source))
 			break
 		}
-
+		if x.Op == "/" && t.Kind == hir.Number && x.Y.Kind == hir.Lit {
+			divisor, err := strconv.ParseFloat(fmt.Sprint(x.Y.Value), 64)
+			if err != nil || divisor == 0 || math.IsNaN(divisor) || math.IsInf(divisor, 0) {
+				e.refuse(fmt.Errorf("node %d (%s): Number division requires a finite non-zero divisor", x.ID, x.Source))
+				break
+			}
+		}
 		if (x.Op == "==" || x.Op == "!=") && x.X.Type.Kind == hir.Optional && !x.X.Type.Args[0].IsRef() {
 			// Presence is independent of box identity; guard both dereferences.
 			ah, zh := b.temp(hir.T(hir.Bool)), b.temp(hir.T(hir.Bool))
