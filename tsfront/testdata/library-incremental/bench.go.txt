@@ -1,0 +1,49 @@
+package main
+
+import (
+ "bufio"
+ "encoding/json"
+ "fmt"
+ "os"
+ "regexp"
+ "runtime"
+ "runtime/pprof"
+ "time"
+ lint "zabaplint"
+)
+type input struct{Files []lint.File;Config string}
+func main(){
+ var data input;raw,err:=os.ReadFile(os.Args[1]);if err!=nil{panic(err)};if err=json.Unmarshal(raw,&data);err!=nil{panic(err)}
+ var c lint.Checker;c.Prime(data.Files,nil,data.Config)
+ files,found:=c.Files("CLAS","ZCL_OSD_ADT_URI");if !found{panic("missing URI")}
+ var original lint.File;for _,f:=range files{if regexp.MustCompile(`zcl_osd_adt_uri.clas.abap$`).MatchString(f.Filename){original=f}}
+ pattern:=regexp.MustCompile(`(?i)(\bMETHOD\s+[^.]+\.)`);loc:=pattern.FindStringIndex(original.Raw);if loc==nil{panic("no method")};broken:=original.Raw[:loc[1]]+"\n    step3_undefined = 1."+original.Raw[loc[1]:]
+ if broken==original.Raw{panic("no edit")}
+ c.CheckObject("CLAS","ZCL_OSD_ADT_URI")
+ reader:=bufio.NewScanner(os.Stdin);encoder:=json.NewEncoder(os.Stdout);fmt.Println(`{"Ready":true}`)
+ var profile *os.File
+ for reader.Scan(){
+  command:=reader.Text()
+  if command=="profile"{profile,err=os.Create(os.Args[2]);if err!=nil{panic(err)};if err=pprof.StartCPUProfile(profile);err!=nil{panic(err)};fmt.Println(`{"Profiling":true}`);continue}
+  if command=="stop"{pprof.StopCPUProfile();profile.Close();fmt.Println(`{"Profiling":false}`);continue}
+  c.CheckObject("CLAS","ZCL_OSD_ADT_URI")
+  before:=c.Stats();var mem0,mem1 runtime.MemStats;runtime.ReadMemStats(&mem0)
+  start:=time.Now();parts:=[]float64{};issues:=0
+  switch command{
+  case "broken":c.Update(original.Filename,&broken);out,_:=c.CheckObject("CLAS","ZCL_OSD_ADT_URI");issues=len(out);c.Update(original.Filename,&original.Raw)
+  case "probe":
+   c.Update(original.Filename,&broken);parts=append(parts,float64(time.Since(start).Nanoseconds())/1e6);now:=time.Now()
+   c.Files("CLAS","MISSING");parts=append(parts,float64(time.Since(now).Nanoseconds())/1e6);now=time.Now()
+   out,_:=c.CheckObject("CLAS","ZCL_OSD_ADT_URI");issues=len(out);parts=append(parts,float64(time.Since(now).Nanoseconds())/1e6);now=time.Now()
+   c.Update(original.Filename,&original.Raw);parts=append(parts,float64(time.Since(now).Nanoseconds())/1e6)
+  case "clean":out,_:=c.CheckObject("CLAS","ZCL_OSD_ADT_URI");issues=len(out)
+  case "tree":c.Tree("CLAS","ZCL_OSD_ADT_URI")
+  case "snapshot":var snapshot lint.Checker;snapshot.Prime(files,nil,data.Config);snapshot.Tree("CLAS","ZCL_OSD_ADT_URI")
+  case "outline":outline(files,data.Config)
+  default:panic(command)
+  }
+  elapsed:=time.Since(start);runtime.ReadMemStats(&mem1);after:=c.Stats()
+  value:=struct{Command string;Milliseconds float64;Parts []float64;Issues int;Stats lint.Stats;AllocBytes,Mallocs,GCPauseNS uint64;GCs uint32}{command,float64(elapsed.Nanoseconds())/1e6,parts,issues,lint.Stats{Updates:after.Updates-before.Updates,Noops:after.Noops-before.Noops,IndexedObjects:after.IndexedObjects-before.IndexedObjects,ReaderVisits:after.ReaderVisits-before.ReaderVisits,DirtiedObjects:after.DirtiedObjects-before.DirtiedObjects,ParseRuns:after.ParseRuns-before.ParseRuns,ParseObjects:after.ParseObjects-before.ParseObjects},mem1.TotalAlloc-mem0.TotalAlloc,mem1.Mallocs-mem0.Mallocs,mem1.PauseTotalNs-mem0.PauseTotalNs,mem1.NumGC-mem0.NumGC}
+  if err=encoder.Encode(value);err!=nil{panic(err)}
+ }
+}
