@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"go/token"
 	"io"
 	"os"
 	"os/exec"
@@ -11,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/oisee/abapiti/hir"
 	"github.com/oisee/abapiti/hir/abap"
 	gohir "github.com/oisee/abapiti/hir/golang"
 	"github.com/oisee/abapiti/tsfront"
@@ -58,6 +60,7 @@ func init() {
 	f.String("externs", "", "Extern module JSON configuration")
 	f.String("target", "all", "Targets to write: all or abap (ABAP targets), a4h, osg, native or go (comma-separated)")
 	f.String("scope", "core", "Build scope: core (all rules) or zabapgit (legacy trace-pruned build)")
+	f.String("go-package", "main", "Go package name: main emits the CLI; another name emits a library with the Checker API (no build)")
 	f.String("package", "$ZLNT", "ABAP package named in the A4H abapGit zip")
 	f.String("input", "", "osg: folder of files to check (embedded into ZCL_ABAPITI_REGISTRY_RUN)")
 	f.String("deps", "", "osg: folder of dependency files")
@@ -109,6 +112,10 @@ func runAbaplint(cmd *cobra.Command, args []string) error {
 	out, _ := flags.GetString("output")
 	targetFlag, _ := flags.GetString("target")
 	pkg, _ := flags.GetString("package")
+	goPackage, _ := flags.GetString("go-package")
+	if !token.IsIdentifier(goPackage) || token.Lookup(goPackage).IsKeyword() || goPackage == "_" {
+		return fmt.Errorf("invalid Go package name %q", goPackage)
+	}
 	input, _ := flags.GetString("input")
 	deps, _ := flags.GetString("deps")
 	config, _ := flags.GetString("config")
@@ -147,6 +154,12 @@ func runAbaplint(cmd *cobra.Command, args []string) error {
 	targets, err := parseTargets(targetFlag)
 	if err != nil {
 		return err
+	}
+	if flags.Changed("go-package") && !targets["go"] {
+		return fmt.Errorf("--go-package requires --target go")
+	}
+	if goPackage != "main" && scope != "core" {
+		return fmt.Errorf("Go library requires --scope core")
 	}
 	embedRun := input != "" || deps != "" || config != ""
 	if embedRun && (input == "" || deps == "" || config == "") {
@@ -286,25 +299,51 @@ func runAbaplint(cmd *cobra.Command, args []string) error {
 
 	// 4. ABAP
 	if targets["go"] {
-		files, sites, err := gohir.EmitWithSites(lowering.Prog)
-		if err != nil {
-			return err
+		var files map[string]string
+		if goPackage == "main" {
+			emitted, sites, emitErr := gohir.EmitWithSites(lowering.Prog)
+			if emitErr != nil {
+				return emitErr
+			}
+			files = emitted
+			files["main.go"] = tsfront.RegistryGoCLIWithSites()
+			siteJSON, marshalErr := json.MarshalIndent(sites, "", "  ")
+			if marshalErr != nil {
+				return marshalErr
+			}
+			if err := os.MkdirAll(out, 0755); err != nil {
+				return err
+			}
+			if err := os.WriteFile(filepath.Join(out, "sites.json"), append(siteJSON, '\n'), 0644); err != nil {
+				return err
+			}
+		} else {
+			var names *hir.Names
+			files, names, err = gohir.EmitPackageWithNames(lowering.Prog, goPackage)
+			if err != nil {
+				return err
+			}
+			files["library.go"] = tsfront.RegistryGoLibrary(goPackage, names)
 		}
-		files["main.go"] = tsfront.RegistryGoCLIWithSites()
 		files["go.mod"] = tsfront.ExternGoMod("zabaplint", externs, work)
-		if err := writeSources(filepath.Join(out, "go"), files); err != nil {
-			return err
+		// A library and CLI must use distinct output directories. Otherwise old
+		// CLI/profile files could silently contaminate the package being linked.
+		goDir := filepath.Join(out, "go")
+		for _, stale := range []string{"main.go", "library.go", "hir_profile.go", "site_profile.go", "site_profile_off.go"} {
+			if _, wanted := files[stale]; !wanted {
+				if _, statErr := os.Stat(filepath.Join(goDir, stale)); statErr == nil {
+					return fmt.Errorf("Go output contains stale %s; use a fresh output directory", stale)
+				}
+			}
 		}
-		siteJSON, err := json.MarshalIndent(sites, "", "  ")
-		if err != nil {
-			return err
-		}
-		if err := os.WriteFile(filepath.Join(out, "sites.json"), append(siteJSON, '\n'), 0644); err != nil {
+		if err := writeSources(goDir, files); err != nil {
 			return err
 		}
 		n.step("Go emitted: %d classes -> %s", len(lowering.Prog.Classes), filepath.Join(out, "go"))
 		n.say("TS-HG@Go generation: %.3fs", time.Since(began).Seconds())
-		if goTool, lookupErr := exec.LookPath("go"); lookupErr == nil {
+		if goPackage != "main" {
+			n.say("TS-HG@Go library package %s emitted (module zabaplint); build it in the consuming application", goPackage)
+		} else if goTool, lookupErr := exec.LookPath("go"); lookupErr == nil {
 			build := exec.CommandContext(cmd.Context(), goTool, "build", "-o", "zabaplint-go", ".")
 			build.Dir = filepath.Join(out, "go")
 			build.Env = append(os.Environ(), "GOFLAGS=-buildvcs=false")
