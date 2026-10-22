@@ -1,5 +1,27 @@
 # TS-HA@OSGO harness: speed and memory
 
+## Current bounded builds
+
+The frontend now runs in a child process that exits before Go compilation.
+Pinned gogen retains module globals, so collecting the parent heap alone did
+not release its registry and IR. With core 2.120.73, the standard uncached
+rules frontend peaked at 8.18 GiB; the cold per-object-cache path peaked at
+12.93 GiB, and a warm attempt exhausted its 12 GiB V8 heap.
+
+`ABAPITI_OSG_CACHE` still enables complete frontend and executable snapshots.
+Gogen's additional per-object cache is off by default; opt in with
+`ABAPITI_OSG_OBJECT_CACHE=1` when its provenance memory cost fits the budget.
+Snapshot identities include the frontend worker and cache mode. Verdicts
+always come from a fresh execution.
+
+Explicitly capped builds default the compiler alone to `GOGC=50`; use
+`ABAPITI_OSG_BUILD_GOGC` to choose another value. Uncapped builds retain Go's
+default. This trades compile time for memory without changing generated code
+or runtime GC settings. `ABAPITI_TESTS_RULES_MEMORY_MAX=24G` isolates rules
+from the 16 GiB limit used for other shards while retaining shared builds for
+the remaining groups. The dated measurements below retain their original
+profiles and pins.
+
 ## One build: five-shard measurement at `98fa0675`
 
 **34m12s → 7m19s (4.7× faster); five lowerings/frontends/builds → one;
