@@ -102,7 +102,7 @@ lexer, statement, structure, MemoryFile and split differential tests run under
 `go test ./hir/... ./tsfront/...`.
 
 `node tools/hir-go-check.mjs KIT GO_BINARY OUTPUT_DIR [RELEASE_BINARY] [UPSTREAM]`
-rebuilds clean original Node abaplint 577f875e, checks both kit variants byte
+rebuilds clean original Node abaplint 9f7f098c, checks both kit variants byte
 for byte, and writes stage timings, peak RSS, CPU/allocation profiles and the
 Go top ten CPU entries. It runs each host sequentially under GNU time.
 

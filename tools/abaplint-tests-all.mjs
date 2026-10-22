@@ -196,6 +196,10 @@ async function main() {
    rmSync(built.build, {recursive:true, force:true});
   });
   async function runShard({name, id, roots}) {
+   const shardEnv = name === 'rules' && env.ABAPITI_TESTS_RULES_MEMORY_MAX
+    ? {...env, ABAPITI_OSG_MEMORY_MAX:env.ABAPITI_TESTS_RULES_MEMORY_MAX,
+       ...(env.ABAPITI_TESTS_RULES_NODE_OPTIONS ? {NODE_OPTIONS:env.ABAPITI_TESTS_RULES_NODE_OPTIONS} : {})}
+    : env;
    console.error(`=== ${name}: ${roots.length} files ===`);
    const closure = join(run, id), build = join(run, `${id}-out`);
    let manifest, borrowed, foreign;
@@ -211,9 +215,9 @@ async function main() {
     let execution;
     try {
      const step = oneBuild
-      ? heavyCommand(process.execPath, [join(tools,'osg-runner-execute.mjs'), join(shared.build,'osg/abaplint-tests-osg'), join(shared.build,'abap/names.json'), join(build,'osg'), name], env)
-      : target === 'osg' ? heavyCommand(join(run,'abapiti'), ['abaplint-tests', closure, '-o', build, ...targetArgs], env) : {command:join(run,'abapiti'), args:['abaplint-tests', closure, '-o', build, ...targetArgs]};
-     execution = {...await promisify(execFile)(step.command, step.args, {cwd:repository, env, encoding:'utf8', maxBuffer:128*1024*1024}), status:0};
+      ? heavyCommand(process.execPath, [join(tools,'osg-runner-execute.mjs'), join(shared.build,'osg/abaplint-tests-osg'), join(shared.build,'abap/names.json'), join(build,'osg'), name], shardEnv)
+      : heavyCommand(join(run,'abapiti'), ['abaplint-tests', closure, '-o', build, ...targetArgs], shardEnv);
+     execution = {...await promisify(execFile)(step.command, step.args, {cwd:repository, env:shardEnv, encoding:'utf8', maxBuffer:128*1024*1024}), status:0};
     } catch (error) {
      execution = {stdout:error.stdout ?? '', stderr:error.stderr ?? '', status:error.code, error};
     }
@@ -259,7 +263,7 @@ async function main() {
   // A single generated package can consume many GiB; -p does not bound that.
   if (target === 'osg' && workers > 1) console.error('OSG: serializing heavy shards (ABAPITI_TESTS_WORKERS applies only to the Go target)');
   await runShards(plan.shards, target === 'osg' ? 1 : workers, runShard,
-   target === 'osg' ? () => waitForResources() : undefined);
+   target === 'osg' || env.ABAPITI_OSG_MEMORY_MAX ? () => waitForResources() : undefined);
   command(process.execPath, [join(tools,'abaplint-tests-summary.mjs'), run, output], {stdio:'inherit'});
   const summary = JSON.parse(readFileSync(output));
   console.log('| Shard | Pass | Fail | Trap | Async-pending | Not-run | Registered | Node |');

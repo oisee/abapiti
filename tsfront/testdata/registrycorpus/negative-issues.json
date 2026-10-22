@@ -1,0 +1,32 @@
+[
+  {
+    "target": "check_syntax",
+    "filename": "zabapgit_standalone.prog.abap",
+    "edit": "\nFORM phase3_syntax.\nWRITE lv_phase3_missing.\nENDFORM.\n\n"
+  },
+  {
+    "target": "unknown_types",
+    "filename": "zabapgit_standalone.prog.abap",
+    "edit": "\nCLASS lcl_phase3_unknown DEFINITION.\nPUBLIC SECTION.\nDATA foo TYPE zphase3_missing_type.\nENDCLASS.\nCLASS lcl_phase3_unknown IMPLEMENTATION.\nENDCLASS.\n\n"
+  },
+  {
+    "target": "implement_methods",
+    "filename": "zabapgit_standalone.prog.abap",
+    "edit": "\nCLASS lcl_phase3_methods DEFINITION.\nPUBLIC SECTION.\nMETHODS missing.\nENDCLASS.\nCLASS lcl_phase3_methods IMPLEMENTATION.\nENDCLASS.\n\n"
+  },
+  {
+    "target": "superclass_final",
+    "filename": "zabapgit_standalone.prog.abap",
+    "edit": "\nCLASS lcl_phase3_final DEFINITION FINAL.\nENDCLASS.\nCLASS lcl_phase3_child DEFINITION INHERITING FROM lcl_phase3_final.\nENDCLASS.\nCLASS lcl_phase3_final IMPLEMENTATION.\nENDCLASS.\nCLASS lcl_phase3_child IMPLEMENTATION.\nENDCLASS.\n\n"
+  },
+  {
+    "target": "parser_error",
+    "filename": "zabapgit_standalone.prog.abap",
+    "edit": "\nTHIS IS NOT AN ABAP STATEMENT.\n"
+  },
+  {
+    "target": "allowed_object_naming",
+    "filename": "z_not_allowed_because_name_is_far_too_long_for_program.prog.abap",
+    "edit": ""
+  }
+]
