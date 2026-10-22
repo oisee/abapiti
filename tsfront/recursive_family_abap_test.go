@@ -123,7 +123,8 @@ func TestRecursiveFamilyTagABAPOracle(t *testing.T) {
 		t.Fatal("missing union payload interface")
 	}
 	// Representation C: every payload class implements the one payload
-	// interface once; a layout check per payload class serves from_dynamic.
+	// interface once; one layout check and one view constructor per payload
+	// class serve from_dynamic (implementations counts views as tens).
 	layout := regexp.MustCompile(`(?m)^\s*METHOD ` + names.Get("union.layout") + `\.$`)
 	implements := regexp.MustCompile(`(?m)^\s*INTERFACES ` + payload + `\.$`)
 	layouts, implementations := 0, 0
@@ -141,7 +142,11 @@ func TestRecursiveFamilyTagABAPOracle(t *testing.T) {
 			}
 		}
 	}
-	if layouts != 3 || implementations != 3 {
+	views := regexp.MustCompile(`(?m)^\s*METHOD ` + names.Get("union.view") + `\.$`)
+	for _, src := range files {
+		implementations += 10 * len(views.FindAllString(src, -1))
+	}
+	if layouts != 3 || implementations != 33 {
 		t.Fatalf("layout methods: %d, payload interface implementations: %d", layouts, implementations)
 	}
 	// Exact alternatives need no per-alternative check: admission and widening
@@ -160,8 +165,9 @@ func TestRecursiveFamilyTagABAPOracle(t *testing.T) {
 	if !has(expr, "from_dynamic") || !has(bin, "check") || has(bin, "from_dynamic") {
 		t.Fatal("family classes: wrong methods\n" + files[expr+".clas.abap"] + files[bin+".clas.abap"])
 	}
-	if strings.Contains(files[runtime+".clas.abap"], "METHOD box.") {
-		t.Fatal("union runtime still boxes admitted payloads")
+	// Admission no longer boxes: box serves only erased (dynamic) storage.
+	if strings.Contains(files[names.Get("probe.ts.Probe")+".clas.abap"], runtime+"=>box(") {
+		t.Fatal("admission still boxes payloads")
 	}
 
 	// A wrong tag refuses like Go's RangeFault; Node does not validate casts.

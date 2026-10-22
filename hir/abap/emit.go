@@ -3328,6 +3328,7 @@ func (b *body) stmt(s *hir.Stmt) {
 }
 
 // wrap only splits outside literal tokens. Long strings are already chunked.
+// Indentation is cosmetic: a line that only fits without it loses it.
 func wrap(src string) (string, error) {
 	var out strings.Builder
 	for _, line := range strings.Split(strings.TrimSuffix(src, "\n"), "\n") {
@@ -3353,6 +3354,11 @@ func wrap(src string) (string, error) {
 					cut = i
 				}
 			}
+			if cut <= len(prefix) && prefix != "" {
+				prefix = ""
+				line = strings.TrimLeft(line, " ")
+				continue
+			}
 			if cut <= len(prefix) {
 				return "", fmt.Errorf("unbreakable source line (%s bytes)", strconv.Itoa(len(line)))
 			}
@@ -3369,6 +3375,10 @@ func wrap(src string) (string, error) {
 func (b *body) boxDynamic(n, a string, t hir.Type) {
 	if t.Kind == hir.Dynamic {
 		b.line(n + " = " + a + ".")
+		return
+	}
+	if t.Kind == hir.UnionRef {
+		b.line(n + " = " + b.e.unionRuntime() + "=>box( " + a + " ).")
 		return
 	}
 	b.line("CLEAR " + n + ".")

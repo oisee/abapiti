@@ -260,8 +260,9 @@ func (e *emitter) unionInterface() string {
 	return name
 }
 
-// unionRuntime holds the record helpers of from_dynamic; runtime.dynamic is
-// unchanged.
+// unionRuntime holds the record helpers of from_dynamic and box, which
+// passes a union reference into erased storage (a view yields its record,
+// so identity holds); runtime.dynamic is unchanged.
 func (e *emitter) unionRuntime() string {
 	name := e.name("union.runtime")
 	file := name + ".clas.abap"
@@ -286,6 +287,8 @@ func (e *emitter) unionRuntime() string {
 	def.WriteString("CLASS-METHODS record IMPORTING p0 TYPE REF TO " + d + " RETURNING VALUE(result) TYPE abap_bool.\n")
 	def.WriteString("CLASS-METHODS has IMPORTING p0 TYPE REF TO " + d + " p1 TYPE string RETURNING VALUE(result) TYPE abap_bool.\n")
 	def.WriteString("CLASS-METHODS literal IMPORTING p0 TYPE REF TO " + d + " p1 TYPE string p2 TYPE string RETURNING VALUE(result) TYPE abap_bool.\n")
+	def.WriteString("CLASS-METHODS box IMPORTING p0 TYPE REF TO " + iface + " RETURNING VALUE(result) TYPE REF TO " + d + ".\n")
+	impl.WriteString("METHOD box.\nDATA adapter TYPE REF TO " + storage + ".\nIF p0 IS NOT BOUND.\nRETURN.\nENDIF.\nIF p0 IS INSTANCE OF " + storage + ".\nadapter ?= p0.\nresult = adapter->source( ).\nENDIF.\nIF result IS NOT BOUND.\nCREATE OBJECT result.\nresult->tag = " + d + "=>tag_ref.\nresult->oval = p0.\nENDIF.\nENDMETHOD.\n")
 	def.WriteString("CLASS-METHODS payload IMPORTING p0 TYPE REF TO " + d + " RETURNING VALUE(result) TYPE REF TO " + iface + ".\n")
 	impl.WriteString("METHOD record.\nDATA adapter TYPE REF TO " + storage + ".\nDATA native TYPE REF TO object.\nIF p0 IS NOT BOUND.\nRETURN.\nENDIF.\nIF p0->tag = " + d + "=>tag_object.\nresult = abap_true.\nRETURN.\nENDIF.\nIF p0->tag <> " + d + "=>tag_ref.\nRETURN.\nENDIF.\n")
 	impl.WriteString("native = p0->oval.\nIF native IS NOT INSTANCE OF " + storage + ".\nRETURN.\nENDIF.\nadapter ?= native.\nresult = adapter->structural( ).\nENDMETHOD.\n")
@@ -322,6 +325,7 @@ func (e *emitter) unionPayloadDeclaration(b *strings.Builder, c *hir.Class) {
 	}
 	fmt.Fprintf(b, "INTERFACES %s.\n", e.unionInterface())
 	fmt.Fprintf(b, "CLASS-METHODS %s IMPORTING p0 TYPE REF TO %s RETURNING VALUE(result) TYPE abap_bool.\n", e.name("union.layout"), e.name("runtime.dynamic"))
+	fmt.Fprintf(b, "CLASS-METHODS %s IMPORTING p0 TYPE REF TO %s RETURNING VALUE(result) TYPE REF TO %s.\n", e.name("union.view"), e.name("runtime.dynamic"), e.name(c.Name))
 }
 
 func (e *emitter) unionFieldRead(c *hir.Class, receiver, field string) string {
@@ -398,6 +402,20 @@ func (e *emitter) unionPayloadImplementation(out *strings.Builder, c *hir.Class)
 		fmt.Fprintf(out, "v = p0->get( %s ).\nIF %s.\nRETURN.\nENDIF.\n", abapString(f.Name), condition)
 	}
 	out.WriteString("result = abap_true.\nENDMETHOD.\n")
+	// view admits an untyped record with this class's layout as a live view.
+	if e.wideShape(c) {
+		e.refuse(fmt.Errorf("union payload %s has no view constructor", c.Name))
+	}
+	b := &body{e: e, c: c, m: &hir.Method{Result: hir.T(hir.Void)}, implemented: e.name("union.view"), locals: map[string]string{}}
+	b.line("IF " + e.name("union.layout") + "( p0 ) = abap_false.\nRETURN.\nENDIF.")
+	args := []string{"view_source = p0"}
+	if c.Ctor != nil {
+		for _, p := range c.Ctor.Params {
+			args = append(args, e.param(p.Name)+" = "+b.temp(p.Type))
+		}
+	}
+	b.line("result = NEW " + e.name(c.Name) + "( " + strings.Join(args, " ") + " ).")
+	fmt.Fprintf(out, "METHOD %s.\n%s%sENDMETHOD.\n", e.name("union.view"), b.constantDeclarations(), foldTempInits(b.code.String()))
 }
 
 // unionUse registers a use of a family class and, optionally, of one of its
@@ -573,7 +591,7 @@ func (e *emitter) unionFamilyClass(u *hir.UnionDecl, methods []string) {
 				for _, tag := range a.Tags {
 					tags = append(tags, "t = "+abapString(tag))
 				}
-				conditions := []string{"( " + strings.Join(tags, "\nOR ") + " )", e.name(a.Payload.Name) + "=>" + e.name("union.layout") + "( p0 ) = abap_true"}
+				var literals []string
 				for _, l := range a.Literals {
 					if l.Field == u.Discriminant {
 						continue
@@ -582,22 +600,17 @@ func (e *emitter) unionFamilyClass(u *hir.UnionDecl, methods []string) {
 					for _, v := range l.Values {
 						values = append(values, runtime+"=>literal( p0 = p0 p1 = "+abapString(l.Field)+" p2 = "+abapString(v)+" ) = abap_true")
 					}
-					conditions = append(conditions, "( "+strings.Join(values, "\nOR ")+" )")
+					literals = append(literals, "( "+strings.Join(values, "\nOR ")+" )")
 				}
-				b.line("IF " + strings.Join(conditions, "\nAND ") + ".")
-				c := e.classBy(a.Payload.Name)
-				if e.wideShape(c) {
-					e.refuse(fmt.Errorf("union family %s: payload %s has no view constructor", u.Name, c.Name))
+				b.line("IF " + strings.Join(tags, "\nOR ") + ".")
+				if len(literals) > 0 {
+					b.line("IF " + strings.Join(literals, "\nAND ") + ".")
 				}
-				args := []string{"view_source = p0"}
-				if c.Ctor != nil {
-					for _, p := range c.Ctor.Params {
-						args = append(args, e.param(p.Name)+" = "+b.temp(p.Type))
-					}
+				b.line("p = " + e.name(a.Payload.Name) + "=>" + e.name("union.view") + "( p0 ).\nIF p IS BOUND.\nresult = p.\nRETURN.\nENDIF.")
+				if len(literals) > 0 {
+					b.line("ENDIF.")
 				}
-				view := b.temp(a.Payload)
-				b.line(view + " = NEW " + e.name(c.Name) + "( " + strings.Join(args, " ") + " ).")
-				b.line("result = " + view + ".\nRETURN.\nENDIF.")
+				b.line("ENDIF.")
 			}
 			b.line("RAISE EXCEPTION TYPE cx_sy_range_out_of_bounds.")
 			emit("from_dynamic", b)
