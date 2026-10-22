@@ -279,7 +279,9 @@ func (b *body) liveUnbox(n, d string, t hir.Type) {
 		}
 		v := b.rawTemp("REF TO object")
 		b.line(v + " = " + d + "->as_ref( ).")
-		b.line(n + " ?= " + v + ".")
+		if !b.recoverInterface(n, v, t) {
+			b.line(n + " ?= " + v + ".")
+		}
 	case hir.OrderedMap, hir.OrderedSet:
 		v := b.rawTemp("REF TO object")
 		b.line(v + " = " + d + "->as_ref( ).")

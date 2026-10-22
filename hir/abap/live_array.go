@@ -222,7 +222,9 @@ func (b *body) arrayElement(n, row string, t hir.Type) {
 		return
 	}
 	if !b.e.arrayViews && t.Kind != hir.Dynamic {
-		b.line(n + " ?= " + row + ".")
+		if !b.recoverInterface(n, row, t) {
+			b.line(n + " ?= " + row + ".")
+		}
 		return
 	}
 	d := b.temp(hir.T(hir.Dynamic))
@@ -249,7 +251,7 @@ func (b *body) arrayElement(n, row string, t hir.Type) {
 		// Rebox the original slot and use the checked live converter, not a nominal cast.
 		b.liveBox(d, row, hir.Ref(hir.RootObject))
 		b.liveUnbox(n, d, t)
-	} else {
+	} else if !b.recoverInterface(n, row, t) {
 		b.line(n + " ?= " + row + ".")
 	}
 	b.line("ENDIF.")

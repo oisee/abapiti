@@ -79,9 +79,11 @@ type emitter struct {
 	constSets map[string][]string
 
 	// unions, unionUses and unionReads stay nil without structural families.
-	unions     *unionModel
-	unionUses  map[string]map[string]bool
-	unionReads map[string][]unionRead
+	unions                  *unionModel
+	unionUses               map[string]map[string]bool
+	unionReads              map[string][]unionRead
+	interfaceAdmissions     map[interfacePair]*interfaceAdmission
+	interfaceAdmissionOrder []*interfaceAdmission
 }
 
 // Emit returns one source per global declaration, including all runtime dependencies.
@@ -270,6 +272,7 @@ func emitNamed(p *hir.Program, refusals *[]error, assertionOwners map[string]boo
 	e.findStaticConstants()
 	e.findConstSets()
 	e.promoteValueSlots()
+	e.collectInterfaceAdmissions()
 	if e.descriptors {
 		n := e.name("runtime.described")
 		e.files[n+".intf.abap"] = "INTERFACE " + n + " PUBLIC.\nMETHODS " + e.name("builtin.classOf") + " RETURNING VALUE(result) TYPE REF TO " + e.name("runtime.classvalue") + ".\nMETHODS " + e.name("builtin.nativeConstructor") + " RETURNING VALUE(result) TYPE REF TO " + e.name("runtime.classvalue") + ".\nENDINTERFACE.\n"
@@ -292,6 +295,7 @@ func emitNamed(p *hir.Program, refusals *[]error, assertionOwners map[string]boo
 	for _, c := range p.Classes {
 		e.class(c)
 	}
+	e.emitInterfaceAdapters()
 	e.nativeCall0Runtime()
 	if e.unionUses != nil {
 		e.unionFamilyClasses()
@@ -308,6 +312,7 @@ func emitNamed(p *hir.Program, refusals *[]error, assertionOwners map[string]boo
 		e.traceCasts()
 	}
 	e.resolveNativeDeleteDeclarations()
+	e.resolveInterfaceArrayIdentity()
 	for file, src := range e.files {
 		out, err := Format(src)
 		if err != nil {
@@ -729,8 +734,12 @@ func (e *emitter) class(c *hir.Class) {
 		fmt.Fprintf(&b, "INTERFACES %s.\n", e.name("runtime.callable"))
 	}
 	for _, i := range c.Implements {
+		if e.inheritedAdmission(c, i) {
+			continue
+		}
 		fmt.Fprintf(&b, "INTERFACES %s.\n", e.name(i))
 	}
+	e.structuralInterfaceDeclarations(&b, c)
 	for _, f := range c.Fields {
 		if lit, ok := e.staticConstant(c.Name, f.Name); ok && f.Static {
 			fmt.Fprintf(&b, "CONSTANTS %s TYPE %s VALUE %s.\n", e.member(f.Name), e.typ(f.Type), lit)
@@ -842,6 +851,9 @@ func (e *emitter) class(c *hir.Class) {
 		}
 	}
 	for _, n := range c.Implements {
+		if e.inheritedAdmission(c, n) {
+			continue
+		}
 		for _, i := range e.p.Interfaces {
 			if i.Name != n {
 				continue
@@ -864,6 +876,7 @@ func (e *emitter) class(c *hir.Class) {
 			}
 		}
 	}
+	e.structuralInterfaceImplementations(&b, c)
 	e.liveClassImplementation(&b, c)
 	e.unionPayloadImplementation(&b, c)
 	b.WriteString("ENDCLASS.\n")
@@ -1064,6 +1077,17 @@ func (b *body) rawTemp(typ string) string {
 	return n
 }
 func (b *body) convert(value string, src, dst hir.Type) string {
+	if converted, ok := b.admitInterface(value, src, dst); ok {
+		return converted
+	}
+	if !interfaceBase(src).Equal(interfaceBase(dst)) && b.e.interfaceFactory(interfaceBase(src)) != "" && (interfaceBase(dst).Kind == hir.ClassRef || interfaceBase(dst).Kind == hir.InterfaceRef) {
+		value = b.interfaceOriginal(value, src)
+		n := b.temp(dst)
+		if !b.recoverInterface(n, value, dst) {
+			b.line(n + " ?= " + value + ".")
+		}
+		return n
+	}
 	if src.Equal(dst) {
 		return value
 	}
@@ -1643,7 +1667,7 @@ func (b *body) expr(x *hir.Expr) string {
 			b.line("IF " + d + " IS BOUND AND " + d + "->tag = " + e.name("runtime.dynamic") + "=>tag_ref.\n" + n + " = xsdbool( " + d + "->oval IS INSTANCE OF " + e.name(x.Owner) + " ).\nENDIF.")
 			break
 		}
-		a := b.expr(x.X)
+		a := b.interfaceOriginal(b.expr(x.X), x.X.Type)
 		if x.Y != nil {
 			// A dynamic class-value operand: walk the descriptor chain.
 			cv := b.expr(x.Y)
@@ -1680,7 +1704,14 @@ func (b *body) expr(x *hir.Expr) string {
 		b.line(n + " = " + e.descriptorOf(x.Owner) + ".")
 	case hir.Cast:
 		a := b.expr(x.X)
-		b.line(n + " ?= " + a + ".")
+		if converted, ok := b.admitInterface(a, x.X.Type, t); ok {
+			b.line(n + " = " + converted + ".")
+			break
+		}
+		a = b.interfaceOriginal(a, x.X.Type)
+		if !b.recoverInterface(n, a, t) {
+			b.line(n + " ?= " + a + ".")
+		}
 	case hir.Seq:
 		old := b.locals
 		b.locals = map[string]string{}
@@ -1694,6 +1725,17 @@ func (b *body) expr(x *hir.Expr) string {
 		b.locals = old
 	case hir.Narrow:
 		a := b.expr(x.X)
+		if converted, ok := b.admitInterface(a, x.X.Type, t); ok {
+			b.line(n + " = " + converted + ".")
+			break
+		}
+		if e.interfaceFactory(interfaceBase(x.X.Type)) != "" && !interfaceBase(x.X.Type).Equal(interfaceBase(t)) {
+			a = b.interfaceOriginal(a, x.X.Type)
+			if !b.recoverInterface(n, a, t) {
+				b.line(n + " ?= " + a + ".")
+			}
+			break
+		}
 		source := x.X.Type
 		if source.Kind == hir.Optional {
 			source = source.Args[0]
@@ -2175,6 +2217,9 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 	}
 	if unionKeyed(x) {
 		b.e.refuse(fmt.Errorf("node %d (%s): ABAP Map and Set keys over union references need record identity", x.ID, x.Source))
+		return
+	}
+	if b.refuseInterfaceKeyIdentity(x) {
 		return
 	}
 	if base := hir.CheckedMapBaseOp(x.Op); base != x.Op {
@@ -2974,6 +3019,12 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 		}
 		if x.Op == "dynamic.asRef" && x.Type.Kind == hir.InterfaceRef && b.e.structuralUnion(x.Type) != "" {
 			b.line(n + " = " + b.e.structuralUnion(x.Type) + "=>convert( " + a + " ).")
+			return
+		}
+		if x.Op == "dynamic.asRef" && b.e.interfaceFactory(x.Type) != "" {
+			raw := b.temp(hir.Ref(hir.RootObject))
+			b.line("CLEAR " + raw + ".\nIF " + a + " IS BOUND.\n" + raw + " = " + a + "->as_ref( ).\nENDIF.")
+			b.recoverInterface(n, raw, x.Type)
 			return
 		}
 		if x.Op == "dynamic.asRef" && x.Type.Kind == hir.Array {

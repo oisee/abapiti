@@ -168,7 +168,9 @@ func (b *body) unbox(value string, dst hir.Type) string {
 	default:
 		root := b.rawTemp("REF TO object")
 		b.line(root + " = " + value + "->as_ref( ).")
-		b.line(n + " ?= " + root + ".")
+		if !b.recoverInterface(n, root, dst) {
+			b.line(n + " ?= " + root + ".")
+		}
 	}
 	return n
 }

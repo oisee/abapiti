@@ -181,7 +181,8 @@ func (e *emitter) containerStorage(t hir.Type) hir.Type {
 }
 
 func (e *emitter) referenceSetMethod(t hir.Type, method, code string) string {
-	if !e.usesReviewedOp("set.view") || t.Kind != hir.OrderedSet || !t.Args[0].IsRef() || (method != "add" && method != "has" && method != "delete") {
+	canonical := e.usesReviewedOp("set.view") || len(t.Args) > 0 && t.Args[0].Name == hir.RootObject && e.hasInterfaceAdapters()
+	if !canonical || t.Kind != hir.OrderedSet || !t.Args[0].IsRef() || (method != "add" && method != "has" && method != "delete") {
 		return code
 	}
 	b := &body{e: e, m: &hir.Method{Result: hir.T(hir.Void)}, locals: map[string]string{}}
@@ -220,7 +221,8 @@ func (b *body) mapViewUnbox(n, raw string, t hir.Type) {
 // Reference-key Maps use canonical storage identity, including keys returned
 // through a structural view. Keep this ABI change gated on Map view usage.
 func (e *emitter) referenceMapMethod(t hir.Type, method, code string) string {
-	if !e.typedMapViews() || t.Kind != hir.OrderedMap || !t.Args[0].IsRef() || t.Args[0].Kind == hir.Dynamic || (method != "set" && method != "get" && method != "has" && method != "delete") {
+	canonical := e.typedMapViews() || len(t.Args) > 0 && t.Args[0].Name == hir.RootObject && e.hasInterfaceAdapters()
+	if !canonical || t.Kind != hir.OrderedMap || !t.Args[0].IsRef() || t.Args[0].Kind == hir.Dynamic || (method != "set" && method != "get" && method != "has" && method != "delete") {
 		return code
 	}
 	b := &body{e: e, m: &hir.Method{Result: hir.T(hir.Void)}, locals: map[string]string{}, serial: 3000}
