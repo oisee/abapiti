@@ -1,0 +1,32 @@
+package main
+
+import("encoding/json";"os";"sort";"strings";lint "zabaplint")
+type query struct{Type,Name string}
+type update struct{Filename string;Raw *string}
+type step struct{Label string;Updates []update;Queries []query;After []update}
+func main(){
+ var input struct{Files []lint.File;Config string;Queries []query;Steps []step}
+ raw,err:=os.ReadFile(os.Args[1]);if err!=nil{panic(err)}
+ if err=json.Unmarshal(raw,&input);err!=nil{panic(err)}
+ var c lint.Checker;c.Prime(input.Files,nil,input.Config)
+ if input.Queries==nil {
+  seen:=map[query]bool{}
+  for _,f:=range input.Files {
+   parts:=strings.Split(f.Filename[strings.LastIndex(f.Filename,"/")+1:],".");if len(parts)<3{continue}
+   typ:=strings.ToUpper(parts[1]);if typ!="DDLS"&&typ!="TABL"&&typ!="VIEW"{continue}
+   name:=strings.ReplaceAll(strings.ReplaceAll(strings.ToUpper(parts[0]),"%23","/"),"#","/")
+   seen[query{typ,name}]=true
+  }
+  input.Queries=make([]query,0,len(seen));for q:=range seen{input.Queries=append(input.Queries,q)}
+  sort.Slice(input.Queries,func(i,j int)bool{return input.Queries[i].Type+"\x00"+input.Queries[i].Name<input.Queries[j].Type+"\x00"+input.Queries[j].Name})
+ }
+ legacy:=len(os.Args)>2&&os.Args[2]=="--legacy"
+ encoder:=json.NewEncoder(os.Stdout)
+ dump:=func(label string,queries []query){for _,q:=range queries{value:=inspect(&c,q,legacy);if err:=encoder.Encode(struct{Label,Type,Name string;Value any}{label,q.Type,q.Name,value});err!=nil{panic(err)}}}
+ dump("baseline",input.Queries)
+ for _,s:=range input.Steps{
+  for _,u:=range s.Updates{c.Update(u.Filename,u.Raw)}
+  dump(s.Label,s.Queries)
+  if len(s.After)>0{for _,u:=range s.After{c.Update(u.Filename,u.Raw)};dump(s.Label+"-restored",s.Queries)}
+ }
+}

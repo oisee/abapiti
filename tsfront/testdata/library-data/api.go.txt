@@ -1,0 +1,19 @@
+package main
+import lint "zabaplint"
+type snapshot struct{Found bool;Files []lint.File;Tree any;SQLView any;Components,Keys []string}
+type legacyExpression struct{Kind,Text string;Children []legacyExpression}
+func project(n *lint.Expression)*legacyExpression{
+ if n==nil{return nil};out:=&legacyExpression{Kind:n.Kind,Text:n.Text}
+ for i:=range n.Children{out.Children=append(out.Children,*project(&n.Children[i]))};return out
+}
+func inspect(c *lint.Checker,q query,legacy bool) any{
+ files,found:=c.Files(q.Type,q.Name)
+ out:=snapshot{Found:found,Files:files}
+ if q.Type=="DDLS"{
+  tree,sql,ok:=c.CDS(q.Name);if ok!=found{panic("CDS/Files existence differs")}
+  out.Tree=tree;out.SQLView=sql
+  if legacy{out.Tree=project(tree);if sql==nil{out.SQLView=""}else{out.SQLView=*sql}}
+ }else if legacy{out.SQLView=""}
+ if q.Type=="TABL"||q.Type=="VIEW"{var ok bool;out.Components,out.Keys,ok=c.DDIC(q.Type,q.Name);if ok!=found{panic("DDIC/Files existence differs")}}
+ return out
+}
