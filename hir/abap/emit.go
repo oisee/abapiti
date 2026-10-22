@@ -1759,11 +1759,17 @@ func (b *body) expr(x *hir.Expr) string {
 			e.refuse(fmt.Errorf("node %d (%s): Number remainder requires an IEEE runtime", x.ID, x.Source))
 			break
 		}
-		if x.Op == "/" && t.Kind == hir.Number && x.Y.Kind == hir.Lit {
-			divisor, err := strconv.ParseFloat(fmt.Sprint(x.Y.Value), 64)
-			if err != nil || divisor == 0 || math.IsNaN(divisor) || math.IsInf(divisor, 0) {
-				e.refuse(fmt.Errorf("node %d (%s): Number division requires a finite non-zero divisor", x.ID, x.Source))
-				break
+		if x.Op == "/" && t.Kind == hir.Number {
+			if x.Y.Kind == hir.Lit {
+				divisor, err := strconv.ParseFloat(fmt.Sprint(x.Y.Value), 64)
+				if err != nil || divisor == 0 || math.IsNaN(divisor) || math.IsInf(divisor, 0) {
+					e.refuse(fmt.Errorf("node %d (%s): Number division requires a finite non-zero divisor", x.ID, x.Source))
+					break
+				}
+			} else {
+				// ABAP evaluates 0 / 0 as zero. Refuse the nonfinite JS result
+				// before division, using the already evaluated divisor once.
+				b.line("IF " + z + " = 0.\nRAISE EXCEPTION TYPE cx_sy_range_out_of_bounds.\nENDIF.")
 			}
 		}
 		if (x.Op == "==" || x.Op == "!=") && x.X.Type.Kind == hir.Optional && !x.X.Type.Args[0].IsRef() {

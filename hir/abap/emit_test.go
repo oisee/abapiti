@@ -323,6 +323,8 @@ func TestTargetDiagnostics(t *testing.T) {
 	for _, x := range []*hir.Expr{
 		{Node: hir.Node{ID: 17, Source: "input.ts:4"}, Kind: hir.Binary, Op: "/", Type: number, X: hir.L(number, 1.0), Y: hir.L(number, 0.0)},
 		{Node: hir.Node{ID: 17, Source: "input.ts:4"}, Kind: hir.Binary, Op: "/", Type: number, X: hir.L(number, 1.0), Y: hir.L(number, math.Copysign(0, -1))},
+		{Node: hir.Node{ID: 17, Source: "input.ts:4"}, Kind: hir.Binary, Op: "/", Type: number, X: hir.L(number, 0.0), Y: hir.L(number, math.Inf(1))},
+		{Node: hir.Node{ID: 17, Source: "input.ts:4"}, Kind: hir.Binary, Op: "/", Type: number, X: hir.L(number, 0.0), Y: hir.L(number, math.NaN())},
 		{Node: hir.Node{ID: 17, Source: "input.ts:4"}, Kind: hir.Binary, Op: "%", Type: hir.T(hir.Number), X: hir.L(hir.T(hir.Number), 0.5), Y: hir.L(hir.T(hir.Number), 0.1)},
 	} {
 		m := method("f", x.Type, ret(x))
@@ -335,6 +337,34 @@ func TestTargetDiagnostics(t *testing.T) {
 		}
 	}
 }
+func TestNumberDivisionRuntimeGuard(t *testing.T) {
+	number := hir.T(hir.Number)
+	for _, divisor := range []*hir.Expr{local("divisor", number), binary("+", local("divisor", number), hir.L(number, 1.0), number)} {
+		m := method("f", number, ret(binary("/", hir.L(number, 0.0), divisor, number)))
+		m.Static = true
+		m.Params = []hir.Param{{Name: "divisor", Type: number}}
+		files, err := emitABAP(t, &hir.Program{Classes: []*hir.Class{{Name: "target", Methods: []*hir.Method{m}}}})
+		if err != nil {
+			t.Fatal(err)
+		}
+		found := false
+		for _, src := range files {
+			if strings.Contains(src, " / ") {
+				flat := strings.Join(strings.Fields(src), " ")
+				guard := strings.Index(flat, " = 0. RAISE EXCEPTION TYPE cx_sy_range_out_of_bounds. ENDIF.")
+				division := strings.Index(flat, " / ")
+				if guard < 0 || guard > division {
+					t.Fatalf("missing guard before Number division:\n%s", src)
+				}
+				found = true
+			}
+		}
+		if !found {
+			t.Fatal("missing division")
+		}
+	}
+}
+
 func TestLongLiteral(t *testing.T) {
 	m := method("f", str, ret(hir.L(str, strings.Repeat("€` {|}\\ ", 300)+"\n\t")))
 	m.Static = true
