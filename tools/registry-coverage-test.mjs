@@ -7,8 +7,8 @@ import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {createRequire} from 'node:module';
 import {validateWorkload} from './registry-workload.mjs';
-import {declarationCandidates} from './registry-coverage-identity.mjs';
-const ts=createRequire(import.meta.url)('/home/alice/dev/abaplint/node_modules/typescript');
+import {declarationCandidates, generatedDeclarationKinds} from './registry-coverage-identity.mjs';
+const ts=createRequire(import.meta.url)((process.env.ABAPITI_ABAPLINT_HOME ?? '/home/alice/dev/abaplint')+'/node_modules/typescript');
 test('class header mapping must not hide an executed constructor',()=>{
  const sf=ts.createSourceFile('probe.ts','export class Probe { constructor() { console.log(1); } }',ts.ScriptTarget.Latest,true);
  const ctor=sf.statements[0].members[0];
@@ -50,4 +50,16 @@ test('collector rejects empty workload before building upstream',()=>{
   assert.match(result.stderr,/expected populated north-star main inputs/);
   assert.notEqual(result.status,0);
  } finally {rmSync(root,{recursive:true,force:true});}
+});
+
+test('V8 static method name offsets keep unexecuted methods source-pinned',()=>{
+ const sf=ts.createSourceFile('probe.ts','class Probe { public static run(): void {} }',ts.ScriptTarget.Latest,true);
+ const js=ts.createSourceFile('probe.js','class Probe { static run() {} }',ts.ScriptTarget.Latest,true);
+ const method=sf.statements[0].members[0], generated=js.statements[0].members[0];
+ const start=generated.name.getStart(js);
+ const kinds=generatedDeclarationKinds(ts,js);
+ assert.equal(kinds.get(start),'MethodDeclaration');
+ const mappings=[{offset:start,originalLine:1,originalColumn:method.name.getStart(sf)}];
+ const fn={functionName:'run',ranges:[{startOffset:start,endOffset:generated.end,count:0}]};
+ assert.deepEqual(declarationCandidates(ts,sf,[method],mappings,fn,kinds.get(start)),[method]);
 });

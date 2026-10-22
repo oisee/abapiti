@@ -1884,6 +1884,402 @@
       ]
     },
     {
+      "file": "src/abap/1_lexer/tokens/at.ts",
+      "start": 91,
+      "end": 145,
+      "kind": "MethodDeclaration",
+      "symbol": "At.railroad",
+      "line": 4,
+      "sha256": "b5edae560dcf050de086433fd73ece2d2fe5c748efe9ddd59ae3fcad0fa187c7",
+      "executed": false,
+      "workloads": []
+    },
+    {
+      "file": "src/abap/1_lexer/tokens/atw.ts",
+      "start": 92,
+      "end": 147,
+      "kind": "MethodDeclaration",
+      "symbol": "AtW.railroad",
+      "line": 4,
+      "sha256": "e0cf4f18d3208d02f54d248151a902026d47ba90782b6bf5091dadfd5e7fdaaf",
+      "executed": false,
+      "workloads": []
+    },
+    {
+      "file": "src/abap/1_lexer/tokens/bracket_left.ts",
+      "start": 100,
+      "end": 154,
+      "kind": "MethodDeclaration",
+      "symbol": "BracketLeft.railroad",
+      "line": 4,
+      "sha256": "fe6639068624c49ef0f80b6ab706c3d9a1efed75f665c945c27ec1b21ad5a9b7",
+      "executed": false,
+      "workloads": []
+    },
+    {
+      "file": "src/abap/1_lexer/tokens/bracket_leftw.ts",
+      "start": 101,
+      "end": 156,
+      "kind": "MethodDeclaration",
+      "symbol": "BracketLeftW.railroad",
+      "line": 4,
+      "sha256": "3d4a262cb6d8ecff9e4333b918d368e58350c16b7b50f8025bdf1e66b6a42c9d",
+      "executed": false,
+      "workloads": []
+    },
+    {
+      "file": "src/abap/1_lexer/tokens/bracket_right.ts",
+      "start": 101,
+      "end": 155,
+      "kind": "MethodDeclaration",
+      "symbol": "BracketRight.railroad",
+      "line": 4,
+      "sha256": "d8741a2682f5136a3b53655f766a9aed4440c5ec10fa33ddbe842ccfe192e571",
+      "executed": false,
+      "workloads": []
+    },
+    {
+      "file": "src/abap/1_lexer/tokens/bracket_rightw.ts",
+      "start": 103,
+      "end": 158,
+      "kind": "MethodDeclaration",
+      "symbol": "BracketRightW.railroad",
+      "line": 5,
+      "sha256": "24367ea73fa50b2138cfdc684069964f8096d25bd5a8cbd8decbf0d01b08160f",
+      "executed": false,
+      "workloads": []
+    },
+    {
+      "file": "src/abap/1_lexer/tokens/dash.ts",
+      "start": 93,
+      "end": 147,
+      "kind": "MethodDeclaration",
+      "symbol": "Dash.railroad",
+      "line": 4,
+      "sha256": "237929c9455133020acfc25aab360013f5e80fe01d2c619fedf70851f0f694f3",
+      "executed": false,
+      "workloads": []
+    },
+    {
+      "file": "src/abap/1_lexer/tokens/dashw.ts",
+      "start": 95,
+      "end": 150,
+      "kind": "MethodDeclaration",
+      "symbol": "DashW.railroad",
+      "line": 5,
+      "sha256": "55cf07273e5c9a2277c7487d5facf27b4853ea7117589922f941e01d754c1a9a",
+      "executed": false,
+      "workloads": []
+    },
+    {
+      "file": "src/abap/1_lexer/tokens/instance_arrow.ts",
+      "start": 102,
+      "end": 157,
+      "kind": "MethodDeclaration",
+      "symbol": "InstanceArrow.railroad",
+      "line": 4,
+      "sha256": "b28dcd15ca16633fbf492b434665a432da6792290792cac06b4b2ec0431a38da",
+      "executed": false,
+      "workloads": []
+    },
+    {
+      "file": "src/abap/1_lexer/tokens/instance_arroww.ts",
+      "start": 104,
+      "end": 160,
+      "kind": "MethodDeclaration",
+      "symbol": "InstanceArrowW.railroad",
+      "line": 5,
+      "sha256": "d433d6650b66d0b59255a958679f2506ee847a5119ca345e506c0dd3efe20b20",
+      "executed": false,
+      "workloads": []
+    },
+    {
+      "file": "src/abap/1_lexer/tokens/paren_left.ts",
+      "start": 98,
+      "end": 152,
+      "kind": "MethodDeclaration",
+      "symbol": "ParenLeft.railroad",
+      "line": 4,
+      "sha256": "2470899705daa753602776fa34ee1658cc0d890aacdab64a408d44fd78cde125",
+      "executed": false,
+      "workloads": []
+    },
+    {
+      "file": "src/abap/1_lexer/tokens/paren_leftw.ts",
+      "start": 100,
+      "end": 155,
+      "kind": "MethodDeclaration",
+      "symbol": "ParenLeftW.railroad",
+      "line": 5,
+      "sha256": "7e82f7f82318b2fcf1dcc9b2be1963ff4e62b7574a5f867faab2b3476d2c1452",
+      "executed": false,
+      "workloads": []
+    },
+    {
+      "file": "src/abap/1_lexer/tokens/paren_right.ts",
+      "start": 99,
+      "end": 153,
+      "kind": "MethodDeclaration",
+      "symbol": "ParenRight.railroad",
+      "line": 4,
+      "sha256": "a75716867bc6e29f15b1839b111797275cd8d050eaa973edf05e5426c84e6d11",
+      "executed": false,
+      "workloads": []
+    },
+    {
+      "file": "src/abap/1_lexer/tokens/paren_rightw.ts",
+      "start": 101,
+      "end": 156,
+      "kind": "MethodDeclaration",
+      "symbol": "ParenRightW.railroad",
+      "line": 5,
+      "sha256": "db16f9c6f572c76036592742f9e1466f3734525dd474710ea31adbf9a0289c1a",
+      "executed": false,
+      "workloads": []
+    },
+    {
+      "file": "src/abap/1_lexer/tokens/plus.ts",
+      "start": 93,
+      "end": 147,
+      "kind": "MethodDeclaration",
+      "symbol": "Plus.railroad",
+      "line": 4,
+      "sha256": "977faed88b46ed4ba8c59974a51c25e819473dfd9939ec180a29f9152bb27ffe",
+      "executed": false,
+      "workloads": []
+    },
+    {
+      "file": "src/abap/1_lexer/tokens/plusw.ts",
+      "start": 95,
+      "end": 150,
+      "kind": "MethodDeclaration",
+      "symbol": "PlusW.railroad",
+      "line": 5,
+      "sha256": "eb58bd95d0224f408bd934a67e4670b8bc77f7e4541e8881c5c36850974ff8a9",
+      "executed": false,
+      "workloads": []
+    },
+    {
+      "file": "src/abap/1_lexer/tokens/static_arrow.ts",
+      "start": 100,
+      "end": 155,
+      "kind": "MethodDeclaration",
+      "symbol": "StaticArrow.railroad",
+      "line": 4,
+      "sha256": "657cac24fe88161f4d0da8ee4f181e89eb4b0d2687ec5ac8f2559843c37b4509",
+      "executed": false,
+      "workloads": []
+    },
+    {
+      "file": "src/abap/1_lexer/tokens/static_arroww.ts",
+      "start": 102,
+      "end": 158,
+      "kind": "MethodDeclaration",
+      "symbol": "StaticArrowW.railroad",
+      "line": 5,
+      "sha256": "14256e7deac4640e5ba7cbbf685ff012c660b9ab4f3466e8bffa4152ea52193c",
+      "executed": false,
+      "workloads": []
+    },
+    {
+      "file": "src/abap/1_lexer/tokens/wat.ts",
+      "start": 92,
+      "end": 147,
+      "kind": "MethodDeclaration",
+      "symbol": "WAt.railroad",
+      "line": 4,
+      "sha256": "6bb8b726dd213909da554476ca7599969dc35d26844b73192a10510ac6ce2d3c",
+      "executed": false,
+      "workloads": []
+    },
+    {
+      "file": "src/abap/1_lexer/tokens/watw.ts",
+      "start": 93,
+      "end": 149,
+      "kind": "MethodDeclaration",
+      "symbol": "WAtW.railroad",
+      "line": 4,
+      "sha256": "20e9f605c9044b16c762c4f1066a75d68ed72921ee328888a82e81b0c8886492",
+      "executed": false,
+      "workloads": []
+    },
+    {
+      "file": "src/abap/1_lexer/tokens/wbracket_left.ts",
+      "start": 102,
+      "end": 157,
+      "kind": "MethodDeclaration",
+      "symbol": "WBracketLeft.railroad",
+      "line": 5,
+      "sha256": "c3dc8e039a03a6fc8f4e6343ce6a749739a6863092f417c001e7c6fdd657ab72",
+      "executed": false,
+      "workloads": []
+    },
+    {
+      "file": "src/abap/1_lexer/tokens/wbracket_leftw.ts",
+      "start": 102,
+      "end": 158,
+      "kind": "MethodDeclaration",
+      "symbol": "WBracketLeftW.railroad",
+      "line": 4,
+      "sha256": "7f2e68f785f961a50c7ff9b76779a51ae54da648cfb6b3c59a4a61ff6d5b18d6",
+      "executed": false,
+      "workloads": []
+    },
+    {
+      "file": "src/abap/1_lexer/tokens/wbracket_right.ts",
+      "start": 103,
+      "end": 158,
+      "kind": "MethodDeclaration",
+      "symbol": "WBracketRight.railroad",
+      "line": 5,
+      "sha256": "26f973d9c85f0f41b167dcf976b62fc600461bf0c86c7a18e72392ad17711557",
+      "executed": false,
+      "workloads": []
+    },
+    {
+      "file": "src/abap/1_lexer/tokens/wbracket_rightw.ts",
+      "start": 104,
+      "end": 160,
+      "kind": "MethodDeclaration",
+      "symbol": "WBracketRightW.railroad",
+      "line": 5,
+      "sha256": "59bce15b0ddd88bebd04dd822cfe06fa48f502acf58b1a5dfea0d88352c215d9",
+      "executed": false,
+      "workloads": []
+    },
+    {
+      "file": "src/abap/1_lexer/tokens/wdash.ts",
+      "start": 95,
+      "end": 150,
+      "kind": "MethodDeclaration",
+      "symbol": "WDash.railroad",
+      "line": 5,
+      "sha256": "1b3274ed0c008cb3ce2c3d3cc93390c8a0db494feb9d7c60064a4e336c5b4a27",
+      "executed": false,
+      "workloads": []
+    },
+    {
+      "file": "src/abap/1_lexer/tokens/wdashw.ts",
+      "start": 96,
+      "end": 152,
+      "kind": "MethodDeclaration",
+      "symbol": "WDashW.railroad",
+      "line": 5,
+      "sha256": "11c0d15611dcc937af66d7c2aa2d9916b8b767f56e7b9622f6c77d66598f0bd3",
+      "executed": false,
+      "workloads": []
+    },
+    {
+      "file": "src/abap/1_lexer/tokens/winstance_arrow.ts",
+      "start": 104,
+      "end": 160,
+      "kind": "MethodDeclaration",
+      "symbol": "WInstanceArrow.railroad",
+      "line": 5,
+      "sha256": "542ab3a1e8cb2cba6102687915c2989b2e4c4400e1044d9736a9b541acfe02ce",
+      "executed": false,
+      "workloads": []
+    },
+    {
+      "file": "src/abap/1_lexer/tokens/winstance_arroww.ts",
+      "start": 105,
+      "end": 162,
+      "kind": "MethodDeclaration",
+      "symbol": "WInstanceArrowW.railroad",
+      "line": 5,
+      "sha256": "e6ec26c98dbb2470b7728aaad7ad4c528450ea91bc34c8cd0b1024b4ab753cac",
+      "executed": false,
+      "workloads": []
+    },
+    {
+      "file": "src/abap/1_lexer/tokens/wparen_left.ts",
+      "start": 100,
+      "end": 155,
+      "kind": "MethodDeclaration",
+      "symbol": "WParenLeft.railroad",
+      "line": 5,
+      "sha256": "d2dd937a7e057f35e36ba3c93cfacc217347fe2f61c1611dd295efcb953dd05b",
+      "executed": false,
+      "workloads": []
+    },
+    {
+      "file": "src/abap/1_lexer/tokens/wparen_leftw.ts",
+      "start": 101,
+      "end": 157,
+      "kind": "MethodDeclaration",
+      "symbol": "WParenLeftW.railroad",
+      "line": 5,
+      "sha256": "eee01efe8cb0250ad92bec7d5dee05948b151a50c73e6cd19ba7f0418696f550",
+      "executed": false,
+      "workloads": []
+    },
+    {
+      "file": "src/abap/1_lexer/tokens/wparen_right.ts",
+      "start": 101,
+      "end": 156,
+      "kind": "MethodDeclaration",
+      "symbol": "WParenRight.railroad",
+      "line": 5,
+      "sha256": "edcd86862c7f1c2550e2a9aa16ff8401b355b9f984807a3a879ce0d73e3664ec",
+      "executed": false,
+      "workloads": []
+    },
+    {
+      "file": "src/abap/1_lexer/tokens/wparen_rightw.ts",
+      "start": 102,
+      "end": 158,
+      "kind": "MethodDeclaration",
+      "symbol": "WParenRightW.railroad",
+      "line": 5,
+      "sha256": "a7940ef6b3aabede39f9ad31ea4d55a8177c70d1cf20cf41978492c51a00f411",
+      "executed": false,
+      "workloads": []
+    },
+    {
+      "file": "src/abap/1_lexer/tokens/wplus.ts",
+      "start": 95,
+      "end": 150,
+      "kind": "MethodDeclaration",
+      "symbol": "WPlus.railroad",
+      "line": 5,
+      "sha256": "929c49823926e15c84efc92e8f2d08e1769fd6885a5a16ca698a7a5df22d633a",
+      "executed": false,
+      "workloads": []
+    },
+    {
+      "file": "src/abap/1_lexer/tokens/wplusw.ts",
+      "start": 96,
+      "end": 152,
+      "kind": "MethodDeclaration",
+      "symbol": "WPlusW.railroad",
+      "line": 5,
+      "sha256": "793fae43d44eebfaf5c59bc44eef49d1ba7851a9fe4b89c9a9db034371991ab3",
+      "executed": false,
+      "workloads": []
+    },
+    {
+      "file": "src/abap/1_lexer/tokens/wstatic_arrow.ts",
+      "start": 102,
+      "end": 158,
+      "kind": "MethodDeclaration",
+      "symbol": "WStaticArrow.railroad",
+      "line": 5,
+      "sha256": "4a0834e00b68233e10eb516ff7ae11d5c022eb1d02e35e0a690fa150aac8bf1a",
+      "executed": false,
+      "workloads": []
+    },
+    {
+      "file": "src/abap/1_lexer/tokens/wstatic_arroww.ts",
+      "start": 103,
+      "end": 160,
+      "kind": "MethodDeclaration",
+      "symbol": "WStaticArrowW.railroad",
+      "line": 5,
+      "sha256": "8842a0055a518d41c05fd257fcb897e07362e517f3b56e5d5a3296005d3b4454",
+      "executed": false,
+      "workloads": []
+    },
+    {
       "file": "src/abap/2_statements/_select_reclassify.ts",
       "start": 488,
       "end": 1096,
@@ -3448,6 +3844,92 @@
     },
     {
       "file": "src/abap/2_statements/combi.ts",
+      "start": 21901,
+      "end": 22284,
+      "kind": "MethodDeclaration",
+      "symbol": "Combi.railroad",
+      "line": 1029,
+      "sha256": "961c076f536b1ebee94e506b9221fca5d47e089714e376e901f9b5e393a82f16",
+      "executed": false,
+      "workloads": []
+    },
+    {
+      "file": "src/abap/2_statements/combi.ts",
+      "start": 22288,
+      "end": 22571,
+      "kind": "MethodDeclaration",
+      "symbol": "Combi.listKeywords",
+      "line": 1043,
+      "sha256": "3e8fc7a320372876af6d0ab89a34dab00215209fd53fe2576da86e4e9ae742f3",
+      "executed": false,
+      "workloads": []
+    },
+    {
+      "file": "src/abap/2_statements/combi.ts",
+      "start": 22626,
+      "end": 23663,
+      "kind": "MethodDeclaration",
+      "symbol": "Combi.run",
+      "line": 1052,
+      "sha256": "88c78d478172345c0490d057c264106f85e97b08a05c6d038ec1b12ccf89d6f9",
+      "executed": true,
+      "workloads": [
+        "DEPLOYMENT",
+        "NEGATIVE",
+        "OBSERVATION",
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/abap/2_statements/combi.ts",
+      "start": 23667,
+      "end": 23737,
+      "kind": "MethodDeclaration",
+      "symbol": "Combi.getRelease",
+      "line": 1089,
+      "sha256": "1e39421046a51f3cebcd1388137edd07d8ccbf16596c71724d1f3883c749f47f",
+      "executed": true,
+      "workloads": [
+        "DEPLOYMENT",
+        "NEGATIVE",
+        "OBSERVATION",
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/abap/2_statements/combi.ts",
+      "start": 23741,
+      "end": 23823,
+      "kind": "MethodDeclaration",
+      "symbol": "Combi.getLanguageVersion",
+      "line": 1093,
+      "sha256": "236ea9ec0d3b296594618d315f1734273989af2f62b009a2c0c678b10ead86c0",
+      "executed": true,
+      "workloads": [
+        "DEPLOYMENT",
+        "NEGATIVE",
+        "OBSERVATION",
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/abap/2_statements/combi.ts",
+      "start": 23827,
+      "end": 23918,
+      "kind": "MethodDeclaration",
+      "symbol": "Combi.isOpenABAP",
+      "line": 1097,
+      "sha256": "e79eda4aad82e4574abd4140e830b498b5dfea009c4520e40b16d58ee6b3ce7a",
+      "executed": true,
+      "workloads": [
+        "DEPLOYMENT",
+        "NEGATIVE",
+        "OBSERVATION",
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/abap/2_statements/combi.ts",
       "start": 24005,
       "end": 24180,
       "kind": "FunctionDeclaration",
@@ -4069,6 +4551,20 @@
       "sha256": "e98c07249260ba05f943059bd51d45b012f4428c2c1f6cd6293b9edd5013bbc9",
       "executed": true,
       "workloads": [
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/abap/2_statements/expand_macros.ts",
+      "start": 8504,
+      "end": 9177,
+      "kind": "MethodDeclaration",
+      "symbol": "ExpandMacros.findName",
+      "line": 247,
+      "sha256": "59ac4d00788daf7cdccdf257a5931fe994e27f0d2ba6ee044697a7b58fdd6f80",
+      "executed": true,
+      "workloads": [
+        "NEGATIVE",
         "UPSTREAM"
       ]
     },
@@ -8294,6 +8790,22 @@
       "symbol": "WriteOffsetLength.getRunnable",
       "line": 7,
       "sha256": "beaeeed3410d6bba88a21a160ef3fd256b3edc0c358eca5fc4d75b33761cb509",
+      "executed": true,
+      "workloads": [
+        "DEPLOYMENT",
+        "NEGATIVE",
+        "OBSERVATION",
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/abap/2_statements/result.ts",
+      "start": 828,
+      "end": 1088,
+      "kind": "MethodDeclaration",
+      "symbol": "Result.fromChain",
+      "line": 28,
+      "sha256": "19ed5f2cac8633c22de28effa12335d847390e5f61cb9138cedf438d06db6b6b",
       "executed": true,
       "workloads": [
         "DEPLOYMENT",
@@ -13828,6 +14340,54 @@
       ]
     },
     {
+      "file": "src/abap/3_structures/structure_parser.ts",
+      "start": 715,
+      "end": 1176,
+      "kind": "MethodDeclaration",
+      "symbol": "StructureParser.run",
+      "line": 16,
+      "sha256": "5b1740e0da8c8ec94f51cb59ed3b7720140cf2c1f23109f01f75335744a68442",
+      "executed": true,
+      "workloads": [
+        "DEPLOYMENT",
+        "NEGATIVE",
+        "OBSERVATION",
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/abap/3_structures/structure_parser.ts",
+      "start": 1200,
+      "end": 1714,
+      "kind": "MethodDeclaration",
+      "symbol": "StructureParser.findStructureForFile",
+      "line": 33,
+      "sha256": "a66bfe7e235b9b1dcba6fffe2a1833174550b7441ed0c888028541e69e6f2ec9",
+      "executed": true,
+      "workloads": [
+        "DEPLOYMENT",
+        "NEGATIVE",
+        "OBSERVATION",
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/abap/3_structures/structure_parser.ts",
+      "start": 1718,
+      "end": 2703,
+      "kind": "MethodDeclaration",
+      "symbol": "StructureParser.runFile",
+      "line": 47,
+      "sha256": "01880132c915dd980afca090db0d8a2776722cc86a03116bde366d3c89592505",
+      "executed": true,
+      "workloads": [
+        "DEPLOYMENT",
+        "NEGATIVE",
+        "OBSERVATION",
+        "UPSTREAM"
+      ]
+    },
+    {
       "file": "src/abap/3_structures/structures/_combi.ts",
       "start": 350,
       "end": 615,
@@ -15963,6 +16523,60 @@
     },
     {
       "file": "src/abap/5_syntax/_builtin.ts",
+      "start": 24398,
+      "end": 24747,
+      "kind": "MethodDeclaration",
+      "symbol": "BuiltIn.buildDefinition",
+      "line": 1040,
+      "sha256": "d67e704bc69b63a1f5ea9dc2c15168b50afebe08e0a683a03bde1f943cf6055d",
+      "executed": true,
+      "workloads": [
+        "DEPLOYMENT",
+        "NEGATIVE",
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/abap/5_syntax/_builtin.ts",
+      "start": 24751,
+      "end": 25059,
+      "kind": "MethodDeclaration",
+      "symbol": "BuiltIn.searchBuiltin",
+      "line": 1051,
+      "sha256": "4169b087eb90bab9b9c54600187e0f20548ea7f13eb1d489c22dbb087d028a7a",
+      "executed": true,
+      "workloads": [
+        "DEPLOYMENT",
+        "NEGATIVE",
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/abap/5_syntax/_builtin.ts",
+      "start": 25456,
+      "end": 25645,
+      "kind": "MethodDeclaration",
+      "symbol": "BuiltIn.hasUnnamedArgument",
+      "line": 1070,
+      "sha256": "615faedba78030f442a3ea482e4bbdb451a659cfed4102136fb8645d42d5ab2c",
+      "executed": true,
+      "workloads": [
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/abap/5_syntax/_builtin.ts",
+      "start": 25649,
+      "end": 25927,
+      "kind": "MethodDeclaration",
+      "symbol": "BuiltIn.isPredicate",
+      "line": 1077,
+      "sha256": "dcd5f5a27c9725becfef69995a3c671f6104e758faa0f7373ca95392122be0da",
+      "executed": false,
+      "workloads": []
+    },
+    {
+      "file": "src/abap/5_syntax/_builtin.ts",
       "start": 25931,
       "end": 26668,
       "kind": "MethodDeclaration",
@@ -16033,6 +16647,38 @@
       "symbol": "BuiltIn.buildConstant",
       "line": 1365,
       "sha256": "b6b365cc14b810f8cf12d710d6ee05f03526b746483ed15589be5bf79f6ddfd3",
+      "executed": true,
+      "workloads": [
+        "DEPLOYMENT",
+        "NEGATIVE",
+        "OBSERVATION",
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/abap/5_syntax/_current_scope.ts",
+      "start": 1608,
+      "end": 2076,
+      "kind": "MethodDeclaration",
+      "symbol": "CurrentScope.buildDefault",
+      "line": 35,
+      "sha256": "5dc6c13bd1df6cbe869ecb48d883b70bff8c5986ea5674ca9504098ff7da961d",
+      "executed": true,
+      "workloads": [
+        "DEPLOYMENT",
+        "NEGATIVE",
+        "OBSERVATION",
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/abap/5_syntax/_current_scope.ts",
+      "start": 2080,
+      "end": 2296,
+      "kind": "MethodDeclaration",
+      "symbol": "CurrentScope.addBuiltIn",
+      "line": 51,
+      "sha256": "f9fa4bb8a35e6de7c1cb87a1f03810df7f51bec644dc6898839ad2b75255e1cb",
       "executed": true,
       "workloads": [
         "DEPLOYMENT",
@@ -18073,6 +18719,647 @@
       ]
     },
     {
+      "file": "src/abap/5_syntax/expressions/attribute_chain.ts",
+      "start": 988,
+      "end": 5612,
+      "kind": "MethodDeclaration",
+      "symbol": "AttributeChain.runSyntax",
+      "line": 19,
+      "sha256": "937f7dfff1d5a4e938504ef8700d7512362dfac0ad4b4f80764f0e2f43c918d8",
+      "executed": true,
+      "workloads": [
+        "DEPLOYMENT",
+        "NEGATIVE",
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/abap/5_syntax/expressions/attribute_name.ts",
+      "start": 797,
+      "end": 4050,
+      "kind": "MethodDeclaration",
+      "symbol": "AttributeName.runSyntax",
+      "line": 16,
+      "sha256": "3e583f9d461d80149c592cdb195ab26ee8e7f06b7f816c720c24f00e14ba69dc",
+      "executed": true,
+      "workloads": [
+        "DEPLOYMENT",
+        "NEGATIVE",
+        "OBSERVATION",
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/abap/5_syntax/expressions/cast.ts",
+      "start": 552,
+      "end": 3155,
+      "kind": "MethodDeclaration",
+      "symbol": "Cast.runSyntax",
+      "line": 12,
+      "sha256": "7bc701c52b1ddfff4b50d39702f3ad223997ef48c2f9e88149806938fdeb1172",
+      "executed": true,
+      "workloads": [
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/abap/5_syntax/expressions/compare.ts",
+      "start": 624,
+      "end": 2673,
+      "kind": "MethodDeclaration",
+      "symbol": "Compare.runSyntax",
+      "line": 14,
+      "sha256": "50f9777a25d740f7facf844e59188e7053a31d74bd1655bc4adf0df93ac38cf0",
+      "executed": true,
+      "workloads": [
+        "DEPLOYMENT",
+        "NEGATIVE",
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/abap/5_syntax/expressions/compare.ts",
+      "start": 2864,
+      "end": 4902,
+      "kind": "MethodDeclaration",
+      "symbol": "Compare.checkInitialOperand",
+      "line": 62,
+      "sha256": "550caa0f1c3de449efa1ace6be871f802b0d37dadfb838221fbca4dc69136610",
+      "executed": true,
+      "workloads": [
+        "DEPLOYMENT",
+        "NEGATIVE",
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/abap/5_syntax/expressions/component_chain.ts",
+      "start": 639,
+      "end": 4685,
+      "kind": "MethodDeclaration",
+      "symbol": "ComponentChain.runSyntax",
+      "line": 13,
+      "sha256": "5d39e436031b391d226a47b4a2c3b8da4067801ed27931c057d5fb8ca11811d7",
+      "executed": true,
+      "workloads": [
+        "DEPLOYMENT",
+        "NEGATIVE",
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/abap/5_syntax/expressions/component_compare.ts",
+      "start": 396,
+      "end": 1473,
+      "kind": "MethodDeclaration",
+      "symbol": "ComponentCompare.runSyntax",
+      "line": 11,
+      "sha256": "3013009023a23b07f2aa92cebf0da23befda8d139e003230b76c50e4ade24693",
+      "executed": true,
+      "workloads": [
+        "DEPLOYMENT",
+        "NEGATIVE",
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/abap/5_syntax/expressions/component_compare_simple.ts",
+      "start": 396,
+      "end": 1617,
+      "kind": "MethodDeclaration",
+      "symbol": "ComponentCompareSimple.runSyntax",
+      "line": 11,
+      "sha256": "30a81920885af4ed87503dd5a9cadc0eaaa91d998c1794ada00acc7db1ce4aa3",
+      "executed": true,
+      "workloads": [
+        "DEPLOYMENT",
+        "NEGATIVE",
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/abap/5_syntax/expressions/component_cond.ts",
+      "start": 303,
+      "end": 842,
+      "kind": "MethodDeclaration",
+      "symbol": "ComponentCond.runSyntax",
+      "line": 9,
+      "sha256": "2912eee77e7b602dcde2a097db300c9704d34624da8fda6ef001ab170baac06c",
+      "executed": true,
+      "workloads": [
+        "DEPLOYMENT",
+        "NEGATIVE",
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/abap/5_syntax/expressions/component_name.ts",
+      "start": 256,
+      "end": 1746,
+      "kind": "MethodDeclaration",
+      "symbol": "ComponentName.runSyntax",
+      "line": 7,
+      "sha256": "29a9a91075c6ec07bdd0d95be7a754c066cf2f42e07b864da36d349114cbe2f4",
+      "executed": true,
+      "workloads": [
+        "DEPLOYMENT",
+        "NEGATIVE",
+        "OBSERVATION",
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/abap/5_syntax/expressions/cond.ts",
+      "start": 211,
+      "end": 594,
+      "kind": "MethodDeclaration",
+      "symbol": "Cond.runSyntax",
+      "line": 7,
+      "sha256": "aeaec28ffeea3e5d6b021320aae0ffc2280f7def02eea40bbdfe7c768711b828",
+      "executed": true,
+      "workloads": [
+        "DEPLOYMENT",
+        "NEGATIVE",
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/abap/5_syntax/expressions/cond_body.ts",
+      "start": 332,
+      "end": 1202,
+      "kind": "MethodDeclaration",
+      "symbol": "CondBody.runSyntax",
+      "line": 10,
+      "sha256": "a96782d95668c9421ff2d83ac80f2be2dd87c5cde50ca86643ef20fcd71be167",
+      "executed": true,
+      "workloads": [
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/abap/5_syntax/expressions/constant.ts",
+      "start": 264,
+      "end": 865,
+      "kind": "MethodDeclaration",
+      "symbol": "Constant.runSyntax",
+      "line": 7,
+      "sha256": "fb65ef82ab3bad7e057d32a27dad9ab29a1a060f409c96c705a70d9dbea7e469",
+      "executed": true,
+      "workloads": [
+        "DEPLOYMENT",
+        "NEGATIVE",
+        "OBSERVATION",
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/abap/5_syntax/expressions/conv_body.ts",
+      "start": 376,
+      "end": 1080,
+      "kind": "MethodDeclaration",
+      "symbol": "ConvBody.runSyntax",
+      "line": 10,
+      "sha256": "5ae7ca16a1237659c8cdaa689143957fa4361fdac65e0fe14e03b508e43d6fa4",
+      "executed": true,
+      "workloads": [
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/abap/5_syntax/expressions/corresponding_body.ts",
+      "start": 285,
+      "end": 1007,
+      "kind": "MethodDeclaration",
+      "symbol": "CorrespondingBody.runSyntax",
+      "line": 8,
+      "sha256": "521d908d457430a1adef2078f67975407f02741c5e929b0fde09463a75397ccb",
+      "executed": true,
+      "workloads": [
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/abap/5_syntax/expressions/data_definition.ts",
+      "start": 389,
+      "end": 1550,
+      "kind": "MethodDeclaration",
+      "symbol": "DataDefinition.runSyntax",
+      "line": 10,
+      "sha256": "73195073658ae659c66c8d8d6afb65c6cae01200b4f4bb3f148a6f71655bdd6f",
+      "executed": true,
+      "workloads": [
+        "DEPLOYMENT",
+        "NEGATIVE",
+        "OBSERVATION",
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/abap/5_syntax/expressions/database_table.ts",
+      "start": 320,
+      "end": 1396,
+      "kind": "MethodDeclaration",
+      "symbol": "DatabaseTable.runSyntax",
+      "line": 9,
+      "sha256": "81d85a4b78243e0f8b37bf551d8bc074c13c19ce71d5f2c6cd263aae59a68eee",
+      "executed": true,
+      "workloads": [
+        "DEPLOYMENT",
+        "NEGATIVE",
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/abap/5_syntax/expressions/default.ts",
+      "start": 303,
+      "end": 712,
+      "kind": "MethodDeclaration",
+      "symbol": "Default.runSyntax",
+      "line": 9,
+      "sha256": "91362413d37527a10b39bafe3a9004ce50150f39e0955defe3cdc6061bb0500d",
+      "executed": true,
+      "workloads": [
+        "DEPLOYMENT",
+        "NEGATIVE",
+        "OBSERVATION",
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/abap/5_syntax/expressions/dereference.ts",
+      "start": 301,
+      "end": 890,
+      "kind": "MethodDeclaration",
+      "symbol": "Dereference.runSyntax",
+      "line": 7,
+      "sha256": "6210ef7723de2b5e26a78bd95578a1d2004e841e88f0fa061ad4c5e7fe114a36",
+      "executed": true,
+      "workloads": [
+        "DEPLOYMENT",
+        "NEGATIVE",
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/abap/5_syntax/expressions/dynamic.ts",
+      "start": 266,
+      "end": 506,
+      "kind": "MethodDeclaration",
+      "symbol": "Dynamic.runSyntax",
+      "line": 8,
+      "sha256": "6fe993b9beecf6316f2f22b4802389a94732698363ff5290909e4b45e291386a",
+      "executed": true,
+      "workloads": [
+        "DEPLOYMENT",
+        "NEGATIVE",
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/abap/5_syntax/expressions/field_assignment.ts",
+      "start": 371,
+      "end": 1779,
+      "kind": "MethodDeclaration",
+      "symbol": "FieldAssignment.runSyntax",
+      "line": 10,
+      "sha256": "89b7e5efba0baba93b33a87483e5ae5dbf03e2ebd09bd7f30b4482e3dacc1dd9",
+      "executed": true,
+      "workloads": [
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/abap/5_syntax/expressions/field_chain.ts",
+      "start": 1138,
+      "end": 7239,
+      "kind": "MethodDeclaration",
+      "symbol": "FieldChain.runSyntax",
+      "line": 22,
+      "sha256": "46002c015aff681d6ec55618dd01b204ec51a9c27690ca06d3cebccf7397a509",
+      "executed": true,
+      "workloads": [
+        "DEPLOYMENT",
+        "NEGATIVE",
+        "OBSERVATION",
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/abap/5_syntax/expressions/field_chain.ts",
+      "start": 7263,
+      "end": 8984,
+      "kind": "MethodDeclaration",
+      "symbol": "FieldChain.findTop",
+      "line": 154,
+      "sha256": "7fc95f48e1f72960bb43cab2d4fdd145ddaef5b557595bab37690feb3e8ec34e",
+      "executed": true,
+      "workloads": [
+        "DEPLOYMENT",
+        "NEGATIVE",
+        "OBSERVATION",
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/abap/5_syntax/expressions/field_length.ts",
+      "start": 270,
+      "end": 805,
+      "kind": "MethodDeclaration",
+      "symbol": "FieldLength.runSyntax",
+      "line": 8,
+      "sha256": "1c69c50283899e294123c29353ac83809a4afea5f58e0eb29539dde2844a422d",
+      "executed": true,
+      "workloads": [
+        "DEPLOYMENT",
+        "NEGATIVE",
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/abap/5_syntax/expressions/field_offset.ts",
+      "start": 270,
+      "end": 631,
+      "kind": "MethodDeclaration",
+      "symbol": "FieldOffset.runSyntax",
+      "line": 8,
+      "sha256": "0427007d4e35a4f564188ef792e7a8490e7ca2f571faccdf22e55a16e24872f1",
+      "executed": true,
+      "workloads": [
+        "DEPLOYMENT",
+        "NEGATIVE",
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/abap/5_syntax/expressions/filter_body.ts",
+      "start": 371,
+      "end": 1120,
+      "kind": "MethodDeclaration",
+      "symbol": "FilterBody.runSyntax",
+      "line": 10,
+      "sha256": "5633515341e53567766f330a38e952a437eb67ba75712542a0ab3b8f0ac2828b",
+      "executed": true,
+      "workloads": [
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/abap/5_syntax/expressions/for.ts",
+      "start": 665,
+      "end": 2399,
+      "kind": "MethodDeclaration",
+      "symbol": "For.runSyntax",
+      "line": 16,
+      "sha256": "512f9d988aa2973d956f91e6c392bea1735da145198b4647acfd06b7e8c8fcdb",
+      "executed": true,
+      "workloads": [
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/abap/5_syntax/expressions/form_param.ts",
+      "start": 677,
+      "end": 3256,
+      "kind": "MethodDeclaration",
+      "symbol": "FormParam.runSyntax",
+      "line": 12,
+      "sha256": "ba46908dbfa941f95b214f809fc11c4e94deab5b0192ae405d711338e2adcdaf",
+      "executed": true,
+      "workloads": [
+        "DEPLOYMENT",
+        "NEGATIVE",
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/abap/5_syntax/expressions/fstarget.ts",
+      "start": 339,
+      "end": 1103,
+      "kind": "MethodDeclaration",
+      "symbol": "FSTarget.runSyntax",
+      "line": 9,
+      "sha256": "1ddbc1ac8445e94a83663218c3d37656f77166479bd9ec53abfe91edb57d7b40",
+      "executed": true,
+      "workloads": [
+        "DEPLOYMENT",
+        "NEGATIVE",
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/abap/5_syntax/expressions/function_parameters.ts",
+      "start": 418,
+      "end": 2282,
+      "kind": "MethodDeclaration",
+      "symbol": "FunctionParameters.runSyntax",
+      "line": 11,
+      "sha256": "9dc8a7643108793239700fec17e302523c1159bb3c0a327164f5143290c63179",
+      "executed": true,
+      "workloads": [
+        "DEPLOYMENT",
+        "NEGATIVE",
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/abap/5_syntax/expressions/inline_data.ts",
+      "start": 550,
+      "end": 2309,
+      "kind": "MethodDeclaration",
+      "symbol": "InlineData.runSyntax",
+      "line": 10,
+      "sha256": "3405c35475fde15013f71d4d68d41742199a7591e1d694225afd8371904ee259",
+      "executed": true,
+      "workloads": [
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/abap/5_syntax/expressions/inline_data.ts",
+      "start": 2574,
+      "end": 3100,
+      "kind": "MethodDeclaration",
+      "symbol": "InlineData.stripDerivedFromConstant",
+      "line": 47,
+      "sha256": "b8a2af0771521be94db0cb6a43c5d97467c3c447d328d22a71851a2a21403e98",
+      "executed": true,
+      "workloads": [
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/abap/5_syntax/expressions/inline_field_definition.ts",
+      "start": 604,
+      "end": 2014,
+      "kind": "MethodDeclaration",
+      "symbol": "InlineFieldDefinition.runSyntax",
+      "line": 13,
+      "sha256": "3be27dd538d2c09e90f83fdf0e8a3e4b775817af0fb462be25eee3904f3d2566",
+      "executed": true,
+      "workloads": [
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/abap/5_syntax/expressions/inline_fs.ts",
+      "start": 427,
+      "end": 1576,
+      "kind": "MethodDeclaration",
+      "symbol": "InlineFS.runSyntax",
+      "line": 10,
+      "sha256": "c21bf1de47f2d1e1e84986c1bffb1bf3ac56398d67b6b5ab94c6c7891469df7c",
+      "executed": true,
+      "workloads": [
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/abap/5_syntax/expressions/inline_loop_definition.ts",
+      "start": 506,
+      "end": 2659,
+      "kind": "MethodDeclaration",
+      "symbol": "InlineLoopDefinition.runSyntax",
+      "line": 11,
+      "sha256": "4fbee555c5220486dc9c10b7448d99d8158f95a02210b5cd01411b405f340ff2",
+      "executed": true,
+      "workloads": [
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/abap/5_syntax/expressions/let.ts",
+      "start": 282,
+      "end": 740,
+      "kind": "MethodDeclaration",
+      "symbol": "Let.runSyntax",
+      "line": 8,
+      "sha256": "a3e2a3d2eee41a1c139af03e082c16a4d30f2e981acead1f95a6977edf7a90ec",
+      "executed": true,
+      "workloads": [
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/abap/5_syntax/expressions/loop_group_by.ts",
+      "start": 426,
+      "end": 1311,
+      "kind": "MethodDeclaration",
+      "symbol": "LoopGroupBy.runSyntax",
+      "line": 12,
+      "sha256": "cbdc61b4801c7c0d62fb78b24c89dfdc45df5ff8e9783ef9b01abc280a8aedb8",
+      "executed": true,
+      "workloads": [
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/abap/5_syntax/expressions/message_source.ts",
+      "start": 218,
+      "end": 1667,
+      "kind": "MethodDeclaration",
+      "symbol": "MessageSource.runSyntax",
+      "line": 7,
+      "sha256": "0db7f185c0bb3e44cce73c5ac42945e029cf4e5a036a9bb4176c22757b696318",
+      "executed": true,
+      "workloads": [
+        "DEPLOYMENT",
+        "NEGATIVE",
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/abap/5_syntax/expressions/method_call_body.ts",
+      "start": 447,
+      "end": 1048,
+      "kind": "MethodDeclaration",
+      "symbol": "MethodCallBody.runSyntax",
+      "line": 12,
+      "sha256": "bb11d558ad251a2e30cb2898bea942373bd8807b65627f412671ff206d7bcb40",
+      "executed": true,
+      "workloads": [
+        "DEPLOYMENT",
+        "NEGATIVE",
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/abap/5_syntax/expressions/method_call_chain.ts",
+      "start": 809,
+      "end": 6356,
+      "kind": "MethodDeclaration",
+      "symbol": "MethodCallChain.runSyntax",
+      "line": 18,
+      "sha256": "37200a5b64b18893f03cb07f3fb0cefddea1cf028e32341ac88acf3fcab5b9c4",
+      "executed": true,
+      "workloads": [
+        "DEPLOYMENT",
+        "NEGATIVE",
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/abap/5_syntax/expressions/method_call_chain.ts",
+      "start": 6400,
+      "end": 8149,
+      "kind": "MethodDeclaration",
+      "symbol": "MethodCallChain.findTop",
+      "line": 135,
+      "sha256": "18dfb1bac78b37774ac6418bc78fe5c6619839ab1865d6d517a5980e71900f9e",
+      "executed": true,
+      "workloads": [
+        "DEPLOYMENT",
+        "NEGATIVE",
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/abap/5_syntax/expressions/method_call_param.ts",
+      "start": 715,
+      "end": 4602,
+      "kind": "MethodDeclaration",
+      "symbol": "MethodCallParam.runSyntax",
+      "line": 16,
+      "sha256": "042083d6a358c03622d785f15f943ddeed903cea22da82f177f02fbad025ecb2",
+      "executed": true,
+      "workloads": [
+        "DEPLOYMENT",
+        "NEGATIVE",
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/abap/5_syntax/expressions/method_def_returning.ts",
+      "start": 417,
+      "end": 1540,
+      "kind": "MethodDeclaration",
+      "symbol": "MethodDefReturning.runSyntax",
+      "line": 10,
+      "sha256": "51178f11990f05ecd507418aea947d87c326d6315e2200c9f628cf27976a7e17",
+      "executed": true,
+      "workloads": [
+        "DEPLOYMENT",
+        "NEGATIVE",
+        "OBSERVATION",
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/abap/5_syntax/expressions/method_param.ts",
+      "start": 536,
+      "end": 2311,
+      "kind": "MethodDeclaration",
+      "symbol": "MethodParam.runSyntax",
+      "line": 12,
+      "sha256": "2e44d97059c7177be5a8bce095f6f441e00581c2c056567b7fa4c2cd35e9ba5e",
+      "executed": true,
+      "workloads": [
+        "DEPLOYMENT",
+        "NEGATIVE",
+        "OBSERVATION",
+        "UPSTREAM"
+      ]
+    },
+    {
       "file": "src/abap/5_syntax/expressions/method_parameters.ts",
       "start": 1008,
       "end": 1112,
@@ -18204,6 +19491,711 @@
       "workloads": [
         "DEPLOYMENT",
         "NEGATIVE",
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/abap/5_syntax/expressions/method_source.ts",
+      "start": 1002,
+      "end": 7122,
+      "kind": "MethodDeclaration",
+      "symbol": "MethodSource.runSyntax",
+      "line": 21,
+      "sha256": "4a246055f6969326613a542f31c21d2937c11bf34ee3472b6fa5a3e6f63cdfa0",
+      "executed": true,
+      "workloads": [
+        "DEPLOYMENT",
+        "NEGATIVE",
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/abap/5_syntax/expressions/method_source.ts",
+      "start": 7166,
+      "end": 8882,
+      "kind": "MethodDeclaration",
+      "symbol": "MethodSource.findTop",
+      "line": 160,
+      "sha256": "edb7a7b73a4cb0491e31cc7631cebd83ff8a621aa8195aa50fc524fe7dc6e57f",
+      "executed": true,
+      "workloads": [
+        "DEPLOYMENT",
+        "NEGATIVE",
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/abap/5_syntax/expressions/new_object.ts",
+      "start": 867,
+      "end": 5450,
+      "kind": "MethodDeclaration",
+      "symbol": "NewObject.runSyntax",
+      "line": 18,
+      "sha256": "9a961b5eda49260f5ed35336e8fa3b7d49cc0da507c33500b2fca8a71f32bea4",
+      "executed": true,
+      "workloads": [
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/abap/5_syntax/expressions/new_object.ts",
+      "start": 5454,
+      "end": 7308,
+      "kind": "MethodDeclaration",
+      "symbol": "NewObject.parameters",
+      "line": 126,
+      "sha256": "49835ec8221989a988a7b606ff233e7299f7425c1a3733c420112ad41bed8cd6",
+      "executed": true,
+      "workloads": [
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/abap/5_syntax/expressions/new_object.ts",
+      "start": 7312,
+      "end": 7755,
+      "kind": "MethodDeclaration",
+      "symbol": "NewObject.defaultImportingType",
+      "line": 165,
+      "sha256": "ca9ae74774140c7e343c241e5b7adb4e1b44f79feb3623b0d09eee82a7c6d61e",
+      "executed": true,
+      "workloads": [
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/abap/5_syntax/expressions/raise_with.ts",
+      "start": 214,
+      "end": 426,
+      "kind": "MethodDeclaration",
+      "symbol": "RaiseWith.runSyntax",
+      "line": 7,
+      "sha256": "fbe79e764d5af0241368f5bc51e82dc1596be0fd4665c46d2f3fc5f8b2578b73",
+      "executed": true,
+      "workloads": [
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/abap/5_syntax/expressions/reduce_body.ts",
+      "start": 541,
+      "end": 2301,
+      "kind": "MethodDeclaration",
+      "symbol": "ReduceBody.runSyntax",
+      "line": 14,
+      "sha256": "a7666c88a29cdd77f53a46418b18980897173e7a680596b556d16b06dfff82d1",
+      "executed": true,
+      "workloads": [
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/abap/5_syntax/expressions/reduce_next.ts",
+      "start": 248,
+      "end": 615,
+      "kind": "MethodDeclaration",
+      "symbol": "ReduceNext.runSyntax",
+      "line": 8,
+      "sha256": "436e1050045b88e387892a22e15fca8521117bcf73396529bbe5515ccbec6ef8",
+      "executed": true,
+      "workloads": [
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/abap/5_syntax/expressions/select.ts",
+      "start": 1299,
+      "end": 6928,
+      "kind": "MethodDeclaration",
+      "symbol": "Select.runSyntax",
+      "line": 27,
+      "sha256": "b24251a4c4c0b95fd5bb233bdc4b4b01c18f16558f155a735a7651b7ea43c992",
+      "executed": true,
+      "workloads": [
+        "DEPLOYMENT",
+        "NEGATIVE",
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/abap/5_syntax/expressions/select.ts",
+      "start": 6932,
+      "end": 7094,
+      "kind": "MethodDeclaration",
+      "symbol": "Select.upToUsesHostVariable",
+      "line": 154,
+      "sha256": "c5a95694af75820d83f523bb44473d18a43e4319714a20f7ee283549bd7314d0",
+      "executed": true,
+      "workloads": [
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/abap/5_syntax/expressions/select.ts",
+      "start": 7098,
+      "end": 7905,
+      "kind": "MethodDeclaration",
+      "symbol": "Select.buildUpToRowsFix",
+      "line": 158,
+      "sha256": "e02bc48b5fa8315a4c7e947cc18c8f0c4c6d9f3913615c779bde9ee9e82b4a7e",
+      "executed": true,
+      "workloads": [
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/abap/5_syntax/expressions/select.ts",
+      "start": 7966,
+      "end": 9077,
+      "kind": "MethodDeclaration",
+      "symbol": "Select.isStrictMode",
+      "line": 183,
+      "sha256": "10571016aa604b04a3dc36b73c0316584353664ffd3b42ee3a60f78b20e56644",
+      "executed": true,
+      "workloads": [
+        "DEPLOYMENT",
+        "NEGATIVE",
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/abap/5_syntax/expressions/select.ts",
+      "start": 9081,
+      "end": 9756,
+      "kind": "MethodDeclaration",
+      "symbol": "Select.strictModeChecks",
+      "line": 218,
+      "sha256": "6979597d813280e5dbc6b823d335888d37c0705612dd5958aab3e4bd989b96dd",
+      "executed": true,
+      "workloads": [
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/abap/5_syntax/expressions/select.ts",
+      "start": 9760,
+      "end": 13056,
+      "kind": "MethodDeclaration",
+      "symbol": "Select.handleInto",
+      "line": 235,
+      "sha256": "5d1764ea264370d14d2d2afa07e546bb17be58310e4a225a79a86bf2c4fcd9ee",
+      "executed": true,
+      "workloads": [
+        "DEPLOYMENT",
+        "NEGATIVE",
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/abap/5_syntax/expressions/select.ts",
+      "start": 13060,
+      "end": 13370,
+      "kind": "MethodDeclaration",
+      "symbol": "Select.countResultType",
+      "line": 319,
+      "sha256": "c48350089b49ffbf0359eee518a040f200d595ff93a11008ef98506fb472d1a0",
+      "executed": true,
+      "workloads": [
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/abap/5_syntax/expressions/select.ts",
+      "start": 13374,
+      "end": 16104,
+      "kind": "MethodDeclaration",
+      "symbol": "Select.buildStructureType",
+      "line": 329,
+      "sha256": "ea16adcf1ab908a9489d8f2f6fe789f36abb6678a48b4d70d4af017074a09c0e",
+      "executed": true,
+      "workloads": [
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/abap/5_syntax/expressions/select.ts",
+      "start": 16108,
+      "end": 18567,
+      "kind": "MethodDeclaration",
+      "symbol": "Select.buildTableType",
+      "line": 398,
+      "sha256": "302e6a0988b10bb15205c9023170d621d32285d061edc7f820a6681ada3d0587",
+      "executed": true,
+      "workloads": [
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/abap/5_syntax/expressions/select.ts",
+      "start": 18571,
+      "end": 19213,
+      "kind": "MethodDeclaration",
+      "symbol": "Select.buildDatabaseSourceInfos",
+      "line": 461,
+      "sha256": "a3530ec9d1a6a5e99adb744e8ffe2c42d9b740ed1ee1b08f7e92b03294e7ea69",
+      "executed": true,
+      "workloads": [
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/abap/5_syntax/expressions/select.ts",
+      "start": 19217,
+      "end": 20165,
+      "kind": "MethodDeclaration",
+      "symbol": "Select.findFieldType",
+      "line": 473,
+      "sha256": "b56244b4d06dced868e4d210a32237a4a417f85a474f3e11436a7af92cded714",
+      "executed": true,
+      "workloads": [
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/abap/5_syntax/expressions/select.ts",
+      "start": 20169,
+      "end": 21094,
+      "kind": "MethodDeclaration",
+      "symbol": "Select.findFields",
+      "line": 499,
+      "sha256": "497c3ca2ca8619e351ad90b4f6856e91311842673457755ac21c5e7ac145951b",
+      "executed": true,
+      "workloads": [
+        "DEPLOYMENT",
+        "NEGATIVE",
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/abap/5_syntax/expressions/source.ts",
+      "start": 2107,
+      "end": 14581,
+      "kind": "MethodDeclaration",
+      "symbol": "Source.runSyntax",
+      "line": 43,
+      "sha256": "9a93adde1df09becb0e25038307bec417e69f257c8fc3e3731e09a49a9a0af9b",
+      "executed": true,
+      "workloads": [
+        "DEPLOYMENT",
+        "NEGATIVE",
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/abap/5_syntax/expressions/source.ts",
+      "start": 14619,
+      "end": 14896,
+      "kind": "MethodDeclaration",
+      "symbol": "Source.traverseRemainingChildren",
+      "line": 339,
+      "sha256": "9e8a332706b92baf080da4a9a317074dd07b083ebd6cae89d243cb76a02e9ee1",
+      "executed": true,
+      "workloads": [
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/abap/5_syntax/expressions/source.ts",
+      "start": 14900,
+      "end": 15549,
+      "kind": "MethodDeclaration",
+      "symbol": "Source.infer",
+      "line": 346,
+      "sha256": "8840817ea53072317909c36ce474280f8235b6d7075797d3b5e6ffd01a649f1d",
+      "executed": true,
+      "workloads": [
+        "DEPLOYMENT",
+        "NEGATIVE",
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/abap/5_syntax/expressions/source.ts",
+      "start": 15917,
+      "end": 16706,
+      "kind": "MethodDeclaration",
+      "symbol": "Source.calculationType",
+      "line": 369,
+      "sha256": "835ebb2118ae09cd64416d70da5706227b23e874c623a029b1b200a043148f97",
+      "executed": true,
+      "workloads": [
+        "DEPLOYMENT",
+        "NEGATIVE",
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/abap/5_syntax/expressions/source.ts",
+      "start": 16710,
+      "end": 17179,
+      "kind": "MethodDeclaration",
+      "symbol": "Source.numericRank",
+      "line": 391,
+      "sha256": "d9df32a9c620d96d50ffafc6ee2a8374926cfd61a98585190683d20aa41f6e48",
+      "executed": true,
+      "workloads": [
+        "DEPLOYMENT",
+        "NEGATIVE",
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/abap/5_syntax/expressions/source.ts",
+      "start": 17183,
+      "end": 18703,
+      "kind": "MethodDeclaration",
+      "symbol": "Source.addIfInferred",
+      "line": 408,
+      "sha256": "ebb19cf17bd2a8a277545186f8b19225ba8734715637c3494921f4caccb5b267",
+      "executed": true,
+      "workloads": [
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/abap/5_syntax/expressions/source.ts",
+      "start": 18707,
+      "end": 20167,
+      "kind": "MethodDeclaration",
+      "symbol": "Source.determineType",
+      "line": 444,
+      "sha256": "6e9ca5af3524e50d0184b2993ab2beeeca85c215025596ac22cda3de5629307c",
+      "executed": true,
+      "workloads": [
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/abap/5_syntax/expressions/source.ts",
+      "start": 20267,
+      "end": 20684,
+      "kind": "MethodDeclaration",
+      "symbol": "Source.isNewObjectDereference",
+      "line": 484,
+      "sha256": "e5839148e8dafa8550aa1cd2ccb12d6f6964cf52211d61baaa390382eee0701a",
+      "executed": true,
+      "workloads": [
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/abap/5_syntax/expressions/source_field.ts",
+      "start": 301,
+      "end": 1216,
+      "kind": "MethodDeclaration",
+      "symbol": "SourceField.runSyntax",
+      "line": 8,
+      "sha256": "0dd22877968492c4e26433da4a6085683d8a8122c069e0bd9c6a2e6139008068",
+      "executed": true,
+      "workloads": [
+        "DEPLOYMENT",
+        "NEGATIVE",
+        "OBSERVATION",
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/abap/5_syntax/expressions/source_field_symbol.ts",
+      "start": 307,
+      "end": 865,
+      "kind": "MethodDeclaration",
+      "symbol": "SourceFieldSymbol.runSyntax",
+      "line": 8,
+      "sha256": "576244fa860810e5ade9eee53b88c2370156d9624068dd7a4500b3e7b834d8ba",
+      "executed": true,
+      "workloads": [
+        "DEPLOYMENT",
+        "NEGATIVE",
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/abap/5_syntax/expressions/sql_compare.ts",
+      "start": 660,
+      "end": 3148,
+      "kind": "MethodDeclaration",
+      "symbol": "SQLCompare.runSyntax",
+      "line": 16,
+      "sha256": "3532d635411608e7036322a205184e03b934c4a4e86176848d283c80ee286bfe",
+      "executed": true,
+      "workloads": [
+        "DEPLOYMENT",
+        "NEGATIVE",
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/abap/5_syntax/expressions/sql_compare.ts",
+      "start": 3152,
+      "end": 3492,
+      "kind": "MethodDeclaration",
+      "symbol": "SQLCompare.findType",
+      "line": 79,
+      "sha256": "a3d28f2af71207520ff9a47f01560c5d225182532a5606647aaabc9a47fc2370",
+      "executed": true,
+      "workloads": [
+        "DEPLOYMENT",
+        "NEGATIVE",
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/abap/5_syntax/expressions/sql_for_all_entries.ts",
+      "start": 303,
+      "end": 1023,
+      "kind": "MethodDeclaration",
+      "symbol": "SQLForAllEntries.runSyntax",
+      "line": 9,
+      "sha256": "39f6a517337621b0a4d5443542acbedeec72e68ca5ca21560936a6d76525e504",
+      "executed": true,
+      "workloads": [
+        "DEPLOYMENT",
+        "NEGATIVE",
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/abap/5_syntax/expressions/sql_from.ts",
+      "start": 299,
+      "end": 869,
+      "kind": "MethodDeclaration",
+      "symbol": "SQLFrom.runSyntax",
+      "line": 9,
+      "sha256": "ec8f404ea99a5018b7ebc115293848a9314d959dd7845b51db9f2b6709725163",
+      "executed": true,
+      "workloads": [
+        "DEPLOYMENT",
+        "NEGATIVE",
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/abap/5_syntax/expressions/sql_in.ts",
+      "start": 512,
+      "end": 1899,
+      "kind": "MethodDeclaration",
+      "symbol": "SQLIn.runSyntax",
+      "line": 13,
+      "sha256": "8bd63c12fb01a9bfe304df083c9364ff2ebea1f32e407681eeef0b6623bbbfdf",
+      "executed": true,
+      "workloads": [
+        "DEPLOYMENT",
+        "NEGATIVE",
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/abap/5_syntax/expressions/sql_in.ts",
+      "start": 1991,
+      "end": 2341,
+      "kind": "MethodDeclaration",
+      "symbol": "SQLIn.isRangeRow",
+      "line": 53,
+      "sha256": "bb78a13d6a6cb6d16d9b78183a145534af79816b79107217c7ebafc732d754f4",
+      "executed": true,
+      "workloads": [
+        "DEPLOYMENT",
+        "NEGATIVE",
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/abap/5_syntax/expressions/sql_order_by.ts",
+      "start": 233,
+      "end": 448,
+      "kind": "MethodDeclaration",
+      "symbol": "SQLOrderBy.runSyntax",
+      "line": 8,
+      "sha256": "1ed17bad3352b3130763b9bbf1cd924d8dbf8245ef4923e45bf928248178cacb",
+      "executed": true,
+      "workloads": [
+        "DEPLOYMENT",
+        "NEGATIVE",
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/abap/5_syntax/expressions/sql_set_op_group.ts",
+      "start": 219,
+      "end": 664,
+      "kind": "MethodDeclaration",
+      "symbol": "SQLSetOpGroup.runSyntax",
+      "line": 8,
+      "sha256": "b40e46274bd6939c065ff95b24c08bca4262e0cfea489a46fb22f773be45a976",
+      "executed": true,
+      "workloads": [
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/abap/5_syntax/expressions/sql_source.ts",
+      "start": 293,
+      "end": 663,
+      "kind": "MethodDeclaration",
+      "symbol": "SQLSource.runSyntax",
+      "line": 9,
+      "sha256": "aed68284542a4f0437c1725b9f408b9a91f1b133a08cb429342a5e48c7845782",
+      "executed": true,
+      "workloads": [
+        "DEPLOYMENT",
+        "NEGATIVE",
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/abap/5_syntax/expressions/string_template.ts",
+      "start": 577,
+      "end": 3153,
+      "kind": "MethodDeclaration",
+      "symbol": "StringTemplate.runSyntax",
+      "line": 11,
+      "sha256": "10ab2c2f89b5f3322ff2dd062f72a3c4aea2f01d7b39f024e21af4867ba96fdd",
+      "executed": true,
+      "workloads": [
+        "DEPLOYMENT",
+        "NEGATIVE",
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/abap/5_syntax/expressions/string_template.ts",
+      "start": 3157,
+      "end": 3821,
+      "kind": "MethodDeclaration",
+      "symbol": "StringTemplate.validateEscapeSequences",
+      "line": 70,
+      "sha256": "a8a83cedd58cda19b94332d0bec35aa95fefcbcfb42b158ca343f57a6d071c92",
+      "executed": true,
+      "workloads": [
+        "DEPLOYMENT",
+        "NEGATIVE",
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/abap/5_syntax/expressions/switch_body.ts",
+      "start": 351,
+      "end": 1119,
+      "kind": "MethodDeclaration",
+      "symbol": "SwitchBody.runSyntax",
+      "line": 9,
+      "sha256": "68ee8abb06738766d1ecd35de39e924d9ed272d1dfa7671626c5f12baf969870",
+      "executed": true,
+      "workloads": [
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/abap/5_syntax/expressions/table_expression.ts",
+      "start": 354,
+      "end": 1380,
+      "kind": "MethodDeclaration",
+      "symbol": "TableExpression.runSyntax",
+      "line": 10,
+      "sha256": "6bc5c6ad263d2cb386f45b5bb48100d4e53abf050bdf31c0f97488ecca52d82e",
+      "executed": true,
+      "workloads": [
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/abap/5_syntax/expressions/target.ts",
+      "start": 1006,
+      "end": 6804,
+      "kind": "MethodDeclaration",
+      "symbol": "Target.runSyntax",
+      "line": 20,
+      "sha256": "b8ddfcda67691377984af27b096c7a3d7afbe39fa5b8915aa8d29063c91cbe05",
+      "executed": true,
+      "workloads": [
+        "DEPLOYMENT",
+        "NEGATIVE",
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/abap/5_syntax/expressions/target.ts",
+      "start": 6843,
+      "end": 8724,
+      "kind": "MethodDeclaration",
+      "symbol": "Target.findTop",
+      "line": 147,
+      "sha256": "06a5601e0a79fc0783dbd686d60c6a52b576a0fa44eba46cfb4056da9c8a1fb1",
+      "executed": true,
+      "workloads": [
+        "DEPLOYMENT",
+        "NEGATIVE",
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/abap/5_syntax/expressions/type_table.ts",
+      "start": 438,
+      "end": 1811,
+      "kind": "MethodDeclaration",
+      "symbol": "TypeTable.runSyntax",
+      "line": 11,
+      "sha256": "a068776fab0f825c1061f078a201d80281ab077778cc44752033490c63616c7f",
+      "executed": true,
+      "workloads": [
+        "DEPLOYMENT",
+        "NEGATIVE",
+        "OBSERVATION",
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/abap/5_syntax/expressions/type_table_key.ts",
+      "start": 274,
+      "end": 942,
+      "kind": "MethodDeclaration",
+      "symbol": "TypeTableKey.runSyntax",
+      "line": 7,
+      "sha256": "41853b89cf47efd6d0cf200d274a8531bf3ef49edc36352d817d441659e42ad5",
+      "executed": true,
+      "workloads": [
+        "DEPLOYMENT",
+        "NEGATIVE",
+        "OBSERVATION",
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/abap/5_syntax/expressions/value_body.ts",
+      "start": 542,
+      "end": 5588,
+      "kind": "MethodDeclaration",
+      "symbol": "ValueBody.runSyntax",
+      "line": 12,
+      "sha256": "759b3ec444b3ab0ce811f6288dbd21307d465f2b2395cc656ddd44d9ab0e60dc",
+      "executed": true,
+      "workloads": [
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/abap/5_syntax/expressions/value_body.ts",
+      "start": 5842,
+      "end": 6144,
+      "kind": "MethodDeclaration",
+      "symbol": "ValueBody.insertsUsingTableKey",
+      "line": 140,
+      "sha256": "60eca631b17b026fa90853332d22557198de3af4c796274d5b6f32857ce87d25",
+      "executed": true,
+      "workloads": [
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/abap/5_syntax/expressions/value_body.ts",
+      "start": 6148,
+      "end": 6480,
+      "kind": "MethodDeclaration",
+      "symbol": "ValueBody.characterOrHexLength",
+      "line": 148,
+      "sha256": "810a90b47c8c42de2c69d9ed50506dc4ad4876e0c4038e682c90dd7cc7e68323",
+      "executed": true,
+      "workloads": [
         "UPSTREAM"
       ]
     },
@@ -19215,6 +21207,21 @@
     },
     {
       "file": "src/abap/5_syntax/statements/create_object.ts",
+      "start": 5761,
+      "end": 6997,
+      "kind": "MethodDeclaration",
+      "symbol": "CreateObject.checkInstantiationAllowed",
+      "line": 131,
+      "sha256": "44cf6cf1c84b06790f4441b12dccc63cc3ce064d394b8df7590b03ed2b8209cb",
+      "executed": true,
+      "workloads": [
+        "DEPLOYMENT",
+        "NEGATIVE",
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/abap/5_syntax/statements/create_object.ts",
       "start": 7001,
       "end": 8976,
       "kind": "MethodDeclaration",
@@ -19972,6 +21979,21 @@
       "symbol": "Move.runSyntax",
       "line": 16,
       "sha256": "7f018087ca46c4d3daf6392fb7dce24bf08136c45230cc9e430758f4130437c0",
+      "executed": true,
+      "workloads": [
+        "DEPLOYMENT",
+        "NEGATIVE",
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/abap/5_syntax/statements/move.ts",
+      "start": 3630,
+      "end": 4544,
+      "kind": "MethodDeclaration",
+      "symbol": "Move.isRefInferIntoGenericFieldSymbol",
+      "line": 87,
+      "sha256": "4ae7b2772285fd6c8811dc5dc1078afdefa7c7777161eaff6b2f6a20c994f8a9",
       "executed": true,
       "workloads": [
         "DEPLOYMENT",
@@ -20780,6 +22802,35 @@
       ]
     },
     {
+      "file": "src/abap/5_syntax/structures/data.ts",
+      "start": 988,
+      "end": 3753,
+      "kind": "MethodDeclaration",
+      "symbol": "Data.runSyntax",
+      "line": 21,
+      "sha256": "6192bdb2c7a0db2b167973cb848177a356466653c6f1e1a6efdd9bd31c194220",
+      "executed": true,
+      "workloads": [
+        "DEPLOYMENT",
+        "NEGATIVE",
+        "OBSERVATION",
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/abap/5_syntax/structures/data.ts",
+      "start": 3757,
+      "end": 5610,
+      "kind": "MethodDeclaration",
+      "symbol": "Data.runCommonPartSyntax",
+      "line": 86,
+      "sha256": "387a53f081382e25107dfe73d33264619a2e416dff8a1652a8702b764e4bac9d",
+      "executed": true,
+      "workloads": [
+        "UPSTREAM"
+      ]
+    },
+    {
       "file": "src/abap/5_syntax/structures/statics.ts",
       "start": 594,
       "end": 3383,
@@ -21101,12 +23152,66 @@
     },
     {
       "file": "src/abap/abap_parser.ts",
+      "start": 2108,
+      "end": 2252,
+      "kind": "MethodDeclaration",
+      "symbol": "ABAPParser.isRelease",
+      "line": 55,
+      "sha256": "203de4498e2e57a9131b587ef71572290209d78dbd720ab88b4f60b408ce9cbb",
+      "executed": true,
+      "workloads": [
+        "DEPLOYMENT",
+        "NEGATIVE",
+        "OBSERVATION",
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/abap/abap_parser.ts",
       "start": 2296,
       "end": 3566,
       "kind": "MethodDeclaration",
       "symbol": "ABAPParser.parse",
       "line": 60,
       "sha256": "601d43a2b7e0db3851b483291ddd440330dd16c767738a81ce0642b445364273",
+      "executed": true,
+      "workloads": [
+        "DEPLOYMENT",
+        "NEGATIVE",
+        "OBSERVATION",
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/abap/artifacts.ts",
+      "start": 1158,
+      "end": 1423,
+      "kind": "MethodDeclaration",
+      "symbol": "ArtifactsABAP.getStructures",
+      "line": 54,
+      "sha256": "3c60af94d540b613c8649a3ac93b494fc327564984a276000ff83058de4d3456",
+      "executed": false,
+      "workloads": []
+    },
+    {
+      "file": "src/abap/artifacts.ts",
+      "start": 1427,
+      "end": 1713,
+      "kind": "MethodDeclaration",
+      "symbol": "ArtifactsABAP.getExpressions",
+      "line": 67,
+      "sha256": "b769df9e85d108dacdc51356e02a9715194c7a650a6ed8e73d0c244545f04006",
+      "executed": false,
+      "workloads": []
+    },
+    {
+      "file": "src/abap/artifacts.ts",
+      "start": 1717,
+      "end": 1982,
+      "kind": "MethodDeclaration",
+      "symbol": "ArtifactsABAP.getStatements",
+      "line": 80,
+      "sha256": "6585c1bc10914207364bd575d547cc86ec12c4328727f0cb18ae389af56da3bf",
       "executed": true,
       "workloads": [
         "DEPLOYMENT",
@@ -22410,6 +24515,17 @@
     },
     {
       "file": "src/abap/types/_typed_identifier.ts",
+      "start": 1361,
+      "end": 1567,
+      "kind": "MethodDeclaration",
+      "symbol": "TypedIdentifier.from",
+      "line": 38,
+      "sha256": "8c4f209c9edf0696b64b29ff984d51a1d2a17c9a0904f28ac3edf7f4629ac2e5",
+      "executed": false,
+      "workloads": []
+    },
+    {
+      "file": "src/abap/types/_typed_identifier.ts",
       "start": 2016,
       "end": 2100,
       "kind": "MethodDeclaration",
@@ -22572,6 +24688,22 @@
     },
     {
       "file": "src/abap/types/basic/any_type.ts",
+      "start": 180,
+      "end": 447,
+      "kind": "MethodDeclaration",
+      "symbol": "AnyType.get",
+      "line": 6,
+      "sha256": "fbde355b6efd20f751858d55ff48b1af39f9896904c4bcc6db7ed3ce610d0b8a",
+      "executed": true,
+      "workloads": [
+        "DEPLOYMENT",
+        "NEGATIVE",
+        "OBSERVATION",
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/abap/types/basic/any_type.ts",
       "start": 524,
       "end": 569,
       "kind": "MethodDeclaration",
@@ -22628,6 +24760,22 @@
       "sha256": "599d8637ec55203514c6aafd453f7766fd68f15718b564df4ba746cb5fac18dd",
       "executed": false,
       "workloads": []
+    },
+    {
+      "file": "src/abap/types/basic/cgeneric_type.ts",
+      "start": 158,
+      "end": 224,
+      "kind": "MethodDeclaration",
+      "symbol": "CGenericType.get",
+      "line": 6,
+      "sha256": "99dae46749fbe3198f1492038ad71735eeac5bf04c3cefd726bf2161d5130244",
+      "executed": true,
+      "workloads": [
+        "DEPLOYMENT",
+        "NEGATIVE",
+        "OBSERVATION",
+        "UPSTREAM"
+      ]
     },
     {
       "file": "src/abap/types/basic/cgeneric_type.ts",
@@ -22789,6 +24937,22 @@
       "sha256": "75a46d2ab070fea38b450be661819739295ac8f2e03f2b396e16aca6f44ffd61",
       "executed": false,
       "workloads": []
+    },
+    {
+      "file": "src/abap/types/basic/clike_type.ts",
+      "start": 152,
+      "end": 215,
+      "kind": "MethodDeclaration",
+      "symbol": "CLikeType.get",
+      "line": 6,
+      "sha256": "755170e2d536f9a10ddcef66594367e1e104a78c1d0ef8580a024d7aa22c0adf",
+      "executed": true,
+      "workloads": [
+        "DEPLOYMENT",
+        "NEGATIVE",
+        "OBSERVATION",
+        "UPSTREAM"
+      ]
     },
     {
       "file": "src/abap/types/basic/clike_type.ts",
@@ -23645,6 +25809,22 @@
     },
     {
       "file": "src/abap/types/basic/integer_type.ts",
+      "start": 188,
+      "end": 463,
+      "kind": "MethodDeclaration",
+      "symbol": "IntegerType.get",
+      "line": 6,
+      "sha256": "27e74fe307427d9701a123831097ff9c09516d92cf58da70b5166eed4020f696",
+      "executed": true,
+      "workloads": [
+        "DEPLOYMENT",
+        "NEGATIVE",
+        "OBSERVATION",
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/abap/types/basic/integer_type.ts",
       "start": 591,
       "end": 756,
       "kind": "MethodDeclaration",
@@ -23715,6 +25895,17 @@
       "symbol": "IntegerType.toCDS",
       "line": 46,
       "sha256": "84bf87a3b465c8727f8fed99cff772ad52cde1855652e19638271ce7d2871e58",
+      "executed": false,
+      "workloads": []
+    },
+    {
+      "file": "src/abap/types/basic/ngeneric_type.ts",
+      "start": 306,
+      "end": 372,
+      "kind": "MethodDeclaration",
+      "symbol": "NGenericType.get",
+      "line": 8,
+      "sha256": "273326ffd7f30919e29b0c5378639e1822e686ec7bcc104a4809ccd2d9c45346",
       "executed": false,
       "workloads": []
     },
@@ -24056,6 +26247,19 @@
     },
     {
       "file": "src/abap/types/basic/pgeneric_type.ts",
+      "start": 158,
+      "end": 224,
+      "kind": "MethodDeclaration",
+      "symbol": "PGenericType.get",
+      "line": 6,
+      "sha256": "15261c14606b6d1e3013e394b36e0ac97f06102f76c99e995e89d11b83e9050e",
+      "executed": true,
+      "workloads": [
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/abap/types/basic/pgeneric_type.ts",
       "start": 272,
       "end": 315,
       "kind": "MethodDeclaration",
@@ -24111,6 +26315,22 @@
     },
     {
       "file": "src/abap/types/basic/simple_type.ts",
+      "start": 154,
+      "end": 218,
+      "kind": "MethodDeclaration",
+      "symbol": "SimpleType.get",
+      "line": 6,
+      "sha256": "e7f2b9ec66047cc8d1c7006c37a5440b8c1c28ca83e50ac73c956f7acd0c48a3",
+      "executed": true,
+      "workloads": [
+        "DEPLOYMENT",
+        "NEGATIVE",
+        "OBSERVATION",
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/abap/types/basic/simple_type.ts",
       "start": 266,
       "end": 314,
       "kind": "MethodDeclaration",
@@ -24163,6 +26383,22 @@
       "sha256": "f197c8d864d1647dee473860b82fb488b41ee19a7f11ef2ef451dae992557802",
       "executed": false,
       "workloads": []
+    },
+    {
+      "file": "src/abap/types/basic/string_type.ts",
+      "start": 186,
+      "end": 459,
+      "kind": "MethodDeclaration",
+      "symbol": "StringType.get",
+      "line": 6,
+      "sha256": "21b4fd9421c07253aca18f8169321f18eac32b8c05039a15a9e1ce3c82b01ded",
+      "executed": true,
+      "workloads": [
+        "DEPLOYMENT",
+        "NEGATIVE",
+        "OBSERVATION",
+        "UPSTREAM"
+      ]
     },
     {
       "file": "src/abap/types/basic/string_type.ts",
@@ -24651,6 +26887,22 @@
     },
     {
       "file": "src/abap/types/basic/void_type.ts",
+      "start": 164,
+      "end": 493,
+      "kind": "MethodDeclaration",
+      "symbol": "VoidType.get",
+      "line": 6,
+      "sha256": "08434bfae50257df2244dbddcda15123ae1cac4654270f89ceb514d7c8562d51",
+      "executed": true,
+      "workloads": [
+        "DEPLOYMENT",
+        "NEGATIVE",
+        "OBSERVATION",
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/abap/types/basic/void_type.ts",
       "start": 777,
       "end": 845,
       "kind": "MethodDeclaration",
@@ -24727,6 +26979,21 @@
       "sha256": "c66858e95ef7f42a21bdbccb9d6cb0fa7198b90d31a87f728c08c366f306f0ea",
       "executed": false,
       "workloads": []
+    },
+    {
+      "file": "src/abap/types/basic/xgeneric_type.ts",
+      "start": 158,
+      "end": 224,
+      "kind": "MethodDeclaration",
+      "symbol": "XGenericType.get",
+      "line": 6,
+      "sha256": "a7c7c8d8ab1f96d8a81ce78f1d753dcc547bf688b3cbaec53d5fb4293dda34af",
+      "executed": true,
+      "workloads": [
+        "DEPLOYMENT",
+        "NEGATIVE",
+        "UPSTREAM"
+      ]
     },
     {
       "file": "src/abap/types/basic/xgeneric_type.ts",
@@ -24837,6 +27104,22 @@
       "sha256": "db222acbfe34b34cfbe3bdfe24d8dcb19648146b1e97733c96e0c4ba88bbefbd",
       "executed": false,
       "workloads": []
+    },
+    {
+      "file": "src/abap/types/basic/xstring_type.ts",
+      "start": 188,
+      "end": 463,
+      "kind": "MethodDeclaration",
+      "symbol": "XStringType.get",
+      "line": 6,
+      "sha256": "3bf9332f2b4492c5e92b59c17ed4ca7dabec3db3f7eba2ecce03909a1e7350e2",
+      "executed": true,
+      "workloads": [
+        "DEPLOYMENT",
+        "NEGATIVE",
+        "OBSERVATION",
+        "UPSTREAM"
+      ]
     },
     {
       "file": "src/abap/types/basic/xstring_type.ts",
@@ -26529,6 +28812,54 @@
       ]
     },
     {
+      "file": "src/artifacts_objects.ts",
+      "start": 208,
+      "end": 526,
+      "kind": "MethodDeclaration",
+      "symbol": "ArtifactsObjects.newObject",
+      "line": 8,
+      "sha256": "35aeaedb7b7aa7d9db79b05357ff0494df605b9000820b974c615fc571703bb5",
+      "executed": true,
+      "workloads": [
+        "DEPLOYMENT",
+        "NEGATIVE",
+        "OBSERVATION",
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/artifacts_objects.ts",
+      "start": 530,
+      "end": 815,
+      "kind": "MethodDeclaration",
+      "symbol": "ArtifactsObjects.buildObjectMap",
+      "line": 20,
+      "sha256": "60600506cb27de399926e1e11c7f3f02603e9965b8bc753c0c44e23261ecdc6d",
+      "executed": true,
+      "workloads": [
+        "DEPLOYMENT",
+        "NEGATIVE",
+        "OBSERVATION",
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/artifacts_rules.ts",
+      "start": 106,
+      "end": 491,
+      "kind": "MethodDeclaration",
+      "symbol": "ArtifactsRules.getRules",
+      "line": 6,
+      "sha256": "63be4ae807c921245dc2dbdc12ecf569e25639e29ee180013b910335db5b2b44",
+      "executed": true,
+      "workloads": [
+        "DEPLOYMENT",
+        "NEGATIVE",
+        "OBSERVATION",
+        "UPSTREAM"
+      ]
+    },
+    {
       "file": "src/cds/cds_determine_types.ts",
       "start": 255,
       "end": 3284,
@@ -26601,6 +28932,19 @@
       "symbol": "Result.get",
       "line": 55,
       "sha256": "7e84fd94408e72142568ca40c06cc7be521df1935c2ad6efc18822b932d2bd27",
+      "executed": true,
+      "workloads": [
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/cds/cds_lexer.ts",
+      "start": 1440,
+      "end": 5665,
+      "kind": "MethodDeclaration",
+      "symbol": "CDSLexer.run",
+      "line": 61,
+      "sha256": "3d08a8fc6023097cff96a94f693c6e0a9faeff24365a8d97dadbc666f0664984",
       "executed": true,
       "workloads": [
         "UPSTREAM"
@@ -27163,6 +29507,20 @@
       "sha256": "ea18ac7d7360232a145d18fed0060a9871522ab0fda15e451241650c1fd71277",
       "executed": true,
       "workloads": [
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/config.ts",
+      "start": 472,
+      "end": 2357,
+      "kind": "MethodDeclaration",
+      "symbol": "Config.getDefault",
+      "line": 11,
+      "sha256": "cc2a04c8855f50d10ba44f37a30af3ca8963d83a222bb4117b59f67c44dc9c40",
+      "executed": true,
+      "workloads": [
+        "OBSERVATION",
         "UPSTREAM"
       ]
     },
@@ -27928,6 +30286,133 @@
     },
     {
       "file": "src/edit_helper.ts",
+      "start": 2324,
+      "end": 2662,
+      "kind": "MethodDeclaration",
+      "symbol": "EditHelper.mergeList",
+      "line": 76,
+      "sha256": "261aa27ecbfbcbc1fb8e1e9e0c74fd10ee1e4e15a40a144006216fc35fd71ca7",
+      "executed": false,
+      "workloads": []
+    },
+    {
+      "file": "src/edit_helper.ts",
+      "start": 2666,
+      "end": 3068,
+      "kind": "MethodDeclaration",
+      "symbol": "EditHelper.merge",
+      "line": 89,
+      "sha256": "b6f34735bcbb485259c095befb66c3a0bce70f63f04be33d0b80e8bfba9f8bac",
+      "executed": true,
+      "workloads": [
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/edit_helper.ts",
+      "start": 3072,
+      "end": 3376,
+      "kind": "MethodDeclaration",
+      "symbol": "EditHelper.findStatement",
+      "line": 109,
+      "sha256": "252620486fa92fc1ebcf1be47e51609b27f4f6e13f07b26f08942cbc637a2ae7",
+      "executed": true,
+      "workloads": [
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/edit_helper.ts",
+      "start": 3380,
+      "end": 5772,
+      "kind": "MethodDeclaration",
+      "symbol": "EditHelper.deleteStatement",
+      "line": 121,
+      "sha256": "4310f6faad91cb98b2360dba8209bbdacdabc14ded7cd6a52dcd0bddc21b5ca4",
+      "executed": true,
+      "workloads": [
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/edit_helper.ts",
+      "start": 5776,
+      "end": 6086,
+      "kind": "MethodDeclaration",
+      "symbol": "EditHelper.firstAfterColon",
+      "line": 181,
+      "sha256": "d89cdac27f81093550b2f8b171a90352e94bfca422d6107a41f3d25152182a2c",
+      "executed": true,
+      "workloads": [
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/edit_helper.ts",
+      "start": 6090,
+      "end": 6327,
+      "kind": "MethodDeclaration",
+      "symbol": "EditHelper.deleteToken",
+      "line": 191,
+      "sha256": "495f701b2941c734e902a361aeec6f36d2f6433533d01f62171e383b928282c2",
+      "executed": false,
+      "workloads": []
+    },
+    {
+      "file": "src/edit_helper.ts",
+      "start": 6331,
+      "end": 6544,
+      "kind": "MethodDeclaration",
+      "symbol": "EditHelper.deleteRange",
+      "line": 197,
+      "sha256": "b8ae3cf169711fbd75f7c0cc197fa1008b775b4530146b5364ef589eaa2566ee",
+      "executed": true,
+      "workloads": [
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/edit_helper.ts",
+      "start": 6548,
+      "end": 6767,
+      "kind": "MethodDeclaration",
+      "symbol": "EditHelper.insertAt",
+      "line": 203,
+      "sha256": "00fada381424fa60b5bc6f2414c309ab68ba9b4d8de70933869fc768c493282f",
+      "executed": true,
+      "workloads": [
+        "NEGATIVE",
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/edit_helper.ts",
+      "start": 6771,
+      "end": 6935,
+      "kind": "MethodDeclaration",
+      "symbol": "EditHelper.replaceToken",
+      "line": 209,
+      "sha256": "5414b9fec23d14bc4770fb46eb43aed63ebbc5a1704bc561ae4cc7519eb5bf52",
+      "executed": true,
+      "workloads": [
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/edit_helper.ts",
+      "start": 6939,
+      "end": 7169,
+      "kind": "MethodDeclaration",
+      "symbol": "EditHelper.replaceRange",
+      "line": 213,
+      "sha256": "7cb5354d6a7c80c54dfdf84a81aeaaf6c4e2edd1e48915784fc19bb0c318fe30",
+      "executed": true,
+      "workloads": [
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/edit_helper.ts",
       "start": 7173,
       "end": 8395,
       "kind": "FunctionDeclaration",
@@ -28038,6 +30523,115 @@
       "symbol": "MemoryFile.getRawRows",
       "line": 15,
       "sha256": "4cb6eaa02f6f1356c40b98f47d39797ad654cc1cd5b5af1b18d3bc3a2f9c8530",
+      "executed": true,
+      "workloads": [
+        "NEGATIVE",
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/issue.ts",
+      "start": 966,
+      "end": 1358,
+      "kind": "MethodDeclaration",
+      "symbol": "Issue.atRow",
+      "line": 35,
+      "sha256": "d5172c73c223926459a64379aa359dc9a605f9a648c3ca2457c5ce64733a6aad",
+      "executed": true,
+      "workloads": [
+        "NEGATIVE",
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/issue.ts",
+      "start": 1362,
+      "end": 1670,
+      "kind": "MethodDeclaration",
+      "symbol": "Issue.atStatement",
+      "line": 49,
+      "sha256": "af6135b9a747f06ad4914e036d235183e3905669f264c67cec9747a962a67040",
+      "executed": true,
+      "workloads": [
+        "NEGATIVE",
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/issue.ts",
+      "start": 1674,
+      "end": 2103,
+      "kind": "MethodDeclaration",
+      "symbol": "Issue.atPosition",
+      "line": 54,
+      "sha256": "244adf9afa5a0f504b0a341043ce2067fa04810910d319cc85cb0f16967ca21e",
+      "executed": true,
+      "workloads": [
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/issue.ts",
+      "start": 2107,
+      "end": 2577,
+      "kind": "MethodDeclaration",
+      "symbol": "Issue.atRowRange",
+      "line": 69,
+      "sha256": "c24c693fa33edb0daa383e1183b65995b289c977a195689adf9deb9c20d52924",
+      "executed": false,
+      "workloads": []
+    },
+    {
+      "file": "src/issue.ts",
+      "start": 2581,
+      "end": 2990,
+      "kind": "MethodDeclaration",
+      "symbol": "Issue.atRange",
+      "line": 85,
+      "sha256": "68c6c2895c225963b650cb88bfbc7037867eccb27dbcc5aef28e4b7d31f7b010",
+      "executed": true,
+      "workloads": [
+        "NEGATIVE",
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/issue.ts",
+      "start": 2994,
+      "end": 3353,
+      "kind": "MethodDeclaration",
+      "symbol": "Issue.atToken",
+      "line": 100,
+      "sha256": "20ed00114a665d999dab115cf2043dd167d52f5ebe381f9e5e991b6676741a51",
+      "executed": true,
+      "workloads": [
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/issue.ts",
+      "start": 3357,
+      "end": 3719,
+      "kind": "MethodDeclaration",
+      "symbol": "Issue.atTokenFilename",
+      "line": 113,
+      "sha256": "f67c4257e6172f020563f1ad817a704224657758cc003e6da1945aa7b4c37bd0",
+      "executed": true,
+      "workloads": [
+        "DEPLOYMENT",
+        "NEGATIVE",
+        "OBSERVATION",
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/issue.ts",
+      "start": 3723,
+      "end": 4092,
+      "kind": "MethodDeclaration",
+      "symbol": "Issue.atIdentifier",
+      "line": 126,
+      "sha256": "780808c048ab4aba3e37860869832150d266d077168cc3c63473d48462db5b14",
       "executed": true,
       "workloads": [
         "NEGATIVE",
@@ -28165,6 +30759,237 @@
       ]
     },
     {
+      "file": "src/lsp/_edit.ts",
+      "start": 131,
+      "end": 582,
+      "kind": "MethodDeclaration",
+      "symbol": "LSPEdit.mapEdits",
+      "line": 5,
+      "sha256": "da82bb8e5ec7ca4199dd2a4b9ac868ad3ec0126439d5ea564088ffb40b46b21b",
+      "executed": false,
+      "workloads": []
+    },
+    {
+      "file": "src/lsp/_edit.ts",
+      "start": 586,
+      "end": 839,
+      "kind": "MethodDeclaration",
+      "symbol": "LSPEdit.mapEdit",
+      "line": 18,
+      "sha256": "9b169051349076bc1f201e421891da618cfa6c51c06f7cc3746be05739ea8e98",
+      "executed": false,
+      "workloads": []
+    },
+    {
+      "file": "src/lsp/_edit.ts",
+      "start": 843,
+      "end": 1240,
+      "kind": "MethodDeclaration",
+      "symbol": "LSPEdit.mapText",
+      "line": 26,
+      "sha256": "7f6eb281dd9aeb48a4bf5aa24f9f3d7349d6b4b5a9e9c8fce59750e978633f05",
+      "executed": false,
+      "workloads": []
+    },
+    {
+      "file": "src/lsp/_lookup.ts",
+      "start": 1733,
+      "end": 7925,
+      "kind": "MethodDeclaration",
+      "symbol": "LSPLookup.lookup",
+      "line": 39,
+      "sha256": "39ff59b2ec33007434b00243f39be6df7b0d79a9d727ba354664e7c33f15b662",
+      "executed": false,
+      "workloads": []
+    },
+    {
+      "file": "src/lsp/_lookup.ts",
+      "start": 7977,
+      "end": 9273,
+      "kind": "MethodDeclaration",
+      "symbol": "LSPLookup.dumpType",
+      "line": 205,
+      "sha256": "5f48926c1dcb707df746eb446a8248947b6fb511dc2986eff48e7be3f50f0fbd",
+      "executed": false,
+      "workloads": []
+    },
+    {
+      "file": "src/lsp/_lookup.ts",
+      "start": 9277,
+      "end": 10837,
+      "kind": "MethodDeclaration",
+      "symbol": "LSPLookup.referenceHover",
+      "line": 238,
+      "sha256": "34e8bd618ccee9d802d982f055859fb583f3c06e02e022b69d85c84744897a29",
+      "executed": false,
+      "workloads": []
+    },
+    {
+      "file": "src/lsp/_lookup.ts",
+      "start": 10841,
+      "end": 11240,
+      "kind": "MethodDeclaration",
+      "symbol": "LSPLookup.hoverMethod",
+      "line": 279,
+      "sha256": "92021b5aff6324d0e63d0d024d98535470c17877962e934765ae8e80cba8976c",
+      "executed": false,
+      "workloads": []
+    },
+    {
+      "file": "src/lsp/_lookup.ts",
+      "start": 11244,
+      "end": 11554,
+      "kind": "MethodDeclaration",
+      "symbol": "LSPLookup.visibilityToString",
+      "line": 292,
+      "sha256": "956be0f3f2cca0a54eb69d0a717fbf29fd9ea3bd5d052ebf35d4732b7aff817a",
+      "executed": false,
+      "workloads": []
+    },
+    {
+      "file": "src/lsp/_lookup.ts",
+      "start": 11558,
+      "end": 12765,
+      "kind": "MethodDeclaration",
+      "symbol": "LSPLookup.methodParameters",
+      "line": 305,
+      "sha256": "56532977a462f448bb2d8bba5df5aa65eff20d0fc2d9b5af4a731db5dfdaf022",
+      "executed": false,
+      "workloads": []
+    },
+    {
+      "file": "src/lsp/_lookup.ts",
+      "start": 12769,
+      "end": 13025,
+      "kind": "MethodDeclaration",
+      "symbol": "LSPLookup.singleParameter",
+      "line": 355,
+      "sha256": "54b4a4b8e6a80f527114246bfe0b336c3de689e52545bd18e03c3df29d23776e",
+      "executed": false,
+      "workloads": []
+    },
+    {
+      "file": "src/lsp/_lookup.ts",
+      "start": 13029,
+      "end": 13447,
+      "kind": "MethodDeclaration",
+      "symbol": "LSPLookup.searchReferences",
+      "line": 363,
+      "sha256": "beb0447eed89a7142144c6b2a164189066b700f4f5f7001eae13f683cae54021",
+      "executed": false,
+      "workloads": []
+    },
+    {
+      "file": "src/lsp/_lookup.ts",
+      "start": 13451,
+      "end": 13618,
+      "kind": "MethodDeclaration",
+      "symbol": "LSPLookup.ABAPFileResult",
+      "line": 380,
+      "sha256": "04b99cf2e059c4a142c1a76c3c4a4993a8044b42f12f33a4b8baf8d4be94862e",
+      "executed": false,
+      "workloads": []
+    },
+    {
+      "file": "src/lsp/_lookup.ts",
+      "start": 13622,
+      "end": 14937,
+      "kind": "MethodDeclaration",
+      "symbol": "LSPLookup.findMethodDefinition",
+      "line": 387,
+      "sha256": "f2b81b9145b01d95472fc36e9d33ab2a4ba0a5894303947ffeea52951dbe6205",
+      "executed": false,
+      "workloads": []
+    },
+    {
+      "file": "src/lsp/_lookup.ts",
+      "start": 14941,
+      "end": 15543,
+      "kind": "MethodDeclaration",
+      "symbol": "LSPLookup.findFunctionModule",
+      "line": 422,
+      "sha256": "7da29a577afb62add3a8fe7bb81c90e2cf95082e06a5f8de869907ef1fec771a",
+      "executed": false,
+      "workloads": []
+    },
+    {
+      "file": "src/lsp/_lookup.ts",
+      "start": 15547,
+      "end": 16278,
+      "kind": "MethodDeclaration",
+      "symbol": "LSPLookup.findInclude",
+      "line": 442,
+      "sha256": "cb366a7524196c9acb345675bbc7e69d4df745b56ba53f5b33563e98f8206ba4",
+      "executed": false,
+      "workloads": []
+    },
+    {
+      "file": "src/lsp/_lsp_utils.ts",
+      "start": 680,
+      "end": 1179,
+      "kind": "MethodDeclaration",
+      "symbol": "LSPUtils.getABAPFile",
+      "line": 21,
+      "sha256": "52e6d5ee1abd9d463c607c2a9160c85a25aca83aae4dc7449fa4233546251d07",
+      "executed": false,
+      "workloads": []
+    },
+    {
+      "file": "src/lsp/_lsp_utils.ts",
+      "start": 1183,
+      "end": 1430,
+      "kind": "MethodDeclaration",
+      "symbol": "LSPUtils.tokenToRange",
+      "line": 41,
+      "sha256": "faa6d6c0a0f6fd4bd3d962c87016d18ba10cb41e3160f828ca91426667269edf",
+      "executed": false,
+      "workloads": []
+    },
+    {
+      "file": "src/lsp/_lsp_utils.ts",
+      "start": 1434,
+      "end": 1571,
+      "kind": "MethodDeclaration",
+      "symbol": "LSPUtils.positionToLS",
+      "line": 49,
+      "sha256": "46104e779255a6f845e7bd0f6afdc7cef3f4d622da9245b60fb841d23dc6e222",
+      "executed": false,
+      "workloads": []
+    },
+    {
+      "file": "src/lsp/_lsp_utils.ts",
+      "start": 1575,
+      "end": 1772,
+      "kind": "MethodDeclaration",
+      "symbol": "LSPUtils.identiferToLocation",
+      "line": 53,
+      "sha256": "86d98ebaedd507205d76d63767a8be4b0d3c2f8c84ed13e5069bdf27cc9bf3f2",
+      "executed": false,
+      "workloads": []
+    },
+    {
+      "file": "src/lsp/_lsp_utils.ts",
+      "start": 1776,
+      "end": 2451,
+      "kind": "MethodDeclaration",
+      "symbol": "LSPUtils.findCursor",
+      "line": 60,
+      "sha256": "96dff9ced7b84d2427a9b4ee67ee7b3c3950c95dc6b74038e89cc6b0315456c3",
+      "executed": false,
+      "workloads": []
+    },
+    {
+      "file": "src/lsp/_lsp_utils.ts",
+      "start": 2455,
+      "end": 3141,
+      "kind": "MethodDeclaration",
+      "symbol": "LSPUtils.buildStack",
+      "line": 82,
+      "sha256": "c694c058ffebd0fab27b59166ad6bc5cfee2d86c88ee586207994db256835d68",
+      "executed": false,
+      "workloads": []
+    },
+    {
       "file": "src/lsp/code_actions.ts",
       "start": 460,
       "end": 1965,
@@ -28254,12 +31079,265 @@
     },
     {
       "file": "src/lsp/diagnostics.ts",
+      "start": 767,
+      "end": 1358,
+      "kind": "MethodDeclaration",
+      "symbol": "Diagnostics.mapDiagnostic",
+      "line": 30,
+      "sha256": "42fc6937be336473b1c68a025adebad66085b62c66f6352cf80f37ede4e0e9c0",
+      "executed": false,
+      "workloads": []
+    },
+    {
+      "file": "src/lsp/diagnostics.ts",
       "start": 1362,
       "end": 1671,
       "kind": "MethodDeclaration",
       "symbol": "Diagnostics.find",
       "line": 46,
       "sha256": "af01873f3c35efe28c8acae3789ccd597fa7fbb190ef3c475fe8b6e44f495e4a",
+      "executed": false,
+      "workloads": []
+    },
+    {
+      "file": "src/lsp/diagnostics.ts",
+      "start": 1675,
+      "end": 2086,
+      "kind": "MethodDeclaration",
+      "symbol": "Diagnostics.mapSeverity",
+      "line": 57,
+      "sha256": "3e44c12c01241046ebff7c5dc6ad8cf3b62f6279c0a2ea2223738df7a35622a2",
+      "executed": false,
+      "workloads": []
+    },
+    {
+      "file": "src/lsp/dump_scope.ts",
+      "start": 173,
+      "end": 360,
+      "kind": "MethodDeclaration",
+      "symbol": "DumpScope.dump",
+      "line": 6,
+      "sha256": "9fa27294d496605d48cdf24a6c59ff60bddbf7f3fee403912ad1b79467c8d312",
+      "executed": false,
+      "workloads": []
+    },
+    {
+      "file": "src/lsp/dump_scope.ts",
+      "start": 364,
+      "end": 1472,
+      "kind": "MethodDeclaration",
+      "symbol": "DumpScope.traverseSpaghetti",
+      "line": 12,
+      "sha256": "96c583573c7829fcdce1cc53a3c23768958d9f4a48d011acfe55f2796faff987",
+      "executed": false,
+      "workloads": []
+    },
+    {
+      "file": "src/lsp/dump_scope.ts",
+      "start": 1476,
+      "end": 3409,
+      "kind": "MethodDeclaration",
+      "symbol": "DumpScope.dumpNode",
+      "line": 45,
+      "sha256": "3cab497048d3e5c116b4c4338bd4237b2e66785cc53da069c913005f1546cfae",
+      "executed": false,
+      "workloads": []
+    },
+    {
+      "file": "src/lsp/dump_scope.ts",
+      "start": 3471,
+      "end": 3717,
+      "kind": "MethodDeclaration",
+      "symbol": "DumpScope.escape",
+      "line": 97,
+      "sha256": "2cd7679680ae734b2d4747b91ea1892f198380ab68b72966baced1e0ae711113",
+      "executed": false,
+      "workloads": []
+    },
+    {
+      "file": "src/lsp/help.ts",
+      "start": 748,
+      "end": 1384,
+      "kind": "MethodDeclaration",
+      "symbol": "Help.find",
+      "line": 17,
+      "sha256": "46f7b5dafb3c09f747f30eeff8415b803ca3c905b13699c9ae42dd122c9da642",
+      "executed": false,
+      "workloads": []
+    },
+    {
+      "file": "src/lsp/help.ts",
+      "start": 1439,
+      "end": 2320,
+      "kind": "MethodDeclaration",
+      "symbol": "Help.dumpDDLS",
+      "line": 39,
+      "sha256": "72136d3c840ba5007129e8d24846b1d9035d9faf579682ad8ed05bb289c274fb",
+      "executed": false,
+      "workloads": []
+    },
+    {
+      "file": "src/lsp/help.ts",
+      "start": 2324,
+      "end": 3291,
+      "kind": "MethodDeclaration",
+      "symbol": "Help.dumpABAP",
+      "line": 65,
+      "sha256": "0ff9037589b46fd53c181a0bbe9ea76d55e23f5fcde65605938a7b2e97fd37aa",
+      "executed": false,
+      "workloads": []
+    },
+    {
+      "file": "src/lsp/help.ts",
+      "start": 3295,
+      "end": 3741,
+      "kind": "MethodDeclaration",
+      "symbol": "Help.dumpInfo",
+      "line": 93,
+      "sha256": "c8eccdfde0f1b189225f263aa7748a7dbd3008fa652847d2c32d2614d9e0469b",
+      "executed": false,
+      "workloads": []
+    },
+    {
+      "file": "src/lsp/help.ts",
+      "start": 3745,
+      "end": 5193,
+      "kind": "MethodDeclaration",
+      "symbol": "Help.cursorInformation",
+      "line": 108,
+      "sha256": "b69370972bb942389214e35c8e1202b23a326f4d0a69d61b10ebd34a5fbbdcbd",
+      "executed": false,
+      "workloads": []
+    },
+    {
+      "file": "src/lsp/help.ts",
+      "start": 5197,
+      "end": 5628,
+      "kind": "MethodDeclaration",
+      "symbol": "Help.fullPath",
+      "line": 144,
+      "sha256": "b74ca65bc9ddd749bbe46ec17e0d6632961d477cfc481e1c298ccb993e1a7988",
+      "executed": false,
+      "workloads": []
+    },
+    {
+      "file": "src/lsp/help.ts",
+      "start": 5632,
+      "end": 6851,
+      "kind": "MethodDeclaration",
+      "symbol": "Help.traverse",
+      "line": 159,
+      "sha256": "41b6936b480f537f05f18321d3c017eb7f941e9b49c53c1523e9aca206692d00",
+      "executed": false,
+      "workloads": []
+    },
+    {
+      "file": "src/lsp/help.ts",
+      "start": 6855,
+      "end": 7460,
+      "kind": "MethodDeclaration",
+      "symbol": "Help.fileInformation",
+      "line": 193,
+      "sha256": "2c15e576d938bd677613ae76b8dd02b575258cc5b903c6dc305c509314d90588",
+      "executed": false,
+      "workloads": []
+    },
+    {
+      "file": "src/lsp/help.ts",
+      "start": 7464,
+      "end": 7710,
+      "kind": "MethodDeclaration",
+      "symbol": "Help.escape",
+      "line": 211,
+      "sha256": "2cd7679680ae734b2d4747b91ea1892f198380ab68b72966baced1e0ae711113",
+      "executed": false,
+      "workloads": []
+    },
+    {
+      "file": "src/lsp/help.ts",
+      "start": 7714,
+      "end": 7919,
+      "kind": "MethodDeclaration",
+      "symbol": "Help.linkToStatement",
+      "line": 220,
+      "sha256": "fd21c5abbdf4c73628c1618d48d5014862261c702eb90a949521a740493070d8",
+      "executed": false,
+      "workloads": []
+    },
+    {
+      "file": "src/lsp/help.ts",
+      "start": 7923,
+      "end": 8128,
+      "kind": "MethodDeclaration",
+      "symbol": "Help.linkToStructure",
+      "line": 225,
+      "sha256": "3cc5c1ca29f43842b3daf73cec9f37785923fee74789cc3ddde0f7730bac7467",
+      "executed": false,
+      "workloads": []
+    },
+    {
+      "file": "src/lsp/help.ts",
+      "start": 8132,
+      "end": 8342,
+      "kind": "MethodDeclaration",
+      "symbol": "Help.linkToExpression",
+      "line": 230,
+      "sha256": "ab7d22c52a6bdab9c50f7c190ebb090201c54338ae4d25b2058c79991432bcc8",
+      "executed": false,
+      "workloads": []
+    },
+    {
+      "file": "src/lsp/help.ts",
+      "start": 8346,
+      "end": 8991,
+      "kind": "MethodDeclaration",
+      "symbol": "Help.outputNodes",
+      "line": 235,
+      "sha256": "cb3e390153a4f35497904a0436547d85badd304550db95135366a555a33cf17b",
+      "executed": false,
+      "workloads": []
+    },
+    {
+      "file": "src/lsp/help.ts",
+      "start": 8995,
+      "end": 9800,
+      "kind": "MethodDeclaration",
+      "symbol": "Help.tokens",
+      "line": 257,
+      "sha256": "ca796afa371a4c875ff9c32b3d31ce4530fd6f6d8ebec1c2b72ed570ff19c69f",
+      "executed": false,
+      "workloads": []
+    },
+    {
+      "file": "src/lsp/help.ts",
+      "start": 9804,
+      "end": 10237,
+      "kind": "MethodDeclaration",
+      "symbol": "Help.buildStatements",
+      "line": 283,
+      "sha256": "24187ddfe63916d472e270a3319119f9f5b74784ce6b73f35db7d279fba03834",
+      "executed": false,
+      "workloads": []
+    },
+    {
+      "file": "src/lsp/help.ts",
+      "start": 10241,
+      "end": 10722,
+      "kind": "MethodDeclaration",
+      "symbol": "Help.buildStructure",
+      "line": 298,
+      "sha256": "2550a3592966383e0b94bd3d856008670863989305943a25a8320c500c6adc62",
+      "executed": false,
+      "workloads": []
+    },
+    {
+      "file": "src/lsp/help.ts",
+      "start": 10726,
+      "end": 11213,
+      "kind": "MethodDeclaration",
+      "symbol": "Help.dumpFiles",
+      "line": 310,
+      "sha256": "846aefd72bf92ccb7f5d01b71a71535d5e525695740ad07a1991567c6b4458b0",
       "executed": false,
       "workloads": []
     },
@@ -28507,6 +31585,17 @@
     },
     {
       "file": "src/lsp/language_server.ts",
+      "start": 4922,
+      "end": 5050,
+      "kind": "MethodDeclaration",
+      "symbol": "LanguageServer.semanticTokensLegend",
+      "line": 114,
+      "sha256": "e59efb10656c0d5179f69002faa51e86d466cc3c72f3ad63b88c5e5c648e5905",
+      "executed": false,
+      "workloads": []
+    },
+    {
+      "file": "src/lsp/language_server.ts",
       "start": 5173,
       "end": 5330,
       "kind": "MethodDeclaration",
@@ -28667,6 +31756,28 @@
       "symbol": "Rename.renameMethod",
       "line": 104,
       "sha256": "5745c78227fb6b08ea49fa270e25f487edbcc2831b94df626ca832544c6164a3",
+      "executed": false,
+      "workloads": []
+    },
+    {
+      "file": "src/lsp/semantic.ts",
+      "start": 1033,
+      "end": 1450,
+      "kind": "MethodDeclaration",
+      "symbol": "SemanticHighlighting.semanticTokensLegend",
+      "line": 32,
+      "sha256": "1217620fc9a7ba1eaffefab41a5832c4859940cae97d399acc0c213ecd6edbb4",
+      "executed": false,
+      "workloads": []
+    },
+    {
+      "file": "src/lsp/semantic.ts",
+      "start": 1454,
+      "end": 2094,
+      "kind": "MethodDeclaration",
+      "symbol": "SemanticHighlighting.initLegend",
+      "line": 42,
+      "sha256": "dfe4658985a8adade52de3112b84b1163cab44030db951660d8081cf11e46194",
       "executed": false,
       "workloads": []
     },
@@ -28941,6 +32052,17 @@
       "symbol": "MSAGReferences.listByMessage",
       "line": 51,
       "sha256": "bc23301ac7cb92d3f6d43fcdf4fff587a7494c508c7fc49898a96402ab6fa7b6",
+      "executed": false,
+      "workloads": []
+    },
+    {
+      "file": "src/objects/_abap_object.ts",
+      "start": 1325,
+      "end": 1415,
+      "kind": "MethodDeclaration",
+      "symbol": "ABAPObject.is",
+      "line": 33,
+      "sha256": "f516a5bc3854a1752d70e2b0945393dd617861f6d76cb3cc70c679821cab9a94",
       "executed": false,
       "workloads": []
     },
@@ -36712,6 +39834,49 @@
     },
     {
       "file": "src/registry.ts",
+      "start": 1175,
+      "end": 1295,
+      "kind": "MethodDeclaration",
+      "symbol": "ParsingPerformance.clear",
+      "line": 26,
+      "sha256": "3bd4c6734e4f807bd1f26a05cc5340bf5b86ceced4cd4d6073c2e8f645e0da16",
+      "executed": true,
+      "workloads": [
+        "DEPLOYMENT",
+        "NEGATIVE",
+        "OBSERVATION",
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/registry.ts",
+      "start": 1299,
+      "end": 2039,
+      "kind": "MethodDeclaration",
+      "symbol": "ParsingPerformance.push",
+      "line": 33,
+      "sha256": "eac8c1798b5c415bec5c9595b55575189af9239d4592395b1ef4a015aa3ecd9c",
+      "executed": true,
+      "workloads": [
+        "DEPLOYMENT",
+        "NEGATIVE",
+        "OBSERVATION",
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/registry.ts",
+      "start": 2043,
+      "end": 2581,
+      "kind": "MethodDeclaration",
+      "symbol": "ParsingPerformance.output",
+      "line": 60,
+      "sha256": "1a6e36ed0d2f582f565447c2a926d7975e8a540f0d7f6d64e5c1899a21108fdc",
+      "executed": false,
+      "workloads": []
+    },
+    {
+      "file": "src/registry.ts",
       "start": 3336,
       "end": 3582,
       "kind": "MethodDeclaration",
@@ -36725,6 +39890,17 @@
         "OBSERVATION",
         "UPSTREAM"
       ]
+    },
+    {
+      "file": "src/registry.ts",
+      "start": 3586,
+      "end": 3703,
+      "kind": "MethodDeclaration",
+      "symbol": "Registry.abaplintVersion",
+      "line": 105,
+      "sha256": "2e6492f2470b7622b2bc963e98b484799e600bb4d6a3f4cabe3f7122d2d131b4",
+      "executed": false,
+      "workloads": []
     },
     {
       "file": "src/registry.ts",
@@ -36985,6 +40161,19 @@
       "symbol": "Registry.checkDuplicateFilename",
       "line": 256,
       "sha256": "1ca368049e48cbec1f81bfb8e022da45da83937dadd4058b6fbe0f0216ca060f",
+      "executed": true,
+      "workloads": [
+        "OBSERVATION"
+      ]
+    },
+    {
+      "file": "src/registry.ts",
+      "start": 8062,
+      "end": 8271,
+      "kind": "MethodDeclaration",
+      "symbol": "Registry.filenameBasename",
+      "line": 269,
+      "sha256": "15ee7c870a53ba636e1fe1eee2dd7823424383722ce887fdc9313dad928bf9e6",
       "executed": true,
       "workloads": [
         "OBSERVATION"
@@ -40235,6 +43424,17 @@
       "workloads": [
         "UPSTREAM"
       ]
+    },
+    {
+      "file": "src/rules/cloud_types.ts",
+      "start": 1133,
+      "end": 3604,
+      "kind": "MethodDeclaration",
+      "symbol": "CloudTypes.isCloud",
+      "line": 43,
+      "sha256": "f412d3e375d548f3f195134fd1d86af2069e7cc221097ebb9997fe3937e49e04",
+      "executed": false,
+      "workloads": []
     },
     {
       "file": "src/rules/cloud_types.ts",
@@ -50748,6 +53948,19 @@
     },
     {
       "file": "src/rules/sequential_blank.ts",
+      "start": 586,
+      "end": 679,
+      "kind": "MethodDeclaration",
+      "symbol": "SequentialBlank.isBlankOrWhitespace",
+      "line": 18,
+      "sha256": "bcb466983c9368a82be0b6193ca08bc0ee4d49419031bdb87dd4442ee9e983ca",
+      "executed": true,
+      "workloads": [
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/rules/sequential_blank.ts",
       "start": 727,
       "end": 1245,
       "kind": "MethodDeclaration",
@@ -54697,6 +57910,87 @@
       ]
     },
     {
+      "file": "src/utils/cyclomatic_complexity_stats.ts",
+      "start": 555,
+      "end": 1923,
+      "kind": "MethodDeclaration",
+      "symbol": "CyclomaticComplexityStats.run",
+      "line": 20,
+      "sha256": "4af78909c07ab1a123be9237c9dd46fffaea2bb647aba903ea4137d5235199b1",
+      "executed": true,
+      "workloads": [
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/utils/excludeHelper.ts",
+      "start": 32,
+      "end": 251,
+      "kind": "MethodDeclaration",
+      "symbol": "ExcludeHelper.isExcluded",
+      "line": 3,
+      "sha256": "025896582c8cd075679367cc31816c9ae13f0d2b784d535d240fb33c4ce1a840",
+      "executed": true,
+      "workloads": [
+        "DEPLOYMENT",
+        "NEGATIVE",
+        "OBSERVATION",
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/utils/form_length_stats.ts",
+      "start": 470,
+      "end": 1479,
+      "kind": "MethodDeclaration",
+      "symbol": "FormLengthStats.run",
+      "line": 11,
+      "sha256": "a709fe5454b6ea4a7f71357cc6f539d9af4993d1e37f7af246b14e9c96dce4f1",
+      "executed": true,
+      "workloads": [
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/utils/form_length_stats.ts",
+      "start": 1483,
+      "end": 1790,
+      "kind": "MethodDeclaration",
+      "symbol": "FormLengthStats.findName",
+      "line": 48,
+      "sha256": "3c4c26c195afea8b8268f49855cba845315b65012e7f05049257fdb102222f50",
+      "executed": true,
+      "workloads": [
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/utils/function_length_stats.ts",
+      "start": 480,
+      "end": 1503,
+      "kind": "MethodDeclaration",
+      "symbol": "FunctionLengthStats.run",
+      "line": 11,
+      "sha256": "cc220e0ba7a88b734723fac82b093fa84c4885e3b857f2203b50017f319b602b",
+      "executed": true,
+      "workloads": [
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/utils/function_length_stats.ts",
+      "start": 1507,
+      "end": 1785,
+      "kind": "MethodDeclaration",
+      "symbol": "FunctionLengthStats.findName",
+      "line": 48,
+      "sha256": "f869369e0ac63b6838ad271dbe372b7a1e3d60511b08884d5698da1b044f9768",
+      "executed": true,
+      "workloads": [
+        "UPSTREAM"
+      ]
+    },
+    {
       "file": "src/utils/include_graph.ts",
       "start": 694,
       "end": 899,
@@ -54839,6 +58133,45 @@
       "workloads": [
         "DEPLOYMENT",
         "NEGATIVE",
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/utils/method_length_stats.ts",
+      "start": 655,
+      "end": 1906,
+      "kind": "MethodDeclaration",
+      "symbol": "MethodLengthStats.run",
+      "line": 20,
+      "sha256": "b63d531652f5c69e2b6fbf393fc30c6f03babfe7a3aa841ec05df9b6d98532df",
+      "executed": true,
+      "workloads": [
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/utils/method_length_stats.ts",
+      "start": 1910,
+      "end": 2223,
+      "kind": "MethodDeclaration",
+      "symbol": "MethodLengthStats.findName",
+      "line": 60,
+      "sha256": "15651df655c18768cfdc11661e7a95ab8b867bb8a1ea0dbb3b691e5953f2deab",
+      "executed": true,
+      "workloads": [
+        "UPSTREAM"
+      ]
+    },
+    {
+      "file": "src/utils/name_validator.ts",
+      "start": 96,
+      "end": 591,
+      "kind": "MethodDeclaration",
+      "symbol": "NameValidator.violatesRule",
+      "line": 5,
+      "sha256": "b4e79e56016d20b78785fee86e4497616ff70df85c36c409837d309f25cf15e0",
+      "executed": true,
+      "workloads": [
         "UPSTREAM"
       ]
     },

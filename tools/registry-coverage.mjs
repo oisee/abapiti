@@ -10,7 +10,7 @@ import {validateWorkload} from './registry-workload.mjs';
 import {buildUpstream, verifyUpstream, upstreamPin} from './statements-upstream.mjs';
 const hash = text => createHash('sha256').update(text).digest('hex');
 import {observeRegistry} from './registry-oracle.mjs';
-import {declarationCandidates} from './registry-coverage-identity.mjs';
+import {declarationCandidates, generatedDeclarationKinds} from './registry-coverage-identity.mjs';
 const args = process.argv.slice(2);
 if (args[0] === '--worker') {
  const [, core, input, deps, config, negatives, workload, observationOut] = args;
@@ -64,12 +64,7 @@ if (args[0] === '--worker') {
    if (!path.startsWith(build.core+'/') || !path.endsWith('.js')) continue;
    const raw = readFileSync(path,'utf8'), map = new SourceMapConsumer(JSON.parse(readFileSync(path+'.map','utf8')));
    const generated = ts.createSourceFile(path,raw,ts.ScriptTarget.Latest,true,ts.ScriptKind.JS);
-   const kinds = new Map();
-   function generatedVisit(n) {
-    if (ts.isClassDeclaration(n) || ts.isClassExpression(n)) kinds.set(n.getStart(generated),'Constructor');
-    else if (ts.isMethodDeclaration(n)||ts.isFunctionDeclaration(n)||ts.isGetAccessor(n)||ts.isSetAccessor(n)) kinds.set(n.getStart(generated),ts.SyntaxKind[n.kind]);
-    ts.forEachChild(n,generatedVisit);
-   } generatedVisit(generated);
+   const kinds = generatedDeclarationKinds(ts, generated);
    const offsets = [0]; for (let i=0;i<raw.length;i++) if (raw[i]==='\n') offsets.push(i+1);
    const mappings = []; map.eachMapping(m=>{if (m.originalLine != null) mappings.push({...m,offset:offsets[m.generatedLine-1]+m.generatedColumn});});
    const rel = relative(build.core,path).replace(/\.js$/,'.ts');
