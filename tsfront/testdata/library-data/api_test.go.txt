@@ -1,0 +1,51 @@
+package librarytree_test
+
+import("bufio";"bytes";"encoding/json";"os";"reflect";"strings";"sync";"testing";lint "zabaplint")
+func primeData(t *testing.T)*lint.Checker{
+ t.Helper();raw,err:=os.ReadFile("fixtures.json");if err!=nil{t.Fatal(err)}
+ var input struct{Files []lint.File;Config string};if err=json.Unmarshal(raw,&input);err!=nil{t.Fatal(err)}
+ c:=new(lint.Checker);c.Prime(input.Files,nil,input.Config);return c
+}
+func TestOriginalNodeSnapshots(t *testing.T){
+ c:=primeData(t)
+ raw,err:=os.ReadFile("reference.jsonl");if err!=nil{t.Fatal(err)}
+ lines:=bufio.NewScanner(bytes.NewReader(raw))
+ for lines.Scan(){
+  var want struct{Type,Name string;Value struct{Found bool;Files []lint.File;Tree *lint.Expression;SQLView *string;Components,Keys []string}}
+  if err=json.Unmarshal(lines.Bytes(),&want);err!=nil{t.Fatal(err)}
+  got:=want.Value;got.Files,got.Found=c.Files(want.Type,strings.ToLower(want.Name))
+  if want.Type=="DDLS"{var found bool;got.Tree,got.SQLView,found=c.CDS(strings.ToLower(want.Name));if found!=got.Found{t.Fatal("CDS found")}}
+  if want.Type=="TABL"||want.Type=="VIEW"{var found bool;got.Components,got.Keys,found=c.DDIC(want.Type,strings.ToLower(want.Name));if found!=got.Found{t.Fatal("DDIC found")}}
+  if !reflect.DeepEqual(got,want.Value){t.Fatalf("%s %s\ngot: %#v\nwant: %#v",want.Type,want.Name,got,want.Value)}
+ }
+ if err=lines.Err();err!=nil{t.Fatal(err)}
+}
+func TestDataUpdatesAndCopies(t *testing.T){
+ c:=primeData(t)
+ tree,sql,found:=c.CDS("zdata");if !found||tree==nil||sql==nil||*sql!="ZSQLVIEW"{t.Fatal(tree,sql,found)}
+ original:=tree.Text;tree.Text="changed";*sql="changed"
+ again,sql,_:=c.CDS("ZDATA");if again.Text!=original||*sql!="ZSQLVIEW"{t.Fatal("CDS aliases registry")}
+ raw:="define view entity zdata as select from ztab { key bKey }"
+ before:=c.Stats();c.Update("zdata.ddls.asddls",&raw)
+ changed,sql,found:=c.CDS("ZDATA");if !found||sql!=nil||changed==nil||!strings.Contains(changed.Text,"bKey")||c.Stats().ParseRuns!=before.ParseRuns+1{t.Fatal(changed,sql,c.Stats())}
+ if again.Text!=original{t.Fatal("old snapshot changed")}
+ // Missing lookups still parse pending edits before getObject.
+ c.Update("zdata.ddls.asddls",&raw)
+ c.Update("zbad.ddls.asddls",&raw);before=c.Stats();c.Files("TABL","MISSING")
+ if c.Stats().ParseRuns!=before.ParseRuns+1{t.Fatal("missing Files lookup did not parse")}
+ c.Update("zbad.ddls.asddls",nil)
+ if n,s,f:=c.CDS("ZBAD");n!=nil||s!=nil||f{t.Fatal(n,s,f)}
+ // Removing the source leaves a found DDLS metadata object with no tree.
+ c.Update("zdata.ddls.asddls",nil)
+ if n,s,f:=c.CDS("ZDATA");n!=nil||s!=nil||!f{t.Fatal(n,s,f)}
+ c.Update("zdata.ddls.xml",nil)
+ if fs,f:=c.Files("DDLS","ZDATA");fs!=nil||f{t.Fatal(fs,f)}
+ components,keys,_:=c.DDIC("TABL","ZTAB");components[0]="changed";keys[0]="changed"
+ components,keys,_=c.DDIC("TABL","ZTAB");if components[0]!="zKey"||keys[0]!="zKey"{t.Fatal(components,keys)}
+ files,_:=c.Files("VIEW","ZVIEW");original=files[0].Raw;files[0].Raw="changed"
+ files,_=c.Files("VIEW","ZVIEW");if files[0].Raw!=original{t.Fatal("Files aliases registry")}
+}
+func TestConcurrentDataReaders(t *testing.T){
+ c,other:=primeData(t),primeData(t);var wg sync.WaitGroup
+ for _,c:=range []*lint.Checker{c,other}{wg.Go(func(){for range 3{c.CDS("zdata");c.DDIC("TABL","ztab");c.DDIC("VIEW","zview");c.Files("DDLS","zdata")}})};wg.Wait()
+}

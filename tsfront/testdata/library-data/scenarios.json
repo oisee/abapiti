@@ -1,0 +1,811 @@
+{
+  "SourceSHA256": "5431a72a665deaf8fe1bb8e0a0e3c5575097fb897acaeaf260f5fe3b9265a8cf",
+  "Files": [],
+  "Config": "{\"syntax\":{\"version\":\"open-abap\",\"errorNamespace\":\".\"},\"rules\":{\"parser_error\":true,\"check_syntax\":true}}",
+  "Queries": [
+    {
+      "Type": "CLAS",
+      "Name": "ZNATIVE_OUTLINE"
+    },
+    {
+      "Type": "DDLS",
+      "Name": "MISSING"
+    },
+    {
+      "Type": "TABL",
+      "Name": "MISSING"
+    },
+    {
+      "Type": "VIEW",
+      "Name": "MISSING"
+    }
+  ],
+  "Steps": [
+    {
+      "Label": "locals-tests-macros",
+      "Updates": [
+        {
+          "Filename": "/src/znative_outline.clas.abap",
+          "Raw": "CLASS znative_outline DEFINITION PUBLIC FINAL. PUBLIC SECTION. METHODS run. ENDCLASS. CLASS znative_outline IMPLEMENTATION. METHOD run. ENDMETHOD. ENDCLASS."
+        },
+        {
+          "Filename": "/src/znative_outline.clas.locals_def.abap",
+          "Raw": "CLASS lcl_one DEFINITION. PUBLIC SECTION. METHODS run. ENDCLASS. CLASS lcl_two DEFINITION. PUBLIC SECTION. METHODS run. ENDCLASS."
+        },
+        {
+          "Filename": "/src/znative_outline.clas.locals_imp.abap",
+          "Raw": "CLASS lcl_one IMPLEMENTATION. METHOD run. ENDMETHOD. ENDCLASS. CLASS lcl_two IMPLEMENTATION. METHOD run. ENDMETHOD. ENDCLASS."
+        },
+        {
+          "Filename": "/src/znative_outline.clas.testclasses.abap",
+          "Raw": "CLASS ltc_test DEFINITION FINAL FOR TESTING DURATION SHORT RISK LEVEL HARMLESS. PRIVATE SECTION. METHODS run FOR TESTING. ENDCLASS. CLASS ltc_test IMPLEMENTATION. METHOD run. ENDMETHOD. ENDCLASS."
+        },
+        {
+          "Filename": "/src/znative_outline.clas.macros.abap",
+          "Raw": "DEFINE example. WRITE &1. END-OF-DEFINITION."
+        }
+      ],
+      "Queries": [
+        {
+          "Type": "CLAS",
+          "Name": "ZNATIVE_OUTLINE"
+        }
+      ],
+      "After": []
+    },
+    {
+      "Label": "edited",
+      "Updates": [
+        {
+          "Filename": "/src/znative_outline.clas.abap",
+          "Raw": "CLASS znative_outline DEFINITION PUBLIC FINAL. PUBLIC SECTION. METHODS run. ENDCLASS. CLASS znative_outline IMPLEMENTATION. METHOD run. WRITE 'edited'. ENDMETHOD. ENDCLASS."
+        }
+      ],
+      "Queries": [
+        {
+          "Type": "CLAS",
+          "Name": "ZNATIVE_OUTLINE"
+        }
+      ],
+      "After": []
+    },
+    {
+      "Label": "broken",
+      "Updates": [
+        {
+          "Filename": "/src/znative_outline.clas.abap",
+          "Raw": "CLASS znative_outline DEFINITION PUBLIC. PUBLIC SECTION. METHODS run. ENDCLASS. CLASS znative_outline IMPLEMENTATION. METHOD run. invalid statement. ENDMETHOD. ENDCLASS."
+        }
+      ],
+      "Queries": [
+        {
+          "Type": "CLAS",
+          "Name": "ZNATIVE_OUTLINE"
+        }
+      ],
+      "After": []
+    },
+    {
+      "Label": "empty",
+      "Updates": [
+        {
+          "Filename": "/src/znative_outline.clas.abap",
+          "Raw": ""
+        }
+      ],
+      "Queries": [
+        {
+          "Type": "CLAS",
+          "Name": "ZNATIVE_OUTLINE"
+        }
+      ],
+      "After": []
+    },
+    {
+      "Label": "include-removed",
+      "Updates": [
+        {
+          "Filename": "/src/znative_outline.clas.locals_imp.abap",
+          "Raw": null
+        }
+      ],
+      "Queries": [
+        {
+          "Type": "CLAS",
+          "Name": "ZNATIVE_OUTLINE"
+        }
+      ],
+      "After": []
+    },
+    {
+      "Label": "include-added",
+      "Updates": [
+        {
+          "Filename": "/src/znative_outline.clas.locals_imp.abap",
+          "Raw": "CLASS lcl_one IMPLEMENTATION. METHOD run. ENDMETHOD. ENDCLASS. CLASS lcl_two IMPLEMENTATION. METHOD run. ENDMETHOD. ENDCLASS."
+        }
+      ],
+      "Queries": [
+        {
+          "Type": "CLAS",
+          "Name": "ZNATIVE_OUTLINE"
+        }
+      ],
+      "After": []
+    },
+    {
+      "Label": "inline-0",
+      "Updates": [],
+      "Queries": [
+        {
+          "Type": "CLAS",
+          "Name": "ZNATIVE_OUTLINE"
+        }
+      ],
+      "After": [
+        {
+          "Filename": "/src/znative_outline.clas.abap",
+          "Raw": ""
+        }
+      ]
+    },
+    {
+      "Label": "inline-1",
+      "Updates": [
+        {
+          "Filename": "/src/znative_outline.clas.abap",
+          "Raw": "CLASS znative_outline DEFINITION PUBLIC FINAL. PUBLIC SECTION. METHODS run. ENDCLASS. CLASS znative_outline IMPLEMENTATION. METHOD run. ENDMETHOD. ENDCLASS."
+        }
+      ],
+      "Queries": [
+        {
+          "Type": "CLAS",
+          "Name": "ZNATIVE_OUTLINE"
+        }
+      ],
+      "After": [
+        {
+          "Filename": "/src/znative_outline.clas.abap",
+          "Raw": ""
+        }
+      ]
+    },
+    {
+      "Label": "inline-2",
+      "Updates": [
+        {
+          "Filename": "/src/znative_outline.clas.abap",
+          "Raw": "broken inline."
+        }
+      ],
+      "Queries": [
+        {
+          "Type": "CLAS",
+          "Name": "ZNATIVE_OUTLINE"
+        }
+      ],
+      "After": [
+        {
+          "Filename": "/src/znative_outline.clas.abap",
+          "Raw": ""
+        }
+      ]
+    },
+    {
+      "Label": "INTF-0",
+      "Updates": [
+        {
+          "Filename": "/src/znative_outline.clas.abap",
+          "Raw": null
+        },
+        {
+          "Filename": "/src/znative_outline.clas.locals_def.abap",
+          "Raw": null
+        },
+        {
+          "Filename": "/src/znative_outline.clas.testclasses.abap",
+          "Raw": null
+        },
+        {
+          "Filename": "/src/znative_outline.clas.macros.abap",
+          "Raw": null
+        },
+        {
+          "Filename": "/src/znative_outline.clas.locals_imp.abap",
+          "Raw": null
+        },
+        {
+          "Filename": "/src/znative_mut.intf.abap",
+          "Raw": "INTERFACE znative_mut PUBLIC. METHODS run. ENDINTERFACE."
+        }
+      ],
+      "Queries": [
+        {
+          "Type": "INTF",
+          "Name": "ZNATIVE_MUT"
+        }
+      ],
+      "After": []
+    },
+    {
+      "Label": "INTF-1",
+      "Updates": [
+        {
+          "Filename": "/src/znative_mut.intf.abap",
+          "Raw": "INTERFACE znative_mut PUBLIC. DATA edited TYPE i. ENDINTERFACE."
+        }
+      ],
+      "Queries": [
+        {
+          "Type": "INTF",
+          "Name": "ZNATIVE_MUT"
+        }
+      ],
+      "After": []
+    },
+    {
+      "Label": "INTF-2",
+      "Updates": [
+        {
+          "Filename": "/src/znative_mut.intf.abap",
+          "Raw": "broken interface."
+        }
+      ],
+      "Queries": [
+        {
+          "Type": "INTF",
+          "Name": "ZNATIVE_MUT"
+        }
+      ],
+      "After": []
+    },
+    {
+      "Label": "INTF-3",
+      "Updates": [
+        {
+          "Filename": "/src/znative_mut.intf.abap",
+          "Raw": ""
+        }
+      ],
+      "Queries": [
+        {
+          "Type": "INTF",
+          "Name": "ZNATIVE_MUT"
+        }
+      ],
+      "After": []
+    },
+    {
+      "Label": "PROG-0",
+      "Updates": [
+        {
+          "Filename": "/src/znative_mut.intf.abap",
+          "Raw": null
+        },
+        {
+          "Filename": "/src/znative_mut.prog.abap",
+          "Raw": "REPORT znative_mut. INITIALIZATION. WRITE 'init'. START-OF-SELECTION. FORM run. ENDFORM."
+        }
+      ],
+      "Queries": [
+        {
+          "Type": "PROG",
+          "Name": "ZNATIVE_MUT"
+        }
+      ],
+      "After": []
+    },
+    {
+      "Label": "PROG-1",
+      "Updates": [
+        {
+          "Filename": "/src/znative_mut.prog.abap",
+          "Raw": "REPORT znative_mut. CLASS lcl_run DEFINITION. ENDCLASS. CLASS lcl_run IMPLEMENTATION. ENDCLASS."
+        }
+      ],
+      "Queries": [
+        {
+          "Type": "PROG",
+          "Name": "ZNATIVE_MUT"
+        }
+      ],
+      "After": []
+    },
+    {
+      "Label": "PROG-2",
+      "Updates": [
+        {
+          "Filename": "/src/znative_mut.prog.abap",
+          "Raw": "REPORT znative_mut. broken statement."
+        }
+      ],
+      "Queries": [
+        {
+          "Type": "PROG",
+          "Name": "ZNATIVE_MUT"
+        }
+      ],
+      "After": []
+    },
+    {
+      "Label": "PROG-3",
+      "Updates": [
+        {
+          "Filename": "/src/znative_mut.prog.abap",
+          "Raw": ""
+        }
+      ],
+      "Queries": [
+        {
+          "Type": "PROG",
+          "Name": "ZNATIVE_MUT"
+        }
+      ],
+      "After": []
+    },
+    {
+      "Label": "INCL-0",
+      "Updates": [
+        {
+          "Filename": "/src/znative_mut.prog.abap",
+          "Raw": "DATA value TYPE i."
+        }
+      ],
+      "Queries": [
+        {
+          "Type": "PROG",
+          "Name": "ZNATIVE_MUT"
+        }
+      ],
+      "After": []
+    },
+    {
+      "Label": "INCL-1",
+      "Updates": [
+        {
+          "Filename": "/src/znative_mut.prog.abap",
+          "Raw": "DEFINE example. WRITE &1. END-OF-DEFINITION."
+        }
+      ],
+      "Queries": [
+        {
+          "Type": "PROG",
+          "Name": "ZNATIVE_MUT"
+        }
+      ],
+      "After": []
+    },
+    {
+      "Label": "INCL-2",
+      "Updates": [
+        {
+          "Filename": "/src/znative_mut.prog.abap",
+          "Raw": "broken include."
+        }
+      ],
+      "Queries": [
+        {
+          "Type": "PROG",
+          "Name": "ZNATIVE_MUT"
+        }
+      ],
+      "After": []
+    },
+    {
+      "Label": "INCL-3",
+      "Updates": [
+        {
+          "Filename": "/src/znative_mut.prog.abap",
+          "Raw": ""
+        }
+      ],
+      "Queries": [
+        {
+          "Type": "PROG",
+          "Name": "ZNATIVE_MUT"
+        }
+      ],
+      "After": []
+    },
+    {
+      "Label": "SRVD-0",
+      "Updates": [
+        {
+          "Filename": "/src/znative_mut.prog.abap",
+          "Raw": null
+        },
+        {
+          "Filename": "/src/znative_mut.srvd.srvdsrv",
+          "Raw": "define service znative_mut { expose zmissing; }"
+        }
+      ],
+      "Queries": [
+        {
+          "Type": "SRVD",
+          "Name": "ZNATIVE_MUT"
+        }
+      ],
+      "After": []
+    },
+    {
+      "Label": "SRVD-1",
+      "Updates": [
+        {
+          "Filename": "/src/znative_mut.srvd.srvdsrv",
+          "Raw": "define service znative_mut { expose zedited as edited; }"
+        }
+      ],
+      "Queries": [
+        {
+          "Type": "SRVD",
+          "Name": "ZNATIVE_MUT"
+        }
+      ],
+      "After": []
+    },
+    {
+      "Label": "SRVD-2",
+      "Updates": [
+        {
+          "Filename": "/src/znative_mut.srvd.srvdsrv",
+          "Raw": "broken service"
+        }
+      ],
+      "Queries": [
+        {
+          "Type": "SRVD",
+          "Name": "ZNATIVE_MUT"
+        }
+      ],
+      "After": []
+    },
+    {
+      "Label": "SRVD-3",
+      "Updates": [
+        {
+          "Filename": "/src/znative_mut.srvd.srvdsrv",
+          "Raw": ""
+        }
+      ],
+      "Queries": [
+        {
+          "Type": "SRVD",
+          "Name": "ZNATIVE_MUT"
+        }
+      ],
+      "After": []
+    },
+    {
+      "Label": "DDLS-0",
+      "Updates": [
+        {
+          "Filename": "/src/znative_mut.srvd.srvdsrv",
+          "Raw": null
+        },
+        {
+          "Filename": "/src/znative_mut.ddls.asddls",
+          "Raw": "define view entity znative_mut as select from zmissing { key id }"
+        }
+      ],
+      "Queries": [
+        {
+          "Type": "DDLS",
+          "Name": "ZNATIVE_MUT"
+        }
+      ],
+      "After": []
+    },
+    {
+      "Label": "DDLS-1",
+      "Updates": [
+        {
+          "Filename": "/src/znative_mut.ddls.asddls",
+          "Raw": "define view entity znative_mut as select from zmissing { key edited }"
+        }
+      ],
+      "Queries": [
+        {
+          "Type": "DDLS",
+          "Name": "ZNATIVE_MUT"
+        }
+      ],
+      "After": []
+    },
+    {
+      "Label": "DDLS-2",
+      "Updates": [
+        {
+          "Filename": "/src/znative_mut.ddls.asddls",
+          "Raw": "broken view"
+        }
+      ],
+      "Queries": [
+        {
+          "Type": "DDLS",
+          "Name": "ZNATIVE_MUT"
+        }
+      ],
+      "After": []
+    },
+    {
+      "Label": "DDLS-3",
+      "Updates": [
+        {
+          "Filename": "/src/znative_mut.ddls.asddls",
+          "Raw": ""
+        }
+      ],
+      "Queries": [
+        {
+          "Type": "DDLS",
+          "Name": "ZNATIVE_MUT"
+        }
+      ],
+      "After": []
+    },
+    {
+      "Label": "DDLS-4",
+      "Updates": [
+        {
+          "Filename": "/src/znative_mut.ddls.asddls",
+          "Raw": "define table function znative_mut returns { id : abap.int4; } implemented by method zcl_missing=>run;"
+        }
+      ],
+      "Queries": [
+        {
+          "Type": "DDLS",
+          "Name": "ZNATIVE_MUT"
+        }
+      ],
+      "After": []
+    },
+    {
+      "Label": "DDLS-5",
+      "Updates": [
+        {
+          "Filename": "/src/znative_mut.ddls.asddls",
+          "Raw": "define view entity znative_mut as select from zmissing { key id } where id = 'A'"
+        }
+      ],
+      "Queries": [
+        {
+          "Type": "DDLS",
+          "Name": "ZNATIVE_MUT"
+        }
+      ],
+      "After": []
+    },
+    {
+      "Label": "DDLS-6",
+      "Updates": [
+        {
+          "Filename": "/src/znative_mut.ddls.asddls",
+          "Raw": "define view entity znative_mut as select from zmissing inner join zother on zmissing.id = zother.id { key zmissing.id }"
+        }
+      ],
+      "Queries": [
+        {
+          "Type": "DDLS",
+          "Name": "ZNATIVE_MUT"
+        }
+      ],
+      "After": []
+    },
+    {
+      "Label": "DDLS-7",
+      "Updates": [
+        {
+          "Filename": "/src/znative_mut.ddls.asddls",
+          "Raw": "@ObjectModel.writeEnabled: true\ndefine view entity znative_mut as select from zmissing { key id }"
+        }
+      ],
+      "Queries": [
+        {
+          "Type": "DDLS",
+          "Name": "ZNATIVE_MUT"
+        }
+      ],
+      "After": []
+    },
+    {
+      "Label": "dictionary-0",
+      "Updates": [
+        {
+          "Filename": "/src/zstg_demo.tabl.xml",
+          "Raw": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<abapGit version=\"v1.0.0\" serializer=\"LCL_OBJECT_TABL\" serializer_version=\"v1.0.0\">\n <asx:abap xmlns:asx=\"http://www.sap.com/abapxml\" version=\"1.0\">\n  <asx:values>\n   <DD02V>\n    <TABNAME>ZSTG_DEMO</TABNAME>\n    <DDLANGUAGE>E</DDLANGUAGE>\n    <TABCLASS>TRANSP</TABCLASS>\n    <CLIDEP>X</CLIDEP>\n    <DDTEXT>open-steamgate demo: travels</DDTEXT>\n    <MAINFLAG>X</MAINFLAG>\n    <CONTFLAG>A</CONTFLAG>\n    <EXCLASS>1</EXCLASS>\n   </DD02V>\n   <DD09L>\n    <TABNAME>ZSTG_DEMO</TABNAME>\n    <AS4LOCAL>A</AS4LOCAL>\n    <TABKAT>0</TABKAT>\n    <TABART>APPL1</TABART>\n    <BUFALLOW>N</BUFALLOW>\n   </DD09L>\n   <DD03P_TABLE>\n    <DD03P>\n     <FIELDNAME>MANDT</FIELDNAME>\n     <KEYFLAG>X</KEYFLAG>\n     <ROLLNAME>MANDT</ROLLNAME>\n     <ADMINFIELD>0</ADMINFIELD>\n     <NOTNULL>X</NOTNULL>\n     <COMPTYPE>E</COMPTYPE>\n    </DD03P>\n    <DD03P>\n     <FIELDNAME>TRAVEL_ID</FIELDNAME>\n     <KEYFLAG>X</KEYFLAG>\n     <ADMINFIELD>0</ADMINFIELD>\n     <INTTYPE>C</INTTYPE>\n     <INTLEN>000016</INTLEN>\n     <NOTNULL>X</NOTNULL>\n     <DATATYPE>CHAR</DATATYPE>\n     <LENG>000008</LENG>\n     <MASK>  CHAR</MASK>\n    </DD03P>\n    <DD03P>\n     <FIELDNAME>DESCRIPTION</FIELDNAME>\n     <ADMINFIELD>0</ADMINFIELD>\n     <INTTYPE>C</INTTYPE>\n     <INTLEN>000080</INTLEN>\n     <DATATYPE>CHAR</DATATYPE>\n     <LENG>000040</LENG>\n     <MASK>  CHAR</MASK>\n    </DD03P>\n    <DD03P>\n     <FIELDNAME>STATUS</FIELDNAME>\n     <ADMINFIELD>0</ADMINFIELD>\n     <INTTYPE>C</INTTYPE>\n     <INTLEN>000002</INTLEN>\n     <DATATYPE>CHAR</DATATYPE>\n     <LENG>000001</LENG>\n     <MASK>  CHAR</MASK>\n    </DD03P>\n    <DD03P>\n     <FIELDNAME>SEATS</FIELDNAME>\n     <ADMINFIELD>0</ADMINFIELD>\n     <INTTYPE>X</INTTYPE>\n     <INTLEN>000004</INTLEN>\n     <DATATYPE>INT4</DATATYPE>\n     <LENG>000010</LENG>\n     <MASK>  INT4</MASK>\n    </DD03P>\n   </DD03P_TABLE>\n  </asx:values>\n </asx:abap>\n</abapGit>\n"
+        },
+        {
+          "Filename": "/src/znative_gen.view.xml",
+          "Raw": "<abapGit><asx:abap xmlns:asx=\"http://www.sap.com/abapxml\"><asx:values><DD25V><VIEWNAME>ZNATIVE_GEN</VIEWNAME><VIEWCLASS>D</VIEWCLASS></DD25V><DD27P_TABLE><DD27P><VIEWFIELD>TRAVEL_ID</VIEWFIELD><TABNAME>ZSTG_DEMO</TABNAME><FIELDNAME>TRAVEL_ID</FIELDNAME><KEYFLAG>X</KEYFLAG></DD27P><DD27P><VIEWFIELD>OLD_FIELD</VIEWFIELD><TABNAME>ZSTG_DEMO</TABNAME><FIELDNAME>DESCRIPTION</FIELDNAME></DD27P></DD27P_TABLE></asx:values></asx:abap></abapGit>"
+        },
+        {
+          "Filename": "/src/znative_mut.ddls.asddls",
+          "Raw": "@AbapCatalog.sqlViewName: 'ZNATIVE_GEN'\n@ObjectModel.writeEnabled: true\ndefine view znative_mut as select from zstg_demo { key travel_id, description }"
+        }
+      ],
+      "Queries": [
+        {
+          "Type": "DDLS",
+          "Name": "ZNATIVE_MUT"
+        },
+        {
+          "Type": "TABL",
+          "Name": "ZSTG_DEMO"
+        },
+        {
+          "Type": "VIEW",
+          "Name": "ZNATIVE_GEN"
+        }
+      ],
+      "After": []
+    },
+    {
+      "Label": "dictionary-1",
+      "Updates": [
+        {
+          "Filename": "/src/znative_mut.ddls.asddls",
+          "Raw": "@AbapCatalog.sqlViewName: 'ZNATIVE_GEN'\n@ObjectModel.writeEnabled: true\ndefine view znative_mut as select from zstg_demo { description }"
+        }
+      ],
+      "Queries": [
+        {
+          "Type": "DDLS",
+          "Name": "ZNATIVE_MUT"
+        },
+        {
+          "Type": "TABL",
+          "Name": "ZSTG_DEMO"
+        },
+        {
+          "Type": "VIEW",
+          "Name": "ZNATIVE_GEN"
+        }
+      ],
+      "After": []
+    },
+    {
+      "Label": "dictionary-2",
+      "Updates": [
+        {
+          "Filename": "/src/znative_mut.ddls.asddls",
+          "Raw": "@AbapCatalog.sqlViewName: 'ZNATIVE_GEN'\n@ObjectModel.writeEnabled: true\ndefine view znative_mut as select from zstg_demo { key travel_id, cast( description as abap.char(20) ) as text }"
+        }
+      ],
+      "Queries": [
+        {
+          "Type": "DDLS",
+          "Name": "ZNATIVE_MUT"
+        },
+        {
+          "Type": "TABL",
+          "Name": "ZSTG_DEMO"
+        },
+        {
+          "Type": "VIEW",
+          "Name": "ZNATIVE_GEN"
+        }
+      ],
+      "After": []
+    },
+    {
+      "Label": "dictionary-3",
+      "Updates": [
+        {
+          "Filename": "/src/znative_mut.ddls.asddls",
+          "Raw": "@AbapCatalog.sqlViewName: 'ZNATIVE_GEN'\n@ObjectModel.writeEnabled: true\ndefine view znative_mut as select from zstg_demo { key travel_id, cast( 'constant' as abap.char(20) ) as text }"
+        }
+      ],
+      "Queries": [
+        {
+          "Type": "DDLS",
+          "Name": "ZNATIVE_MUT"
+        },
+        {
+          "Type": "TABL",
+          "Name": "ZSTG_DEMO"
+        },
+        {
+          "Type": "VIEW",
+          "Name": "ZNATIVE_GEN"
+        }
+      ],
+      "After": []
+    },
+    {
+      "Label": "dictionary-4",
+      "Updates": [
+        {
+          "Filename": "/src/znative_mut.ddls.asddls",
+          "Raw": "@AbapCatalog.sqlViewName: 'ZNATIVE_GEN'\n@ObjectModel.writeEnabled: true\ndefine view znative_mut as select from zstg_demo { key travel_id, cast( description as abap.unknown(20) ) as text }"
+        }
+      ],
+      "Queries": [
+        {
+          "Type": "DDLS",
+          "Name": "ZNATIVE_MUT"
+        },
+        {
+          "Type": "TABL",
+          "Name": "ZSTG_DEMO"
+        },
+        {
+          "Type": "VIEW",
+          "Name": "ZNATIVE_GEN"
+        }
+      ],
+      "After": []
+    },
+    {
+      "Label": "dictionary-5",
+      "Updates": [
+        {
+          "Filename": "/src/znative_mut.ddls.asddls",
+          "Raw": "@AbapCatalog.sqlViewName: 'ZNATIVE_GEN'\n@ObjectModel.writeEnabled: true\ndefine view znative_mut as select from zstg_demo { key travel_id, @ObjectModel.virtualElement: true cast( '' as abap.char(20) ) as text }"
+        }
+      ],
+      "Queries": [
+        {
+          "Type": "DDLS",
+          "Name": "ZNATIVE_MUT"
+        },
+        {
+          "Type": "TABL",
+          "Name": "ZSTG_DEMO"
+        },
+        {
+          "Type": "VIEW",
+          "Name": "ZNATIVE_GEN"
+        }
+      ],
+      "After": []
+    },
+    {
+      "Label": "dictionary-6",
+      "Updates": [
+        {
+          "Filename": "/src/znative_mut.ddls.asddls",
+          "Raw": "@AbapCatalog.sqlViewName: 'ZNATIVE_GEN'\n@ObjectModel.writeEnabled: true\ndefine view znative_mut as select from zstg_demo { key travel_id, @ObjectModel.virtualElement: true @ObjectModel.virtualElementCalculatedBy: 'ABAP:ZCL_TEST' cast( '' as abap.char(20) ) as text }"
+        }
+      ],
+      "Queries": [
+        {
+          "Type": "DDLS",
+          "Name": "ZNATIVE_MUT"
+        },
+        {
+          "Type": "TABL",
+          "Name": "ZSTG_DEMO"
+        },
+        {
+          "Type": "VIEW",
+          "Name": "ZNATIVE_GEN"
+        }
+      ],
+      "After": []
+    },
+    {
+      "Label": "dictionary-7",
+      "Updates": [
+        {
+          "Filename": "/src/znative_mut.ddls.asddls",
+          "Raw": "@AbapCatalog.sqlViewName: 'ZNATIVE_GEN'\n@ObjectModel.writeEnabled: true\ndefine view znative_mut as select from zstg_demo { key travel_id, @ObjectModel.virtualElement: true @ObjectModel.virtualElementCalculatedBy: 'ABAP:ZCL_TEST' cast( '' as abap.unknown(20) ) as text }"
+        }
+      ],
+      "Queries": [
+        {
+          "Type": "DDLS",
+          "Name": "ZNATIVE_MUT"
+        },
+        {
+          "Type": "TABL",
+          "Name": "ZSTG_DEMO"
+        },
+        {
+          "Type": "VIEW",
+          "Name": "ZNATIVE_GEN"
+        }
+      ],
+      "After": []
+    }
+  ]
+}

@@ -19,10 +19,17 @@ func RegistryGoLibrary(pkg string, names *hir.Names) string {
 
 func registryGoLibrarySymbols(pkg string, n *hir.Names) *strings.Replacer {
 	pairs := []string{"@package@", pkg}
-	for _, name := range []string{"addFile", "addDependency", "parse", "getFileByName", "findObjectForFile", "findIssuesObject", "getFiles", "getObjects", "next", "close", "done", "value", "getRaw", "getObjectName", "getName", "setDirty", "isDirty", "updateFile", "removeFile", "getKey", "getSeverity", "getFilename", "getMessage", "getStart", "getEnd", "getRow", "getCol", "getObject", "getType", "getABAPFiles", "getMainABAPFile", "getSequencedFiles", "getStructure", "getStatements", "get", "getChildren", "getFirstStatement", "getFirstToken", "getLastToken", "getTokens", "getStr"} {
+	for _, name := range []string{"addFile", "addDependency", "parse", "getFileByName", "findObjectForFile", "findIssuesObject", "getFiles", "getObjects", "next", "close", "done", "value", "getRaw", "getObjectName", "getName", "setDirty", "isDirty", "updateFile", "removeFile", "getKey", "getSeverity", "getFilename", "getMessage", "getStart", "getEnd", "getRow", "getCol", "getObject", "getType", "getABAPFiles", "getMainABAPFile", "getSequencedFiles", "getStructure", "getStatements", "get", "getChildren", "getFirstStatement", "getFirstToken", "getLastToken", "getTokens", "getStr", "getTree", "getSQLViewName", "concatTokens", "parseType", "listKeys", "getComponents", "name"} {
 		pairs = append(pairs, "@"+name+"@", n.Get("member."+name))
 	}
 	for marker, id := range map[string]string{
+		"ExpressionNode":   "ref.src/abap/nodes/expression_node.ts.ExpressionNode",
+		"DataDefinition":   "ref.src/objects/data_definition.ts.DataDefinition",
+		"Table":            "ref.src/objects/table.ts.Table",
+		"View":             "ref.src/objects/view.ts.View",
+		"StructureType":    "ref.src/abap/types/basic/structure_type.ts.StructureType",
+		"AbstractType":     "ref.src/abap/types/basic/_abstract_type.ts.AbstractType",
+		"Component":        "ref.src/abap/types/basic/structure_type.ts.IStructureComponent",
 		"Registry":         "ref.src/registry.ts.Registry",
 		"ABAPObject":       "ref.src/objects/_abap_object.ts.ABAPObject",
 		"ABAPFile":         "ref.src/abap/abap_file.ts.ABAPFile",

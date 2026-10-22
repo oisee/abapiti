@@ -275,7 +275,8 @@ returning ordered structured issues (`Filename`, `Key`, `Severity`, `Message`,
 `Row`, `Column`, `EndRow`, `EndColumn`), without the batch report/dump transport.
 Coordinates must be finite integers representable as int32. `Update` dirties
 transitive lexical readers using the same conservative word pattern as OSG;
-parsing stays lazy until Check, CheckObject or Tree. Removing an include preserves sibling readers;
+parsing stays lazy until Check, CheckObject, Tree, CDS, DDIC or Files.
+Removing an include preserves sibling readers;
 removing the last file discards the old object identity. `Stats` exposes work
 counters, not a timing or engine parity certificate.
 
@@ -346,3 +347,41 @@ The full-core fixture test can be enabled with
 `ABAPITI_LIBRARY_TREE_DIR=/absolute/path/to/out-library/go`; see
 [`testdata/library-tree`](../tsfront/testdata/library-tree/README.md) for the
 Node/Go differential driver and reproducible inputs.
+
+
+The library exposes CDS, dictionary and raw object-file snapshots as well:
+
+```go
+type Expression struct {
+    Kind, Text string
+    Start, End Pos
+    Children []Expression
+}
+func (c *Checker) CDS(name string) (tree *Expression, sqlView *string, found bool)
+func (c *Checker) DDIC(typ, name string) (components, keys []string, found bool)
+func (c *Checker) Files(typ, name string) (files []File, found bool)
+```
+
+Each call holds `libraryMu` and calls `registry.parse()` before `getObject`,
+including missing-object lookups. `CDS` looks up DDLS; undefined trees and SQL
+view names return nil, while a defined empty SQL view name returns a pointer to
+`""`. Expression kinds use `node.get().constructor.name`, text uses the core's
+`concatTokens()`, and positions use the first token's start and last token's
+`getEnd()`. Children contain only ExpressionNodes, in core order; TokenNodes are
+skipped.
+
+`DDIC` handles TABL and VIEW. It calls `parseType(registry, undefined, undefined)`
+and copies component names only when the result is a StructureType. Other types
+return nil components; an empty structure would return a non-nil empty slice.
+TABL keys come from `listKeys(registry)` and VIEW keys from `listKeys()`, including
+VIEW's source field names when exposed fields have aliases. Order and case are
+preserved for both components and keys. Empty key lists remain nil.
+
+`Files` returns `getFiles()` in object order, copying each filename and raw source.
+All three APIs return `found=false` when `getObject` returns undefined. Returned
+snapshots are detached Go values.
+
+Set `ABAPITI_LIBRARY_DATA_DIR=/absolute/path/to/out-library/go` to enable the
+full-core data fixtures. [`testdata/library-data`](../tsfront/testdata/library-data/README.md)
+documents the original Node oracle and the differential against OSG PR #839's
+exact base-library adapter, including all 41 change scenarios and frozen M1.

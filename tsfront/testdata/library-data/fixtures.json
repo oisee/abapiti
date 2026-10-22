@@ -1,0 +1,99 @@
+{
+  "Files": [
+    {
+      "Filename": "zdata.ddls.xml",
+      "Raw": "<abapGit><asx:abap xmlns:asx=\"http://www.sap.com/abapxml\"><asx:values><DDDDLS><DDLNAME>ZDATA</DDLNAME></DDDDLS></asx:values></asx:abap></abapGit>"
+    },
+    {
+      "Filename": "zdata.ddls.asddls",
+      "Raw": "@AbapCatalog.sqlViewName: 'zSqlView'\r\n@EndUserText.label: 'Text'\r\ndefine view zdata as select from ztab { key zKey, aField as Renamed }"
+    },
+    {
+      "Filename": "zentity.ddls.asddls",
+      "Raw": "define view entity zentity as select from ztab { key zKey }"
+    },
+    {
+      "Filename": "zbad.ddls.asddls",
+      "Raw": "broken view"
+    },
+    {
+      "Filename": "zempty.ddls.asddls",
+      "Raw": ""
+    },
+    {
+      "Filename": "zmeta.ddls.xml",
+      "Raw": "<abapGit><asx:abap xmlns:asx=\"http://www.sap.com/abapxml\"><asx:values><DDDDLS><DDLNAME>ZMETA</DDLNAME></DDDDLS></asx:values></asx:abap></abapGit>"
+    },
+    {
+      "Filename": "ztab.tabl.xml",
+      "Raw": "<abapGit><asx:abap xmlns:asx=\"http://www.sap.com/abapxml\"><asx:values><DD02V><TABNAME>ZTAB</TABNAME><TABCLASS>TRANSP</TABCLASS></DD02V><DD03P_TABLE><DD03P><FIELDNAME>zKey</FIELDNAME><KEYFLAG>X</KEYFLAG><DATATYPE>INT4</DATATYPE></DD03P><DD03P><FIELDNAME>bKey</FIELDNAME><KEYFLAG>X</KEYFLAG><DATATYPE>INT4</DATATYPE></DD03P><DD03P><FIELDNAME>aField</FIELDNAME><DATATYPE>CHAR</DATATYPE><LENG>20</LENG></DD03P></DD03P_TABLE></asx:values></asx:abap></abapGit>"
+    },
+    {
+      "Filename": "zview.view.xml",
+      "Raw": "<abapGit><asx:abap xmlns:asx=\"http://www.sap.com/abapxml\"><asx:values><DD25V><VIEWNAME>ZVIEW</VIEWNAME><VIEWCLASS>D</VIEWCLASS></DD25V><DD27P_TABLE><DD27P><VIEWFIELD>aliasKey</VIEWFIELD><TABNAME>ZTAB</TABNAME><FIELDNAME>zKey</FIELDNAME><KEYFLAG>X</KEYFLAG></DD27P><DD27P><VIEWFIELD>otherAlias</VIEWFIELD><TABNAME>ZTAB</TABNAME><FIELDNAME>bKey</FIELDNAME><KEYFLAG>X</KEYFLAG></DD27P><DD27P><VIEWFIELD>text</VIEWFIELD><TABNAME>ZTAB</TABNAME><FIELDNAME>aField</FIELDNAME></DD27P></DD27P_TABLE></asx:values></asx:abap></abapGit>"
+    },
+    {
+      "Filename": "zbad.tabl.xml",
+      "Raw": ""
+    },
+    {
+      "Filename": "zbad.view.xml",
+      "Raw": ""
+    }
+  ],
+  "Config": "{\"syntax\":{\"version\":\"open-abap\",\"errorNamespace\":\".\"},\"rules\":{\"parser_error\":true}}",
+  "Queries": [
+    {
+      "Type": "DDLS",
+      "Name": "ZDATA"
+    },
+    {
+      "Type": "DDLS",
+      "Name": "ZENTITY"
+    },
+    {
+      "Type": "DDLS",
+      "Name": "ZBAD"
+    },
+    {
+      "Type": "DDLS",
+      "Name": "ZEMPTY"
+    },
+    {
+      "Type": "DDLS",
+      "Name": "ZMETA"
+    },
+    {
+      "Type": "TABL",
+      "Name": "ZTAB"
+    },
+    {
+      "Type": "VIEW",
+      "Name": "ZVIEW"
+    },
+    {
+      "Type": "TABL",
+      "Name": "ZBAD"
+    },
+    {
+      "Type": "VIEW",
+      "Name": "ZBAD"
+    },
+    {
+      "Type": "DDLS",
+      "Name": "MISSING"
+    },
+    {
+      "Type": "TABL",
+      "Name": "MISSING"
+    },
+    {
+      "Type": "VIEW",
+      "Name": "MISSING"
+    },
+    {
+      "Type": "tabl",
+      "Name": "ZTAB"
+    }
+  ]
+}

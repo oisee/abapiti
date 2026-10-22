@@ -1,0 +1,50 @@
+package lintlib
+
+import("reflect";"testing";"sync")
+
+func dataChecker() *Checker {
+ c:=new(Checker);c.Prime(nil,nil,"{}")
+ c.registry.data=map[string]@Object@{}
+ return c
+}
+func TestDataAPI(t *testing.T) {
+ c:=dataChecker()
+ for _,fn:=range []func(){func(){c.CDS("missing")},func(){c.DDIC("TABL","missing")},func(){c.Files("VIEW","missing")}} {
+  before:=c.registry.parseCalls;fn();if c.registry.parseCalls!=before+1{t.Fatal("missing lookup must parse")}
+ }
+ if n,s,f:=c.CDS("missing");n!=nil||s!=nil||f{t.Fatal(n,s,f)}
+ if v,k,f:=c.DDIC("TABL","missing");v!=nil||k!=nil||f{t.Fatal(v,k,f)}
+ if v,f:=c.Files("TABL","missing");v!=nil||f{t.Fatal(v,f)}
+ obj:=&objectStub{name:str("ZDATA"),files:&array[any]{}}
+ d:=&definitionStub{objectStub:obj};c.registry.data["DDLS:ZDATA"]=d
+ if n,s,f:=c.CDS("zdata");n!=nil||s!=nil||!f{t.Fatal(n,s,f)}
+ d.sql=present(str(""))
+ if _,s,f:=c.CDS("ZDATA");s==nil||*s!=""||!f{t.Fatal(s,f)}
+ first:=&tokenStub{"a",&positionStub{2,3},&positionStub{2,4}}
+ last:=&tokenStub{"last",&positionStub{4,5},&positionStub{4,9}}
+ child:=&expressionStub{"CDSName","a",&array[any]{Items:[]any{&tokenNodeStub{first}}},first,first}
+ child2:=&expressionStub{"CDSAs","last",&array[any]{Items:[]any{&tokenNodeStub{last}}},last,last}
+ d.tree=&expressionStub{"CDSSelect","a last",&array[any]{Items:[]any{&tokenNodeStub{first},child,&tokenNodeStub{last},child2}},first,last}
+ tree,_,_:=c.CDS("zdata")
+ if tree.Kind!="CDSSelect"||tree.Text!="a last"||tree.Start!=(Pos{2,3})||tree.End!=(Pos{4,9})||len(tree.Children)!=2||tree.Children[0].Kind!="CDSName"||tree.Children[0].Children!=nil||tree.Children[1].Kind!="CDSAs"||tree.Children[1].Text!="last"{t.Fatal(tree)}
+ tree.Children[0].Text="changed"
+ again,_,_:=c.CDS("zdata");if again.Children[0].Text!="a"{t.Fatal("expression aliases core")}
+ table:=&tableStub{objectStub:obj,parsed:kindStub{"not a structure"},keys:&array[jsString]{Items:[]jsString{str("zKey"),str("Akey")}}}
+ c.registry.data["TABL:ZDATA"]=table
+ if v,k,f:=c.DDIC("TABL","zdata");v!=nil||!reflect.DeepEqual(k,[]string{"zKey","Akey"})||!f{t.Fatal(v,k,f)}
+ table.parsed=&structureStub{&array[any]{}}
+ if v,_,_:=c.DDIC("TABL","zdata");v==nil||len(v)!=0{t.Fatal("empty structure",v)}
+ table.parsed=&structureStub{&array[any]{Items:[]any{&componentStub{str("bField")},&componentStub{str("aField")}}}}
+ view:=&viewStub{objectStub:obj,parsed:table.parsed,keys:&array[jsString]{Items:[]jsString{str("ViewKey")}}}
+ c.registry.data["VIEW:ZDATA"]=view
+ v,k,f:=c.DDIC("VIEW","zdata");if !f||!reflect.DeepEqual(v,[]string{"bField","aField"})||!reflect.DeepEqual(k,[]string{"ViewKey"}){t.Fatal(v,k,f)}
+ v[0]="changed";k[0]="changed"
+ v,k,_=c.DDIC("VIEW","ZDATA");if v[0]!="bField"||k[0]!="ViewKey"{t.Fatal("DDIC aliases core")}
+ obj.files.Items=[]any{&fileStub{str("z.second"),str("\x00\r\n😀")},&fileStub{str("a.first"),str("")}}
+ files,found:=c.Files("DDLS","zdata");if !found||len(files)!=2||files[0]!=(File{"z.second","\x00\r\n😀"})||files[1]!=(File{"a.first",""}){t.Fatal(files,found)}
+ files[0].Raw="changed";files,_=c.Files("DDLS","zdata");if files[0].Raw!="\x00\r\n😀"{t.Fatal("files alias core")}
+ // Reentrant core globals and registry state are protected across all APIs.
+ var wg sync.WaitGroup
+ for range 3 {wg.Go(func(){for range 5{c.CDS("zdata");c.DDIC("TABL","zdata");c.Files("VIEW","zdata")}})}
+ wg.Wait()
+}

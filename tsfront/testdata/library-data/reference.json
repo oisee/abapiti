@@ -1,0 +1,49 @@
+{
+  "Core": "@abaplint/core@2.120.73",
+  "Base": "8df2b93214a2e41ee1701de4861477fd77553056",
+  "PR839": "bd29576752eb459dc56b8bf8cf845a8162d10405",
+  "M1": {
+    "Snapshots": 295,
+    "Found": 295,
+    "Types": {
+      "DDLS": 0,
+      "TABL": 259,
+      "VIEW": 36
+    },
+    "Expressions": 0,
+    "Bytes": 1288895,
+    "APIAndNodeSHA256": "549468ac2096f0f9e5d6c2fbf0949fb7ce4994996b8b63fb622a28598683bb38",
+    "AdapterAndLegacyAPISHA256": "6b02949e80ba3ddc1ce2b20e4414a307870a9e1c4db4472906cdb001573e9d11",
+    "Files": 2785
+  },
+  "Scenarios": {
+    "Snapshots": 64,
+    "Found": 60,
+    "Types": {
+      "DDLS": 16,
+      "TABL": 8,
+      "VIEW": 8
+    },
+    "Expressions": 249,
+    "Bytes": 88472,
+    "APIAndNodeSHA256": "8e6906dd6beb0d3deef0708872eed6f3ade27d1a9d5d069368e8ee72ae8d9d4b",
+    "AdapterAndLegacyAPISHA256": "02cb1393221cfaf273547925571c537d66607b0398233d910929eeb725846f10",
+    "Mutations": 41
+  },
+  "Fixtures": {
+    "Snapshots": 13,
+    "Found": 9,
+    "Types": {
+      "DDLS": 5,
+      "TABL": 2,
+      "VIEW": 2
+    },
+    "Expressions": 29,
+    "Bytes": 8145,
+    "APIAndNodeSHA256": "eaffbac0b834134902bccb8aedec82805c989c9c11ccd209a8d5a4f8c2fb590b"
+  },
+  "DefaultCLI": {
+    "hir.go": "970bd64bd0721c37db0ffbbcead311841a06e10945dc41ae2768f483df392138",
+    "sites.json": "e32df9a686e08ce14ba4b3481c9c6f77abefb4ca478911abcfd302b575b5413e"
+  }
+}

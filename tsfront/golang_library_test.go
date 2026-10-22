@@ -33,7 +33,7 @@ func TestRegistryGoLibrary(t *testing.T) {
   @setDirty@()
   @isDirty@() bool
  }
- type @File@ interface { @getRaw@() jsString; @getObjectName@() jsString }
+ type @File@ interface { @getFilename@() jsString; @getRaw@() jsString; @getObjectName@() jsString }
  type @Issue@ = *issueStub
  type @Position@ = *positionStub
  type @AbstractToken@ interface { @getStr@() jsString; @getStart@() @Position@; @getEnd@() @Position@ }
@@ -43,10 +43,11 @@ func TestRegistryGoLibrary(t *testing.T) {
  type @ABAPObject@ interface { @getABAPFiles@() *array[@ABAPFile@]; @getMainABAPFile@() @ABAPFile@; @getSequencedFiles@() *array[@ABAPFile@] }
  var @PragmaDescriptor@ classDescriptor
  func(o *objectStub) @getType@() jsString { return str("CLAS") }
- func(r *registryStub) @getObject@(typ,name optional[jsString]) @Object@ { if !typ.Has || !name.Has || typ.Value.String()!="CLAS" {return nil}; o:=r.objects[strings.ToUpper(name.Value.String())];if o==nil{return nil};return o }
+ func(r *registryStub) @getObject@(typ,name optional[jsString]) @Object@ { if r.data!=nil {if !r.parsed{panic("lookup before parse")};r.parsed=false;return r.data[typ.Value.String()+":"+strings.ToUpper(name.Value.String())]}; if !typ.Has || !name.Has || typ.Value.String()!="CLAS" {return nil}; o:=r.objects[strings.ToUpper(name.Value.String())];if o==nil{return nil};return o }
 
  type fileStub struct { name, raw jsString }
  func @newFile@(name,raw jsString) *fileStub { return &fileStub{name,raw} }
+ func(f *fileStub) @getFilename@() jsString {return f.name}
  func(f *fileStub) @getRaw@() jsString { return f.raw }
  func(f *fileStub) @getObjectName@() jsString {return str(strings.ToUpper(strings.Split(path.Base(f.name.String()),".")[0]))}
  type objectStub struct {name jsString; files *array[any]; dirty bool}
@@ -54,7 +55,7 @@ func TestRegistryGoLibrary(t *testing.T) {
  func(o *objectStub) @getName@() jsString {return o.name}
  func(o *objectStub) @setDirty@() {o.dirty=true}
  func(o *objectStub) @isDirty@() bool {return o.dirty}
- type registryStub struct {files map[string]*fileStub; objects map[string]*objectStub}
+ type registryStub struct {files map[string]*fileStub; objects map[string]*objectStub; data map[string]@Object@; parsed bool; parseCalls int}
  type objectsStub struct{objects []@Object@; at int}
  type objectNext struct{@done@ bool; @value@ @Object@}
  func(r *registryStub) @getObjects@() *objectsStub {
@@ -95,7 +96,7 @@ func TestRegistryGoLibrary(t *testing.T) {
  func @newRun@() *harnessStub{return &harnessStub{}}
  func(h *harnessStub) @addFile@(name,raw jsString){h.files=append(h.files,@newFile@(name,raw))}
  func(h *harnessStub) @addDependency@(name,raw jsString){h.deps=append(h.deps,@newFile@(name,raw))}
- func(r *registryStub) @parse@() { for _,o:=range r.objects{o.dirty=false} }
+ func(r *registryStub) @parse@() { r.parsed=true;r.parseCalls++; for _,o:=range r.objects{o.dirty=false} }
  func(h *harnessStub) @parse@(cfg jsString) @Registry@ {
   if cfg.String()=="throw"{panic("refused prime")}
   r:=&registryStub{files:map[string]*fileStub{},objects:map[string]*objectStub{}}
@@ -113,6 +114,13 @@ func TestRegistryGoLibrary(t *testing.T) {
  func(p *positionStub) @getRow@() float64{return p.row}
  func(p *positionStub) @getCol@() optional[float64]{return optional[float64]{Has:true,Value:p.col}}
  `)
+	for _, pair := range [][2]string{{"stub.go.txt", "data_stub.go"}, {"unit_test.go.txt", "data_test.go"}} {
+		raw, err := os.ReadFile(filepath.Join("testdata", "library-data", pair[0]))
+		if err != nil {
+			t.Fatal(err)
+		}
+		files[pair[1]] = registryGoLibrarySymbols("lintlib", names).Replace(string(raw))
+	}
 	files["library_test.go"] = `package lintlib
  import("math";"strings";"testing")
  func refused(t *testing.T, part string, fn func()){
@@ -191,13 +199,19 @@ func TestRegistryGoLibrary(t *testing.T) {
 // must not make a placeholder appear to have been emitted by the package.
 func TestRegistryGoLibraryEmittedNames(t *testing.T) {
 	registry := &hir.Class{Name: "src/registry.ts.Registry"}
-	for _, name := range []string{"addFile", "addDependency", "parse", "getFileByName", "findObjectForFile", "findIssuesObject", "getFiles", "getObjects", "next", "close", "done", "value", "getRaw", "getObjectName", "getName", "setDirty", "isDirty", "updateFile", "removeFile", "getKey", "getSeverity", "getFilename", "getMessage", "getStart", "getEnd", "getRow", "getCol", "getObject", "getType", "getABAPFiles", "getMainABAPFile", "getSequencedFiles", "getStructure", "getStatements", "get", "getChildren", "getFirstStatement", "getFirstToken", "getLastToken", "getTokens", "getStr"} {
+	for _, name := range []string{"addFile", "addDependency", "parse", "getFileByName", "findObjectForFile", "findIssuesObject", "getFiles", "getObjects", "next", "close", "done", "value", "getRaw", "getObjectName", "getName", "setDirty", "isDirty", "updateFile", "removeFile", "getKey", "getSeverity", "getFilename", "getMessage", "getStart", "getEnd", "getRow", "getCol", "getObject", "getType", "getABAPFiles", "getMainABAPFile", "getSequencedFiles", "getStructure", "getStatements", "get", "getChildren", "getFirstStatement", "getFirstToken", "getLastToken", "getTokens", "getStr", "getTree", "getSQLViewName", "concatTokens", "parseType", "listKeys", "getComponents", "name"} {
 		registry.Methods = append(registry.Methods, &hir.Method{
 			Name: name, Result: hir.T(hir.Void), Body: &hir.Stmt{Kind: hir.Block},
 		})
 	}
 	p := &hir.Program{
 		Classes: []*hir.Class{registry,
+			{Name: "src/abap/nodes/expression_node.ts.ExpressionNode"},
+			{Name: "src/objects/data_definition.ts.DataDefinition"},
+			{Name: "src/objects/table.ts.Table"},
+			{Name: "src/objects/view.ts.View"},
+			{Name: "src/abap/types/basic/structure_type.ts.StructureType"},
+			{Name: "src/abap/types/basic/_abstract_type.ts.AbstractType"},
 			{Name: "src/issue.ts.Issue"},
 			{Name: "src/objects/_abap_object.ts.ABAPObject"},
 			{Name: "src/abap/abap_file.ts.ABAPFile"},
@@ -210,6 +224,7 @@ func TestRegistryGoLibraryEmittedNames(t *testing.T) {
 			{Name: "src/files/memory_file.ts.MemoryFile"},
 		},
 		Interfaces: []*hir.Interface{
+			{Name: "src/abap/types/basic/structure_type.ts.IStructureComponent"},
 			{Name: "src/objects/_iobject.ts.IObject"},
 			{Name: "src/files/_ifile.ts.IFile"},
 		},
@@ -242,6 +257,13 @@ func TestRegistryGoLibraryEmittedNames(t *testing.T) {
 		}
 	}
 	special := map[string]string{
+		"ExpressionNode":   "ref.src/abap/nodes/expression_node.ts.ExpressionNode",
+		"DataDefinition":   "ref.src/objects/data_definition.ts.DataDefinition",
+		"Table":            "ref.src/objects/table.ts.Table",
+		"View":             "ref.src/objects/view.ts.View",
+		"StructureType":    "ref.src/abap/types/basic/structure_type.ts.StructureType",
+		"AbstractType":     "ref.src/abap/types/basic/_abstract_type.ts.AbstractType",
+		"Component":        "ref.src/abap/types/basic/structure_type.ts.IStructureComponent",
 		"Registry":         "ref.src/registry.ts.Registry",
 		"ABAPObject":       "ref.src/objects/_abap_object.ts.ABAPObject",
 		"ABAPFile":         "ref.src/abap/abap_file.ts.ABAPFile",
