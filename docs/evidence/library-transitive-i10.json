@@ -1,0 +1,442 @@
+{
+  "Baseline": "83195cb77aff14942a694d5935e164b5e7f54354",
+  "CodeHead": "c782ed7008fc6cb9987b30c0c861240201538337",
+  "Host": "i10 container, four-CPU quota, 20 GiB cgroup",
+  "Go": "1.26.9",
+  "NodeCore": "2.120.73 (original npm package)",
+  "ConsumerBuildFlags": [
+    "-p=1",
+    "-gcflags=-N"
+  ],
+  "GOMAXPROCS": 2,
+  "BenchmarkGOGC": 100,
+  "BenchmarkMaxLoad": 64,
+  "SharedHostMeasurement": true,
+  "HostOnlineCPUs": 12,
+  "AlternatingPairs": 20,
+  "WarmupsPerCommandPerVariant": 2,
+  "M1Files": 2785,
+  "M1InputsSHA256": "f56c900570498bbbefb38867f26530584270853959772ec8473bff191d20c9a8",
+  "MacroPolicy": "Conservatively reparse transitive MacroCall/Unknown consumers to rebuild stored/potential expansion; all other transitive ABAP consumers receive only a syntaxResult=nil field write. No additional M1 URI reparses.",
+  "NodeStale": [
+    {
+      "Scenario": "inheritance",
+      "ExpectedFreshError": "Method \"foo\" not found",
+      "CachedNativeNodeIssues": []
+    },
+    {
+      "Scenario": "interface-alias",
+      "ExpectedFreshError": "Method \"foo\" not found",
+      "CachedNativeNodeIssues": []
+    },
+    {
+      "Scenario": "include-chain",
+      "ExpectedFreshError": "\"foo\" not found",
+      "CachedNativeNodeIssues": []
+    },
+    {
+      "Scenario": "macro-chain",
+      "ExpectedFreshError": "\"missing\" not found",
+      "CachedNativeNodeIssues": []
+    },
+    {
+      "Scenario": "typepool-structure",
+      "ExpectedFreshError": "Component \"bar\" not found",
+      "CachedNativeNodeIssues": []
+    }
+  ],
+  "BaselineFailureEvidence": "docs/evidence/library-transitive-base-fail.txt",
+  "Differentials": [
+    {
+      "Actual": "tree-new-m1.jsonl",
+      "Reference": "tree-node-m1.jsonl",
+      "Snapshots": 2210,
+      "Differences": [],
+      "SHA256": "37b0fc10c8856bc65d545e7260c95eb77cb9f2fcfc80625809f72d82a3ad8a07"
+    },
+    {
+      "Actual": "tree-new-small.jsonl",
+      "Reference": "tree-node-small.jsonl",
+      "Snapshots": 7,
+      "Differences": [],
+      "SHA256": "f752a55549aa1a4f0b2856a089a135369ab7f28a6f3781c2501eb141f5d35994"
+    },
+    {
+      "Actual": "data-new-m1.jsonl",
+      "Reference": "data-node-m1.jsonl",
+      "Snapshots": 295,
+      "Differences": [],
+      "SHA256": "549468ac2096f0f9e5d6c2fbf0949fb7ce4994996b8b63fb622a28598683bb38"
+    },
+    {
+      "Actual": "data-new-fixtures.jsonl",
+      "Reference": "data-node-fixtures.jsonl",
+      "Snapshots": 13,
+      "Differences": [],
+      "SHA256": "eaffbac0b834134902bccb8aedec82805c989c9c11ccd209a8d5a4f8c2fb590b"
+    },
+    {
+      "Actual": "data-new-scenarios.jsonl",
+      "Reference": "data-node-scenarios.jsonl",
+      "Snapshots": 64,
+      "Differences": [],
+      "SHA256": "8e6906dd6beb0d3deef0708872eed6f3ade27d1a9d5d069368e8ee72ae8d9d4b"
+    },
+    {
+      "Actual": "incremental-new-scenarios.jsonl",
+      "Reference": "incremental-node-scenarios.jsonl",
+      "Snapshots": 64,
+      "Differences": [],
+      "SHA256": "5945aca5e408c572193b5f9eca26a1a80ba756635a342fcc866d52007ef750eb"
+    },
+    {
+      "Actual": "incremental-new-direct.jsonl",
+      "Reference": "incremental-node-direct.jsonl",
+      "Snapshots": 126,
+      "Differences": [],
+      "SHA256": "59340c02efbc0bdfb704ae17376a82e00de07e38e924475d2652c0c44f2437bb"
+    },
+    {
+      "Actual": "incremental-new-closure.jsonl",
+      "Reference": "incremental-node-closure.jsonl",
+      "Snapshots": 432,
+      "Differences": [],
+      "SHA256": "74d1bcb5d07726583238c2a2f3fdd3ccbd1413ba129ff1c9fbb458bf7963fe32"
+    }
+  ],
+  "DefaultGoOutput": [
+    {
+      "File": "go/go.mod",
+      "SHA256": "1e0591999faff09d57e9f1743365dcde5bfb8ca9633e871ce0263614b061e905",
+      "Bytes": 28
+    },
+    {
+      "File": "go/hir.go",
+      "SHA256": "970bd64bd0721c37db0ffbbcead311841a06e10945dc41ae2768f483df392138",
+      "Bytes": 34099117
+    },
+    {
+      "File": "go/hir_profile.go",
+      "SHA256": "9cdc73e264e0992dd99b616388e266ab6de6d8b13a4f04906b0b3ed96f3146a7",
+      "Bytes": 36313922
+    },
+    {
+      "File": "go/literals.go",
+      "SHA256": "54d7e1da37a52a5cb494a69db825a27be393a6f6c3269c1b52e595da4dce7d17",
+      "Bytes": 640853
+    },
+    {
+      "File": "go/main.go",
+      "SHA256": "e61c5bda72a4fd630958b290882ab5e8a11003b85ddf92a7c52cc1fed90d7de6",
+      "Bytes": 4701
+    },
+    {
+      "File": "go/promise.go",
+      "SHA256": "ee8b201aeef05a11f8f1122325ce1589538aa8cac087d14440827d63b4766309",
+      "Bytes": 738
+    },
+    {
+      "File": "go/runtime.go",
+      "SHA256": "a8a51312b1b83a201085be91241725707aaa289c5c74fd2487e468aff9516dc0",
+      "Bytes": 216293
+    },
+    {
+      "File": "go/site_profile.go",
+      "SHA256": "fcdf5c6096f0188377346b2e1c5793348c1cd3ed5d44effc778de39853c61b0e",
+      "Bytes": 5405243
+    },
+    {
+      "File": "go/site_profile_off.go",
+      "SHA256": "4f07dc8fd8b26ff04fb5ee339e0a081aa7d5aa728025ca2e86bea99fbedff2fc",
+      "Bytes": 269
+    },
+    {
+      "File": "sites.json",
+      "SHA256": "e32df9a686e08ce14ba4b3481c9c6f77abefb4ca478911abcfd302b575b5413e",
+      "Bytes": 34825528
+    }
+  ],
+  "Timings": [
+    {
+      "Variant": "before",
+      "Command": "broken",
+      "Runs": 20,
+      "MedianMS": 801.308623,
+      "ProcessPeakRSSKiB": 2032564,
+      "MedianAllocBytes": 208841536.0,
+      "MedianMallocs": 5091919.0,
+      "TotalGCs": 11,
+      "Parts": [],
+      "Stats": {
+        "Updates": 2,
+        "Noops": 0,
+        "IndexedObjects": 2,
+        "ReaderVisits": 28,
+        "DirtiedObjects": 28,
+        "ParseRuns": 1,
+        "ParseObjects": 14
+      }
+    },
+    {
+      "Variant": "before",
+      "Command": "clean",
+      "Runs": 20,
+      "MedianMS": 23.8169385,
+      "ProcessPeakRSSKiB": 2032564,
+      "MedianAllocBytes": 3573120.0,
+      "MedianMallocs": 43590.0,
+      "TotalGCs": 0,
+      "Parts": [],
+      "Stats": {
+        "Updates": 0,
+        "Noops": 0,
+        "IndexedObjects": 0,
+        "ReaderVisits": 0,
+        "DirtiedObjects": 0,
+        "ParseRuns": 0,
+        "ParseObjects": 0
+      }
+    },
+    {
+      "Variant": "before",
+      "Command": "tree",
+      "Runs": 20,
+      "MedianMS": 25.4467585,
+      "ProcessPeakRSSKiB": 2032564,
+      "MedianAllocBytes": 3787904.0,
+      "MedianMallocs": 59305.0,
+      "TotalGCs": 0,
+      "Parts": [],
+      "Stats": {
+        "Updates": 0,
+        "Noops": 0,
+        "IndexedObjects": 0,
+        "ReaderVisits": 0,
+        "DirtiedObjects": 0,
+        "ParseRuns": 0,
+        "ParseObjects": 0
+      }
+    },
+    {
+      "Variant": "before",
+      "Command": "snapshot",
+      "Runs": 20,
+      "MedianMS": 27.5383855,
+      "ProcessPeakRSSKiB": 2032564,
+      "MedianAllocBytes": 7895152.0,
+      "MedianMallocs": 186809.0,
+      "TotalGCs": 0,
+      "Parts": [],
+      "Stats": {
+        "Updates": 0,
+        "Noops": 0,
+        "IndexedObjects": 0,
+        "ReaderVisits": 0,
+        "DirtiedObjects": 0,
+        "ParseRuns": 0,
+        "ParseObjects": 0
+      }
+    },
+    {
+      "Variant": "before",
+      "Command": "outline",
+      "Runs": 20,
+      "MedianMS": 25.290512,
+      "ProcessPeakRSSKiB": 2032564,
+      "MedianAllocBytes": 7437248.0,
+      "MedianMallocs": 183472.0,
+      "TotalGCs": 0,
+      "Parts": [],
+      "Stats": {
+        "Updates": 0,
+        "Noops": 0,
+        "IndexedObjects": 0,
+        "ReaderVisits": 0,
+        "DirtiedObjects": 0,
+        "ParseRuns": 0,
+        "ParseObjects": 0
+      }
+    },
+    {
+      "Variant": "before",
+      "Command": "probe",
+      "Runs": 20,
+      "MedianMS": 679.8173625,
+      "ProcessPeakRSSKiB": 2032564,
+      "MedianAllocBytes": 211838752.0,
+      "MedianMallocs": 5130305.0,
+      "TotalGCs": 1,
+      "Parts": [
+        15.881358500000001,
+        622.508288,
+        27.492327500000002,
+        16.379189
+      ],
+      "Stats": {
+        "Updates": 2,
+        "Noops": 0,
+        "IndexedObjects": 2,
+        "ReaderVisits": 28,
+        "DirtiedObjects": 28,
+        "ParseRuns": 1,
+        "ParseObjects": 14
+      }
+    },
+    {
+      "Variant": "after",
+      "Command": "broken",
+      "Runs": 20,
+      "MedianMS": 974.807823,
+      "ProcessPeakRSSKiB": 2099812,
+      "MedianAllocBytes": 209024804.0,
+      "MedianMallocs": 5103424.5,
+      "TotalGCs": 8,
+      "Parts": [],
+      "Stats": {
+        "Updates": 2,
+        "Noops": 0,
+        "IndexedObjects": 2,
+        "ReaderVisits": 496,
+        "DirtiedObjects": 28,
+        "ParseRuns": 1,
+        "ParseObjects": 14
+      }
+    },
+    {
+      "Variant": "after",
+      "Command": "clean",
+      "Runs": 20,
+      "MedianMS": 21.655312000000002,
+      "ProcessPeakRSSKiB": 2099812,
+      "MedianAllocBytes": 3573120.0,
+      "MedianMallocs": 43590.0,
+      "TotalGCs": 0,
+      "Parts": [],
+      "Stats": {
+        "Updates": 0,
+        "Noops": 0,
+        "IndexedObjects": 0,
+        "ReaderVisits": 0,
+        "DirtiedObjects": 0,
+        "ParseRuns": 0,
+        "ParseObjects": 0
+      }
+    },
+    {
+      "Variant": "after",
+      "Command": "tree",
+      "Runs": 20,
+      "MedianMS": 24.067444000000002,
+      "ProcessPeakRSSKiB": 2099812,
+      "MedianAllocBytes": 3787904.0,
+      "MedianMallocs": 59305.0,
+      "TotalGCs": 0,
+      "Parts": [],
+      "Stats": {
+        "Updates": 0,
+        "Noops": 0,
+        "IndexedObjects": 0,
+        "ReaderVisits": 0,
+        "DirtiedObjects": 0,
+        "ParseRuns": 0,
+        "ParseObjects": 0
+      }
+    },
+    {
+      "Variant": "after",
+      "Command": "snapshot",
+      "Runs": 20,
+      "MedianMS": 24.6006715,
+      "ProcessPeakRSSKiB": 2099812,
+      "MedianAllocBytes": 7895152.0,
+      "MedianMallocs": 186809.0,
+      "TotalGCs": 0,
+      "Parts": [],
+      "Stats": {
+        "Updates": 0,
+        "Noops": 0,
+        "IndexedObjects": 0,
+        "ReaderVisits": 0,
+        "DirtiedObjects": 0,
+        "ParseRuns": 0,
+        "ParseObjects": 0
+      }
+    },
+    {
+      "Variant": "after",
+      "Command": "outline",
+      "Runs": 20,
+      "MedianMS": 25.1961905,
+      "ProcessPeakRSSKiB": 2099812,
+      "MedianAllocBytes": 7437248.0,
+      "MedianMallocs": 183472.0,
+      "TotalGCs": 0,
+      "Parts": [],
+      "Stats": {
+        "Updates": 0,
+        "Noops": 0,
+        "IndexedObjects": 0,
+        "ReaderVisits": 0,
+        "DirtiedObjects": 0,
+        "ParseRuns": 0,
+        "ParseObjects": 0
+      }
+    },
+    {
+      "Variant": "after",
+      "Command": "probe",
+      "Runs": 20,
+      "MedianMS": 691.5995805,
+      "ProcessPeakRSSKiB": 2099812,
+      "MedianAllocBytes": 212020360.0,
+      "MedianMallocs": 5141788.0,
+      "TotalGCs": 0,
+      "Parts": [
+        14.3097855,
+        632.8600675,
+        28.026130000000002,
+        16.973556000000002
+      ],
+      "Stats": {
+        "Updates": 2,
+        "Noops": 0,
+        "IndexedObjects": 2,
+        "ReaderVisits": 496,
+        "DirtiedObjects": 28,
+        "ParseRuns": 1,
+        "ParseObjects": 14
+      }
+    }
+  ],
+  "MaximumTimingLoad": 17.48779296875,
+  "Validation": {
+    "Command": "go test -short -timeout 60m -p 2 -json ./tsfront",
+    "PassedTestsIncludingSubtests": 1656,
+    "PassedTopLevelTests": 1006,
+    "SkippedTestsIncludingSubtests": 37,
+    "ElapsedSeconds": 1075.888,
+    "Build": "go build -p 2 ./...: passed",
+    "Vet": "go vet -p 2 ./...: passed"
+  },
+  "TestEnvironment": {
+    "GOCACHE": "/work/.scratch/gocache",
+    "TMPDIR": "/work/.scratch/tmp",
+    "GOFLAGS": "",
+    "GOMEMLIMIT": "12GiB",
+    "NODE_OPTIONS": "--disable-warning=MODULE_TYPELESS_PACKAGE_JSON",
+    "GIT_CEILING_DIRECTORIES": "/work/.scratch/tmp",
+    "FullCoreLibraryFixturesEnabled": [
+      "Tree",
+      "Data",
+      "Incremental (direct-reader Node)",
+      "Transitive"
+    ]
+  },
+  "DiagnosticProfiles": {
+    "BeforeTotalCPUSeconds": 10.67,
+    "AfterTotalCPUSeconds": 11.72,
+    "RequestsPerProfile": 5,
+    "IncludesCompletionOfLazyRestores": true,
+    "Note": "Separate post-timing profile samples; dominated by runtime GC scanning. Shared-host results are not a clean causal overhead estimate."
+  }
+}

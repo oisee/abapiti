@@ -119,3 +119,10 @@ guard now checks its output filesystem instead of a host-specific mount.
 The load guard defaults to 12. On an already busy shared host, an explicit
 `ABAPITI_BENCH_MAX_LOAD` can raise that limit; preserve the raw sampled Load
 values and qualify the resulting medians as shared-host measurements.
+
+The i10 follow-up evidence is in `docs/evidence/library-transitive-i10.json`.
+All 432 M1 closure snapshots equal fresh Checkers and the existing Node policy.
+In a qualified shared-host 20-pair run, broken checks measured 801.309/974.808 ms
+before/after; clean checks 23.817/21.655 ms. Both reparse 14 owners; allocation
+is 208.842/209.025 MB. The observed wall-clock slowdown is retained explicitly;
+these shared-host measurements do not establish a quiet-host overhead estimate.
