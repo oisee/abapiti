@@ -17,6 +17,8 @@ type Issue struct {
  Filename, Key, Severity, Message string
  Row, Column, EndRow, EndColumn int32
 }
+// ParseObjects counts invalidated objects submitted to parsing after Update,
+// excluding inert core objects which remain dirty even after a successful parse.
 type Stats struct {
  Updates, Noops, IndexedObjects, ReaderVisits, DirtiedObjects, ParseRuns, ParseObjects int32
 }
@@ -34,13 +36,14 @@ type Checker struct {
  registry @Registry@
  readers map[string]map[@Object@]bool
  words map[@Object@][]string
+ pending map[@Object@]bool
  stats Stats
 }
 
 // Prime replaces the baseline, including files, dependencies and config.
 func (c *Checker) Prime(files, deps []File, config string) {
  libraryMu.Lock(); defer libraryMu.Unlock()
- *c = Checker{readers: map[string]map[@Object@]bool{}, words: map[@Object@][]string{}}
+ *c = Checker{readers: map[string]map[@Object@]bool{}, words: map[@Object@][]string{}, pending: map[@Object@]bool{}}
  h := @newRun@()
  for _, f := range files { h.@addFile@(str(f.Filename), str(f.Raw)) }
  for _, f := range deps { h.@addDependency@(str(f.Filename), str(f.Raw)) }
@@ -85,7 +88,8 @@ func (c *Checker) unindex(obj @Object@) {
 
 // Update batches edits without parsing. nil removes a file; &"" installs an
 // empty file. The host implements overlay+restore by deferring Update(original).
-// Lexical readers include comments/strings, matching OSG's conservative closure.
+// Only direct lexical readers are invalidated, including comments/strings.
+// Following readers transitively discards unrelated parsed trees and definitions.
 func (c *Checker) Update(filename string, raw *string) {
  libraryMu.Lock(); defer libraryMu.Unlock()
  c.require()
@@ -94,7 +98,7 @@ func (c *Checker) Update(filename string, raw *string) {
  if raw == nil && before == nil || raw != nil && before != nil && before.@getRaw@().String() == *raw { c.stats.Noops++; return }
  var old @Object@
  if before != nil { old = c.registry.@findObjectForFile@(before) }
- if old != nil { c.unindex(old) }
+ if old != nil { c.unindex(old); delete(c.pending, old) }
  file := before
  var obj @Object@
  if raw == nil {
@@ -107,18 +111,14 @@ func (c *Checker) Update(filename string, raw *string) {
  }
  dirty := map[@Object@]bool{}
  if obj != nil { c.index(obj); dirty[obj] = true }
- queue := []string{strings.ToUpper(file.@getObjectName@().String())}
- reached := map[string]bool{queue[0]: true}
- for at := 0; at < len(queue); at++ {
-  for reader := range c.readers[queue[at]] {
-   c.stats.ReaderVisits++
-   if dirty[reader] { continue }
-   dirty[reader] = true
-   reader.@setDirty@()
-   name := strings.ToUpper(reader.@getName@().String())
-   if !reached[name] { reached[name] = true; queue = append(queue, name) }
-  }
+ name := strings.ToUpper(file.@getObjectName@().String())
+ for reader := range c.readers[name] {
+  c.stats.ReaderVisits++
+  if dirty[reader] { continue }
+  dirty[reader] = true
+  reader.@setDirty@()
  }
+ for object := range dirty { c.pending[object] = true }
  c.stats.DirtiedObjects += int32(len(dirty))
 }
 
@@ -172,13 +172,14 @@ func (c *Checker) CheckObject(typ, name string) ([]Issue, bool) {
 
 func (c *Checker) countParse() {
  dirty := int32(0)
- for object := range c.words { if object.@isDirty@() { dirty++ } }
+ for object := range c.pending { if object.@isDirty@() { dirty++ } }
  if dirty > 0 { c.stats.ParseRuns++; c.stats.ParseObjects += dirty }
 }
 
 func (c *Checker) checkObject(obj @Object@) []Issue {
  c.countParse()
  issues := c.registry.@findIssuesObject@(obj)
+ clear(c.pending)
  out := make([]Issue, 0, libraryLength(issues))
  for at := int32(0); at < libraryLength(issues); at++ {
   issue := any(libraryAt(issues, at)).(@Issue@)
@@ -268,6 +269,7 @@ func (c *Checker) Tree(typ, name string) ([]FileTree, bool) {
  if obj == nil { return nil, false }
  c.countParse()
  c.registry.@parse@()
+ clear(c.pending)
  out := make([]FileTree, 0)
  abap, ok := obj.(@ABAPObject@)
  if !ok { return out, true }
@@ -313,6 +315,7 @@ func (c *Checker) CDS(name string) (tree *Expression, sqlView *string, found boo
  c.require()
  c.countParse()
  c.registry.@parse@()
+ clear(c.pending)
  obj := c.registry.@getObject@(present(str("DDLS")), present(str(name)))
  if obj == nil { return nil, nil, false }
  definition := obj.(@DataDefinition@)
@@ -329,6 +332,7 @@ func (c *Checker) DDIC(typ, name string) (components, keys []string, found bool)
  c.require()
  c.countParse()
  c.registry.@parse@()
+ clear(c.pending)
  obj := c.registry.@getObject@(present(str(typ)), present(str(name)))
  if obj == nil { return nil, nil, false }
  var parsed @AbstractType@
@@ -362,6 +366,7 @@ func (c *Checker) Files(typ, name string) (files []File, found bool) {
  c.require()
  c.countParse()
  c.registry.@parse@()
+ clear(c.pending)
  obj := c.registry.@getObject@(present(str(typ)), present(str(name)))
  if obj == nil { return nil, false }
  values := obj.@getFiles@()

@@ -129,8 +129,8 @@ func TestRegistryGoLibrary(t *testing.T) {
  func TestLifecycle(t *testing.T){
   var c Checker
   refused(t,"prime",func(){c.Check("missing")})
-  c.Prime([]File{{"/zbase.clas.abap","ZBASE old"},{"/zsub.clas.abap","ZSUB ZBASE"},{"/zcall.clas.abap","ZCALL ZSUB"},{"/zcall.clas.locals_def.abap","ZBASE"},{"/zother.clas.abap","ZOTHER"}},[]File{{"/zdep.intf.abap","ZDEP"}},"{}")
-  if c.Stats().IndexedObjects!=5{t.Fatal(c.Stats())}
+  c.Prime([]File{{"/zbase.clas.abap","ZBASE old"},{"/zsub.clas.abap","ZSUB ZBASE"},{"/zcall.clas.abap","ZCALL ZSUB"},{"/zcall.clas.locals_def.abap","ZBASE"},{"/zother.clas.abap","ZOTHER"},{"/zfar.clas.abap","ZFAR ZCALL"}},[]File{{"/zdep.intf.abap","ZDEP"}},"{}")
+  if c.Stats().IndexedObjects!=6{t.Fatal(c.Stats())}
   if issues,found:=c.CheckObject("CLAS","missing");found||issues!=nil{t.Fatal(issues,found)}
   if files,found:=c.Tree("CLAS","missing");found||files!=nil{t.Fatal(files,found)}
   if files,found:=c.Tree("CLAS","zbase");!found||len(files)!=0{t.Fatal(files,found)}
@@ -141,8 +141,11 @@ func TestRegistryGoLibrary(t *testing.T) {
   if c.Stats().Noops!=1||c.Stats().DirtiedObjects!=0{t.Fatal(c.Stats())}
   raw="ZBASE new";c.Update("/zbase.clas.abap",&raw)
   if c.Stats().DirtiedObjects!=3||c.Stats().ParseRuns!=0{t.Fatal(c.Stats())}
+  if c.registry.objects["ZFAR"].dirty{t.Fatal("transitive reader was dirtied")}
   c.Check("/zcall.clas.abap")
   if c.Stats().ParseRuns!=1||c.Stats().ParseObjects!=3{t.Fatal(c.Stats())}
+  c.Check("/zcall.clas.abap")
+  if c.Stats().ParseRuns!=1{t.Fatal("clean check counted as parse",c.Stats())}
   // Restore remains lazy; no-op updates must retain pending dirty state.
   raw="ZBASE old";c.Update("/zbase.clas.abap",&raw);c.Update("/zbase.clas.abap",&raw)
   c.Check("/zcall.clas.abap")
@@ -155,7 +158,7 @@ func TestRegistryGoLibrary(t *testing.T) {
   // Re-created identities, cycles and removal of the last file.
   c.Update("/zsub.clas.abap",nil);raw="ZSUB ZBASE ZCALL";c.Update("/zsub.clas.abap",&raw)
   before=c.Stats();raw="ZBASE cycle";c.Update("/zbase.clas.abap",&raw)
-  if c.Stats().DirtiedObjects-before.DirtiedObjects!=3{t.Fatal("cycle",c.Stats())}
+  if c.Stats().DirtiedObjects-before.DirtiedObjects!=2{t.Fatal("cycle",c.Stats())}
   c.Check("/zcall.clas.abap")
   // Empty source differs from removal; restore after a failed check works.
   raw="";c.Update("/znew.prog.abap",&raw)
