@@ -291,3 +291,83 @@ func (c *Checker) Tree(typ, name string) ([]FileTree, bool) {
  }
  return out, true
 }
+
+// Expression copies CDS expression nodes, omitting TokenNode children. Bounds
+// retain raw one-based token positions, including the last token's getEnd().
+type Expression struct { Kind, Text string; Start, End Pos; Children []Expression }
+
+func libraryExpression(node @ExpressionNode@) Expression {
+ out := Expression{Kind: classOf(node.@get@()).Name.String(), Text: node.@concatTokens@().String(),
+  Start: libraryPos(node.@getFirstToken@().@getStart@()), End: libraryPos(node.@getLastToken@().@getEnd@())}
+ children := node.@getChildren@()
+ for i := int32(0); i < libraryLength(children); i++ {
+  if child, ok := libraryUnwrap(libraryAt(children, i)).(@ExpressionNode@); ok { out.Children = append(out.Children, libraryExpression(child)) }
+ }
+ return out
+}
+
+// CDS parses pending edits before looking up a DDLS object. An absent tree or
+// SQL view name remains nil; a defined empty SQL view name remains &"".
+func (c *Checker) CDS(name string) (tree *Expression, sqlView *string, found bool) {
+ libraryMu.Lock(); defer libraryMu.Unlock()
+ c.require()
+ c.countParse()
+ c.registry.@parse@()
+ obj := c.registry.@getObject@(present(str("DDLS")), present(str(name)))
+ if obj == nil { return nil, nil, false }
+ definition := obj.(@DataDefinition@)
+ if node := definition.@getTree@(); node != nil { out := libraryExpression(node); tree = &out }
+ if sql := definition.@getSQLViewName@(); sql.Has { out := sql.Value.String(); sqlView = &out }
+ return tree, sqlView, true
+}
+
+// DDIC copies TABL/VIEW components only for StructureType results. A different
+// type yields nil components; an empty StructureType yields a non-nil empty slice.
+// Component and key order/case are exactly those returned by the core.
+func (c *Checker) DDIC(typ, name string) (components, keys []string, found bool) {
+ libraryMu.Lock(); defer libraryMu.Unlock()
+ c.require()
+ c.countParse()
+ c.registry.@parse@()
+ obj := c.registry.@getObject@(present(str(typ)), present(str(name)))
+ if obj == nil { return nil, nil, false }
+ var parsed @AbstractType@
+ var coreKeys *array[jsString]
+ switch object := obj.(type) {
+ case @Table@:
+  parsed = object.@parseType@(c.registry, optional[jsString]{}, optional[jsString]{})
+  coreKeys = object.@listKeys@(c.registry)
+ case @View@:
+  parsed = object.@parseType@(c.registry, optional[jsString]{}, optional[jsString]{})
+  coreKeys = object.@listKeys@()
+ }
+ if structure, ok := parsed.(@StructureType@); ok {
+  values := structure.@getComponents@()
+  components = make([]string, 0, libraryLength(values))
+  for i := int32(0); i < libraryLength(values); i++ {
+   component := libraryUnwrap(libraryAt(values, i)).(@Component@)
+   components = append(components, component.@name@.String())
+  }
+ }
+ if coreKeys != nil {
+  for i := int32(0); i < libraryLength(coreKeys); i++ { keys = append(keys, libraryAt(coreKeys, i).String()) }
+ }
+ return components, keys, true
+}
+
+// Files parses pending edits before lookup and copies files in object order,
+// preserving logical filenames and exact raw source bytes.
+func (c *Checker) Files(typ, name string) (files []File, found bool) {
+ libraryMu.Lock(); defer libraryMu.Unlock()
+ c.require()
+ c.countParse()
+ c.registry.@parse@()
+ obj := c.registry.@getObject@(present(str(typ)), present(str(name)))
+ if obj == nil { return nil, false }
+ values := obj.@getFiles@()
+ for i := int32(0); i < libraryLength(values); i++ {
+  file := libraryUnwrap(libraryAt(values, i)).(@File@)
+  files = append(files, File{Filename: file.@getFilename@().String(), Raw: file.@getRaw@().String()})
+ }
+ return files, true
+}

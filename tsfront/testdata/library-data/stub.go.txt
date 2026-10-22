@@ -1,0 +1,36 @@
+package lintlib
+
+type @ExpressionNode@ = *expressionStub
+type @DataDefinition@ = *definitionStub
+type @Table@ = *tableStub
+type @View@ = *viewStub
+type @AbstractType@ interface{}
+type @StructureType@ = *structureStub
+type @Component@ = *componentStub
+
+type expressionStub struct {kind, text string; children *array[any]; first, last @AbstractToken@}
+func(n *expressionStub) @get@() any {return kindStub{n.kind}}
+func(n *expressionStub) @concatTokens@() jsString {return str(n.text)}
+func(n *expressionStub) @getChildren@() *array[any] {return n.children}
+func(n *expressionStub) @getFirstToken@() @AbstractToken@ {return n.first}
+func(n *expressionStub) @getLastToken@() @AbstractToken@ {return n.last}
+type kindStub struct {name string}
+func(k kindStub) descriptor() *classDescriptor {return &classDescriptor{Name:str(k.name)}}
+type tokenStub struct {text string; start, end *positionStub}
+func(n *tokenStub) @getStr@() jsString {return str(n.text)}
+func(n *tokenStub) @getStart@() @Position@ {return n.start}
+func(n *tokenStub) @getEnd@() @Position@ {return n.end}
+// Deliberately not ExpressionNode, despite carrying token text and positions.
+type tokenNodeStub struct {token *tokenStub}
+type definitionStub struct {*objectStub; tree @ExpressionNode@; sql optional[jsString]}
+func(d *definitionStub) @getTree@() @ExpressionNode@ {return d.tree}
+func(d *definitionStub) @getSQLViewName@() optional[jsString] {return d.sql}
+type structureStub struct {components *array[any]}
+func(s *structureStub) @getComponents@() *array[any] {return s.components}
+type componentStub struct {@name@ jsString}
+type tableStub struct {*objectStub; parsed @AbstractType@; keys *array[jsString]; seen @Registry@}
+func(o *tableStub) @parseType@(r @Registry@, a,b optional[jsString]) @AbstractType@ {if a.Has||b.Has{panic("parseType options must be undefined")};o.seen=r;return o.parsed}
+func(o *tableStub) @listKeys@(r @Registry@) *array[jsString] {if r!=o.seen{panic("TABL registry")};return o.keys}
+type viewStub struct {*objectStub; parsed @AbstractType@; keys *array[jsString]}
+func(o *viewStub) @parseType@(r @Registry@, a,b optional[jsString]) @AbstractType@ {if r==nil||a.Has||b.Has{panic("VIEW parseType arguments")};return o.parsed}
+func(o *viewStub) @listKeys@() *array[jsString] {return o.keys}
