@@ -25,8 +25,9 @@ const {compileProgram}=await tool('frontend.mjs');
 const {emitGo,referencedClasses}=await tool('emit-go.mjs');
 // Newer gogen pins accept a warm per-object frontend cache (byte-identical
 // output). Feature-detect it; older pins never see the extra argument.
-const frontendCache=cacheRoot && /\bcacheDir\b/.test(compileProgram.toString()) ? {cacheDir:join(cacheRoot,'gogen-frontend')} : {};
-cache.gogenFrontend=frontendCache.cacheDir ? 'enabled' : 'unsupported';
+const objectCache=process.env.ABAPITI_OSG_OBJECT_CACHE==='1';
+const frontendCache=cacheRoot && objectCache && /\bcacheDir\b/.test(compileProgram.toString()) ? {cacheDir:join(cacheRoot,'gogen-frontend')} : {};
+cache.gogenFrontend=frontendCache.cacheDir ? 'enabled' : objectCache ? 'unsupported' : 'disabled';
 started=performance.now();
 const objects=abapFiles.map(f=>f.split('.')[0].toUpperCase());
 // Match unit.mjs's dependency closure, including native exception bases.

@@ -70,6 +70,7 @@ if (cacheRoot) {
  const files=['abap_transpile.json','package-lock.json','libs.lock.json'].map(f=>join(osg,f)).filter(existsSync);
  frontKey=snapshotKey([...trees,...files],{
   kind:'frontend',pin,node:process.version,
+  objectCache:process.env.ABAPITI_OSG_OBJECT_CACHE==='1',
   gogenEnv:Object.fromEntries(Object.entries(process.env).filter(([k])=>k.startsWith('GOGEN_')).sort()),
   bridge:readFileSync(new URL(import.meta.url),'utf8'),
   frontendBridge:readFileSync(new URL('./abaplint-tests-osg-frontend.mjs',import.meta.url),'utf8'),
