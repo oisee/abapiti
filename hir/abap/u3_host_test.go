@@ -31,5 +31,8 @@ func TestU3HostExternCapabilities(t *testing.T) {
 	for _, v := range files {
 		src += v
 	}
-	u3Want(t, src, "zcl_abapiti_hostio=>env( name = ", "zcl_probe_host=>write_stderr( text = ", "IS BOUND.", "->has = abap_true.")
+	u3Want(t, src, "zcl_abapiti_hostio=>env( name = ", "zcl_probe_host=>write_stderr( text = ", "IS BOUND.", "->* TO <", "->has = abap_true.")
+	if strings.Contains(src, "CAST string(") {
+		t.Fatal("host optional string must be read as a data reference, not cast to an object")
+	}
 }
