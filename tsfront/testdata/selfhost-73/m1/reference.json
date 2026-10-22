@@ -1,0 +1,14 @@
+{
+  "upstreamPin": "9f7f098c21e93b8b534fff0f0148f0a900d29d16",
+  "coreVersion": "2.120.73",
+  "mainFiles": 2785,
+  "dependencyFiles": 0,
+  "issues": 82,
+  "outputSHA256": "4b190bf969c07acabdfdbdc7bc854ed8c815bf3a28d3b953274e29170d5bb3f3",
+  "dumpSHA256": "2957aaf4ef05393e076b9bd6399c54fc257efb140a7aed3cfd3d234e9f633092",
+  "filesListSHA256": "8c6eb8b45dca8b7e7b43fb77774ea12e33f36960eba18684ca2c69afbedb1185",
+  "depsListSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "configSHA256": "0897b388bfb4db73cac3a29ddcb98bf0d6b3249fb8f26a1aa4b48b5d082e8958",
+  "inputsSHA256": "f56c900570498bbbefb38867f26530584270853959772ec8473bff191d20c9a8",
+  "harnessSHA256": "8b8ac5d2a0e4cec68c36c450cee0431486186d26c32a62c979ee7eb574ef78bf"
+}
