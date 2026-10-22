@@ -50,9 +50,11 @@ const mode=process.env.ABAPITI_OSG_BUILD_MODE ?? 'fast';
 if (!['default','fast'].includes(mode)) throw new Error('ABAPITI_OSG_BUILD_MODE must be default or fast');
 const gcflags=[...(mode==='fast'?['-N','-l']:[]),...(debug?[]:['-dwarf=false'])];
 const buildArgs=['build','-p','1','-trimpath',...(debug?[]:['-ldflags=-s -w']),...(gcflags.length?['-gcflags=osg/gogen/cmd/abapitests='+gcflags.join(' ')]:[])];
-// GOGC/GOMEMLIMIT stay at Go defaults: a 12 GiB soft limit made the objects
-// compile thrash (1,336 s vs 496 s) and GOGC=50 cost 38 % time there.
-const buildEnv={...process.env,GOMAXPROCS:process.env.GOMAXPROCS ?? '8'};
+// Capped builds need headroom below the cgroup ceiling. More frequent GC
+// trades compiler time for memory without changing generated code. Uncapped
+// builds retain Go's default; callers can choose the compiler GC explicitly.
+const buildEnv={...process.env,GOMAXPROCS:process.env.GOMAXPROCS ?? '8',
+ GOGC:process.env.ABAPITI_OSG_BUILD_GOGC ?? process.env.GOGC ?? (process.env.ABAPITI_OSG_MEMORY_MAX ? '50' : '100')};
 const go=join(out,'go'), cmd=join(go,'cmd','abapitests'), binary=join(out,'abaplint-tests-osg');
 const generated={'zz_generated.go':join(cmd,'zz_generated.go'),'main.go':join(cmd,'main.go')};
 let frontKey, binaryKey, refusals, regexAdapter, buildPeakRSSKiB=null, frontendPeakRSSKiB=null;
