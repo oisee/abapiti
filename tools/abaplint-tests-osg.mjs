@@ -9,10 +9,7 @@ import {execFileSync, spawnSync} from 'node:child_process';
 import {performance} from 'node:perf_hooks';
 import {snapshotKey, readSnapshot, writeSnapshot, externalPath} from './osg-harness-cache.mjs';
 import {waitForResources} from './osg-harness-resources.mjs';
-import {resumeRunner, wireCheckpoints} from './osg-runner-resume.mjs';
-import {runnerMain} from './osg-runner-main.mjs';
-import {protectTestBoundaries} from './osgo-test-boundaries.mjs';
-import {adaptTestRegex} from './osgo-test-regex.mjs';
+import {resumeRunner} from './osg-runner-resume.mjs';
 
 const [inputArg, outArg, osgArg] = process.argv.slice(2);
 if (!inputArg || !outArg || !osgArg) throw new Error('usage: abaplint-tests-osg.mjs ABAP OUT OSG');
@@ -58,7 +55,7 @@ const buildArgs=['build','-p','1','-trimpath',...(debug?[]:['-ldflags=-s -w']),.
 const buildEnv={...process.env,GOMAXPROCS:process.env.GOMAXPROCS ?? '8'};
 const go=join(out,'go'), cmd=join(go,'cmd','abapitests'), binary=join(out,'abaplint-tests-osg');
 const generated={'zz_generated.go':join(cmd,'zz_generated.go'),'main.go':join(cmd,'main.go')};
-let frontKey, binaryKey, refusals, regexAdapter, buildPeakRSSKiB=null;
+let frontKey, binaryKey, refusals, regexAdapter, buildPeakRSSKiB=null, frontendPeakRSSKiB=null;
 const cache={frontend:cacheRoot?'miss':'disabled',binary:cacheRoot?'miss':'disabled'};
 let started=performance.now();
 if (cacheRoot) {
@@ -73,6 +70,7 @@ if (cacheRoot) {
   kind:'frontend',pin,node:process.version,
   gogenEnv:Object.fromEntries(Object.entries(process.env).filter(([k])=>k.startsWith('GOGEN_')).sort()),
   bridge:readFileSync(new URL(import.meta.url),'utf8'),
+  frontendBridge:readFileSync(new URL('./abaplint-tests-osg-frontend.mjs',import.meta.url),'utf8'),
   cache:readFileSync(new URL('./osg-harness-cache.mjs',import.meta.url),'utf8'),
   resume:readFileSync(new URL('./osg-runner-resume.mjs',import.meta.url),'utf8'),
   main:readFileSync(new URL('./osg-runner-main.mjs',import.meta.url),'utf8'),
@@ -98,53 +96,15 @@ else {
  const front=cacheRoot ? readSnapshot(cacheRoot,frontKey,generated) : null;
  if (front) { ({refusals,regexAdapter}=front); cache.frontend='hit'; }
  else {
-  const {compileProgram}=await tool('frontend.mjs');
-  const {emitGo,referencedClasses}=await tool('emit-go.mjs');
-  // Newer gogen pins accept a warm per-object frontend cache (byte-identical
-  // output). Feature-detect it; older pins never see the extra argument.
-  const frontendCache=cacheRoot && /\bcacheDir\b/.test(compileProgram.toString()) ? {cacheDir:join(cacheRoot,'gogen-frontend')} : {};
-  cache.gogenFrontend=frontendCache.cacheDir ? 'enabled' : 'unsupported';
-  started=performance.now();
-  const objects=abapFiles.map(f=>f.split('.')[0].toUpperCase());
-  // Match unit.mjs's dependency closure, including native exception bases.
-  const walk=dir=>readdirSync(dir,{withFileTypes:true}).flatMap(e=>e.isDirectory()?walk(join(dir,e.name)):[join(dir,e.name)]);
-  const sources=new Map(folders.flatMap(walk).filter(f=>!skip(f)&&/\.clas\.abap$/.test(f)).map(f=>[f.split('/').at(-1).split('.')[0].replaceAll('#','/').toUpperCase(),f]));
-  const wanted=new Set(objects), queue=[...objects];
-  while(queue.length){
-   const file=sources.get(queue.shift());if(!file)continue;
-   for(const match of readFileSync(file,'utf8').matchAll(/\b(?:CL|CX|ZCL|ZCX)_[A-Z0-9_]+\b/gi)){
-    const name=match[0].toUpperCase();if(sources.has(name)&&!wanted.has(name)){wanted.add(name);queue.push(name)}
-   }
-  }
-  let program,registry;
-  const session={};
-  for(let round=0;round<12;round++){
-   program=compileProgram({folders,objects:[...wanted],tolerant:true,skip,registry,session,...frontendCache});registry=program.reg;
-   const refs=new Set([...referencedClasses(program),...program.missing]);
-   for(const name of wanted){const sup=registry.getObject('CLAS',name)?.getDefinition()?.getSuperClass();if(sup)refs.add(sup.toUpperCase())}
-   const more=[...refs].filter(name=>sources.has(name)&&!wanted.has(name));
-   if(!more.length)break;
-   for(const name of more)wanted.add(name);
-   if(round===11)throw new Error('OSG dependency closure did not settle');
-  }
-  timingMs.frontend=Math.round(performance.now()-started);
-  // names.json is part of the fixture folder, hence of frontKey.
-  regexAdapter=adaptTestRegex(program,JSON.parse(readFileSync(join(input,'names.json'),'utf8')));
-  // Tolerant stubs remain named runtime refusals. Driver-only boundaries keep
-  // source catches separate from native NOT_COMPILED. The parent records host
-  // dumps at the active checkpoint and restarts; no results are fabricated.
-  refusals={diagnostics:program.diagnostics,skipped:program.skipped,missing:[...program.missing],stubs:program.classes.flatMap(c=>(c.stubs??[]).map(m=>({class:c.name,method:m.name,reason:m.reason})))};
-  started=performance.now();
-  writeFileSync(generated['zz_generated.go'],wireCheckpoints(protectTestBoundaries(emitGo(program,'main',null,true),program,{resume:true})));
-  writeFileSync(generated['main.go'],runnerMain);
-  timingMs.emit=Math.round(performance.now()-started);
+  // The pinned frontend retains module globals; process exit releases all of
+  // them before compilation, even when an explicit GC cannot collect them.
+  const frontend=spawnSync(process.execPath,[join(import.meta.dirname,'abaplint-tests-osg-frontend.mjs'),input,out,osg,cacheRoot ?? ''],{env:process.env,stdio:'inherit'});
+  if(frontend.status!==0)throw new Error(`OSG frontend exited ${frontend.status}: ${frontend.error?.message ?? frontend.signal ?? ''}`);
+  const state=JSON.parse(readFileSync(join(out,'frontend.json'),'utf8'));
+  ({refusals,regexAdapter}=state);
+  frontendPeakRSSKiB=state.nodePeakRSSKiB;
+  Object.assign(timingMs,state.timingMs);Object.assign(cache,state.cache);
   if(cacheRoot)writeSnapshot(cacheRoot,frontKey,generated,{refusals,regexAdapter});
-  // Release gogen's registry/IR before the memory-heavy Go compiler starts.
-  started=performance.now();
-  program=null;registry=null;
-  for (const name of Object.keys(session)) delete session[name];
-  global.gc?.();
-  timingMs.release=Math.round(performance.now()-started);
  }
  // Recheck after frontend/emission: other jobs may have consumed the budget.
  await waitForResources();
@@ -162,7 +122,7 @@ else {
  if(build.status!==0){
   process.stderr.write(build.stderr??build.error?.message??'OSG build failed');
   writeFileSync(join(out,'osg-refusals.json'),JSON.stringify(refusals,null,2)+'\n');
-  writeFileSync(join(out,'timing.json'),JSON.stringify({pin,timingMs,status:2,envelope,regexAdapter,mode,admission,cache,buildPeakRSSKiB,nodePeakRSSKiB:process.resourceUsage().maxRSS},null,2)+'\n');
+  writeFileSync(join(out,'timing.json'),JSON.stringify({pin,timingMs,status:2,envelope,regexAdapter,mode,admission,cache,buildPeakRSSKiB,frontendPeakRSSKiB,nodePeakRSSKiB:Math.max(frontendPeakRSSKiB ?? 0,process.resourceUsage().maxRSS)},null,2)+'\n');
   process.exit(2);
  }
  if(cacheRoot)writeSnapshot(cacheRoot,binaryKey,{binary},{refusals,regexAdapter});
@@ -182,5 +142,5 @@ try {
  }
 } catch (error) { process.stderr.write(String(error)+'\n'); }
 timingMs.run=Math.round(performance.now()-started);
-writeFileSync(join(out,'timing.json'),JSON.stringify({pin,timingMs,status,envelope,regexAdapter,mode,admission,cache:{...cache,frontKey,binaryKey},buildPeakRSSKiB,nodePeakRSSKiB:process.resourceUsage().maxRSS},null,2)+'\n');
+writeFileSync(join(out,'timing.json'),JSON.stringify({pin,timingMs,status,envelope,regexAdapter,mode,admission,cache:{...cache,frontKey,binaryKey},buildPeakRSSKiB,frontendPeakRSSKiB,nodePeakRSSKiB:Math.max(frontendPeakRSSKiB ?? 0,process.resourceUsage().maxRSS)},null,2)+'\n');
 process.exitCode=status;
