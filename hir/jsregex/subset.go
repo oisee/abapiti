@@ -276,6 +276,12 @@ func subsetPunctuation(c byte) bool {
 // Classes are normalized as an ASCII membership set. Negation remains a
 // complement over all UTF-16 units; it is not Go Unicode case folding.
 func (p *subsetParser) class() (string, bool) {
+	// ECMAScript's whitespace and non-whitespace union covers every UTF-16
+	// unit, including all four line terminators excluded by an ordinary dot.
+	if len(p.pattern)-p.pos >= 5 && (p.pattern[p.pos:p.pos+5] == `\s\S]` || p.pattern[p.pos:p.pos+5] == `\S\s]`) {
+		p.pos += 5
+		return `(?s:.)`, true
+	}
 	negate := false
 	if p.pos < len(p.pattern) && p.pattern[p.pos] == '^' {
 		negate = true

@@ -188,8 +188,13 @@ func (l *lowerer) assignClassRecords(n *ast.Node) *hir.Expr {
 				if field.Static {
 					continue
 				}
-				write := &hir.Stmt{Kind: hir.Assign, Node: l.node(n), X: &hir.Expr{Kind: hir.FieldGet, Node: l.node(n), Type: field.Type, X: target, Name: field.Name}, Y: l.coerce(value, field.Type)}
-				body = hir.B(&hir.Stmt{Kind: hir.If, Node: l.node(n), X: &hir.Expr{Kind: hir.Binary, Op: "==", Type: hir.T(hir.Bool), X: key, Y: hir.L(key.Type, field.Name)}, Body: hir.B(write), Else: body})
+				saved := l.pend
+				l.pend = nil
+				converted := l.coerce(value, field.Type)
+				write := &hir.Stmt{Kind: hir.Assign, Node: l.node(n), X: &hir.Expr{Kind: hir.FieldGet, Node: l.node(n), Type: field.Type, X: target, Name: field.Name}, Y: converted}
+				branch := hir.B(append(l.pend, write)...)
+				l.pend = saved
+				body = hir.B(&hir.Stmt{Kind: hir.If, Node: l.node(n), X: &hir.Expr{Kind: hir.Binary, Op: "==", Type: hir.T(hir.Bool), X: key, Y: hir.L(key.Type, field.Name)}, Body: branch, Else: body})
 			}
 		}
 		copy := &hir.Stmt{Kind: hir.ForEach, Node: l.node(n), Name: key.Name, Type: key.Type, X: keys, Body: body}

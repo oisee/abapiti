@@ -9,8 +9,8 @@ import (
 )
 
 func TestLazyCapturesMatchNode(t *testing.T) {
-	patterns := []string{`a*?`, `a+?`, `a??`, `a{1,3}?`, `(a??)a`, `(.+?)X`, `^(.+?)\s+IS\s+(?:NOT\s+)?INITIAL\s*$`}
-	inputs := []string{"", "a", "aaaa", "aaXaaX", "abc IS INITIAL", "abc IS NOT INITIAL", "a IS INITIAL IS INITIAL", "a\u00a0IS INITIAL", "a\nIS INITIAL", "a\u2028IS INITIAL", "aaa IS INITIAL "}
+	patterns := []string{`[\s\S]*?X`, `[\S\s]+`, `<DD03P>[\s\S]*?<\/DD03P>`, `a*?`, `a+?`, `a??`, `a{1,3}?`, `(a??)a`, `(.+?)X`, `^(.+?)\s+IS\s+(?:NOT\s+)?INITIAL\s*$`}
+	inputs := []string{"", "a", "aaaa", "a\nX", "a\u2028X", "<DD03P>\na</DD03P><DD03P>b</DD03P>", "aaXaaX", "abc IS INITIAL", "abc IS NOT INITIAL", "a IS INITIAL IS INITIAL", "a\u00a0IS INITIAL", "a\nIS INITIAL", "a\u2028IS INITIAL", "aaa IS INITIAL "}
 	request, _ := json.Marshal(map[string]any{"patterns": patterns, "inputs": inputs})
 	command := exec.Command("node", "-e", `const q=JSON.parse(process.argv[1]);console.log(JSON.stringify(q.patterns.map(p=>q.inputs.map(s=>new RegExp(p).exec(s)))))`, string(request))
 	raw, err := command.CombinedOutput()
