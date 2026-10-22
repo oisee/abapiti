@@ -19,7 +19,7 @@ func TestEmbeddedAbaplint(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !src.Embedded || src.Files != 1539 || len(src.Packages) != 3 {
+	if !src.Embedded || src.Files != 1549 || len(src.Packages) != 3 {
 		t.Fatalf("unpacked %d files, %d packages", src.Files, len(src.Packages))
 	}
 }
@@ -131,11 +131,11 @@ func TestAbaplintFullCoreDefaults(t *testing.T) {
 }
 
 // TestAbaplintCommand runs the whole command on a pinned checkout
-// (ABAPITI_ABAPLINT_CHECKOUT, e.g. a clone at 577f875e after npm ci).
+// (ABAPITI_ABAPLINT_CHECKOUT, e.g. a clone at 9f7f098c after npm ci).
 func TestAbaplintCommand(t *testing.T) {
 	checkout := os.Getenv("ABAPITI_ABAPLINT_CHECKOUT")
 	if checkout == "" {
-		t.Skip("set ABAPITI_ABAPLINT_CHECKOUT to an abaplint checkout at 577f875e")
+		t.Skip("set ABAPITI_ABAPLINT_CHECKOUT to an abaplint checkout at 9f7f098c")
 	}
 	out := t.TempDir()
 	rootCmd.SetArgs([]string{"abaplint", checkout, "-o", out, "-q"})
@@ -150,7 +150,7 @@ func TestAbaplintCommand(t *testing.T) {
 	if len(classes) < 2000 || len(lib) != len(classes) {
 		t.Fatalf("classes %d, native/lib %d", len(classes), len(lib))
 	}
-	for _, f := range []string{"native/zabaplint.prog.abap", "a4h/abaplint-577f875e-a4h.zip", "osg/README.txt"} {
+	for _, f := range []string{"native/zabaplint.prog.abap", "a4h/abaplint-9f7f098c-a4h.zip", "osg/README.txt"} {
 		if _, err := os.Stat(filepath.Join(out, filepath.FromSlash(f))); err != nil {
 			t.Error(err)
 		}

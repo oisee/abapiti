@@ -59,5 +59,5 @@ func TestGoFullClosure(t *testing.T) {
 	if out, err := cmd.CombinedOutput(); err != nil {
 		t.Fatalf("full closure compilation: %v\n%s", err, out)
 	}
-	t.Log("1538 pinned files, 1927 classes, 73 interfaces: complete Go executable compiled")
+	t.Log("1548 pinned files: complete Go executable compiled")
 }

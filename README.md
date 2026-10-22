@@ -76,7 +76,7 @@ TS-HA is abaplint translated TypeScript → HIR → ABAP by abapiti, TS-HG the s
 
 A seeded variant with one error per rule equals vanilla on every host too. What changed in each step is in the release notes of [v0.3.0](https://github.com/oisee/abapiti/releases/tag/v0.3.0) and [v0.2.0](https://github.com/oisee/abapiti/releases/tag/v0.2.0).
 
-> **Not a general TypeScript → ABAP compiler yet.** The translator is tuned for abaplint core at commit `577f875e` (2.120.56). Since v0.5.0 the default build includes **all of core and all rules**, with readable ABAP names. `--scope zabapgit` retains the old smaller six-rule, trace-pruned build. Unsupported operations are still refused with their TypeScript location, never answered silently differently. Certified on a real SAP kernel: TS-HA@A4H 11,060 / 11,060.
+> **Not a general TypeScript → ABAP compiler yet.** The translator is tuned for abaplint core at commit `9f7f098c` (2.120.73). Since v0.5.0 the default build includes **all of core and all rules**, with readable ABAP names. `--scope zabapgit` retains the old smaller six-rule, trace-pruned build. Unsupported operations are still refused with their TypeScript location, never answered silently differently. Certified on a real SAP kernel: TS-HA@A4H 11,060 / 11,060.
 
 ### Goal: 100 % of abaplint — reached
 
@@ -102,12 +102,12 @@ Download `abapiti` for your platform from the [latest release](https://github.co
 abapiti abaplint -o out
 ```
 
-abaplint 577f875e is built into the binary (every file checked against its recorded SHA-256), so this needs no network. The full core takes longer to build than the old pruned scope (`--scope zabapgit`) and writes:
+abaplint 9f7f098c is built into the binary (every file checked against its recorded SHA-256), so this needs no network. The full core takes longer to build than the old pruned scope (`--scope zabapgit`) and writes:
 
 | Directory | For | Run it |
 |---|---|---|
 | `out/osg/` | open-steamgate, **osgo** and **OSG-JS** | in an [open-steamgate](https://github.com/oisee/open-steamgate) checkout: `npm run osgo:unit -- ../out/osg` or `npm run osgjs:unit -- ../out/osg` |
-| `out/a4h/` | an **ABAP system** (the full core uses PCRE, requiring 7.55; kernel certification is in progress) | import `abaplint-577f875e-a4h.zip` into `$ZLNT` with abapGit, then run `ZLNT_REGISTRY_RUN` as a background job (see [A4H](docs/abaplint-cli.md#output)) |
+| `out/a4h/` | an **ABAP system** (the full core uses PCRE, requiring 7.55; kernel certification is in progress) | import `abaplint-9f7f098c-a4h.zip` into `$ZLNT` with abapGit, then run `ZLNT_REGISTRY_RUN` as a background job (see [A4H](docs/abaplint-cli.md#output)) |
 | `out/native/` | a **native command** | `node tools/gogen/osabap.mjs ../out/native/zabaplint.prog.abap --lib ../out/native/lib` in open-steamgate, or take `zabaplint` from the release |
 
 An opt-in fourth target, **TS-HG@Go** (TypeScript → HIR → Go), writes a standalone standard-library Go module to `out/go` and builds `out/go/zabaplint-go` when Go is on PATH:
@@ -283,7 +283,7 @@ abapiti compile ts lexer.ts -o out/            # needs node + npm install, from 
 abapiti abaplint -o out/                       # abaplint core → ABAP, no Node needed
 ```
 
-`abapiti abaplint` translates abaplint's core (commit 577f875e, `@abaplint/core` 2.120.56) into 2,110 ABAP classes and interfaces, packaged for A4H (abapGit zip), open-steamgate unit runners and open-steamgate's native build. The build is pruned to what checking zabapgit_standalone with abapGit's `ci/abaplint.json` executes; see [docs/abaplint-cli.md](docs/abaplint-cli.md).
+`abapiti abaplint` translates abaplint's core (commit 9f7f098c, `@abaplint/core` 2.120.73) into 2,110 ABAP classes and interfaces, packaged for A4H (abapGit zip), open-steamgate unit runners and open-steamgate's native build. The build is pruned to what checking zabapgit_standalone with abapGit's `ci/abaplint.json` executes; see [docs/abaplint-cli.md](docs/abaplint-cli.md).
 
 ABAPiti never talks to SAP. Deploy the output with [vsp](https://github.com/oisee/vibing-steampunk) (`vsp deploy out/zcl_wasm_add.clas.abap '$TMP'`) or abapGit.
 

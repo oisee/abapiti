@@ -15,10 +15,10 @@ import (
 	"github.com/oisee/abapiti/tsfront/overrides"
 )
 
-// RegistryUpstreamPin is the abaplint commit (packages/core 2.120.56) whose
+// RegistryUpstreamPin is the abaplint commit (packages/core 2.120.73) whose
 // sources the closure manifest, the reachability manifest and the
 // fingerprinted overrides were recorded against.
-const RegistryUpstreamPin = "577f875ebec44cfaf64841cfe71c8ab8dc32622e"
+const RegistryUpstreamPin = "9f7f098c21e93b8b534fff0f0148f0a900d29d16"
 
 // RegistryHarnessPath is where the deployment harness sits next to src/.
 const RegistryHarnessPath = "harness/registry_run.ts"
@@ -42,7 +42,7 @@ var registryNodePackageFiles embed.FS
 // listed in closure.json) and abaplint's LICENSE, as a gzipped tar, so
 // abapiti translates abaplint without any download.
 //
-//go:embed testdata/registrycorpus/abaplint-core-577f875e.tar.gz
+//go:embed testdata/registrycorpus/abaplint-core-9f7f098c.tar.gz
 var registryAbaplintArchive []byte
 
 // EmbeddedAbaplintArchive returns the embedded abaplint source archive.

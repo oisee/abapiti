@@ -31,25 +31,25 @@ if [ "${RELEASE_RESUME:-}" != packages ]; then
 node tools/a4h-tests-build.mjs "$upstream" "$work/a4h"
 fi
 node tools/a4h-tests-lint.mjs "$work/a4h" "$osg"
-cp "$work/a4h/zlnt.zip" "$assets/abaplint-577f875e-a4h.zip"
-cp "$work/a4h/zlnt_tests.zip" "$assets/abaplint-577f875e-a4h-tests.zip"
-cp "$work/a4h/zlnt.manifest.json" "$assets/abaplint-577f875e-a4h.manifest.json"
-cp "$work/a4h/zlnt_tests.manifest.json" "$assets/abaplint-577f875e-a4h-tests.manifest.json"
-cp "$work/a4h/names.json" "$assets/abaplint-577f875e-names.json"
+cp "$work/a4h/zlnt.zip" "$assets/abaplint-9f7f098c-a4h.zip"
+cp "$work/a4h/zlnt_tests.zip" "$assets/abaplint-9f7f098c-a4h-tests.zip"
+cp "$work/a4h/zlnt.manifest.json" "$assets/abaplint-9f7f098c-a4h.manifest.json"
+cp "$work/a4h/zlnt_tests.manifest.json" "$assets/abaplint-9f7f098c-a4h-tests.manifest.json"
+cp "$work/a4h/names.json" "$assets/abaplint-9f7f098c-names.json"
 # Keep the monolith for compatibility; independent parts install core -> base
 # -> remaining parts (parallel). The splitter independently verifies the zips.
 node tools/a4h-tests-parts.mjs "$work/a4h" "$work/parts"
 node tools/a4h-tests-parts.mjs "$work/a4h" "$work/parts" --verify
 for file in "$work/parts"/zlnt_tests_*; do
   name=$(basename "$file")
-  cp "$file" "$assets/abaplint-577f875e-a4h-tests-${name#zlnt_tests_}"
+  cp "$file" "$assets/abaplint-9f7f098c-a4h-tests-${name#zlnt_tests_}"
 done
 python3 - "$work/parts/parts.json" "$assets/parts.json" <<'PY'
 import json, sys
 with open(sys.argv[1]) as f:
     index = json.load(f)
 for part in index['parts'].values():
-    part['zip'] = part['zip'].replace('zlnt_tests_', 'abaplint-577f875e-a4h-tests-', 1)
+    part['zip'] = part['zip'].replace('zlnt_tests_', 'abaplint-9f7f098c-a4h-tests-', 1)
 with open(sys.argv[2], 'w') as f:
     json.dump(index, f, indent=2)
     f.write('\n')
@@ -79,7 +79,7 @@ for platform in "${platforms[@]}"; do
   cp "$assets/zabaplint-go-$platform$ext" "$bundle/zabaplint-go$ext"
   cp -a "$work/kit/zabapgit-check-kit" "$bundle/"
   rm -f "$bundle"/zabapgit-check-kit/actual-*.txt
-  printf '%s\n' "abapiti $version; abaplint 577f875e (2.120.56), FULL core / all rules." \
+  printf '%s\n' "abapiti $version; abaplint 9f7f098c (2.120.73), FULL core / all rules." \
     'Run zabapgit-check-kit/check.sh (POSIX) or check.ps1 (Windows).' \
     'zabaplint = TS-HA@OSGO; zabaplint-go = TS-HG@Go.' \
     'A4H kernel certification is in progress; no kernel parity claim.' > "$bundle/README.txt"

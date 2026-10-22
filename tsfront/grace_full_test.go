@@ -21,7 +21,7 @@ import (
 // its own advisory CI job, never in the shared test shards.
 func TestGraceFullRegistryClosure(t *testing.T) {
 	if testing.Short() || os.Getenv("ABAPITI_GRACE_FULL") != "1" {
-		t.Skip("full pinned 1538-file closure runs only with ABAPITI_GRACE_FULL=1 and without -short")
+		t.Skip("full pinned 1548-file closure runs only with ABAPITI_GRACE_FULL=1 and without -short")
 	}
 	t.Setenv("ABAPITI_ASSUME_INT", "1")
 	start := time.Now()
@@ -76,8 +76,8 @@ func TestGraceFullRegistryClosure(t *testing.T) {
 		}
 	}
 	manifest := EmbeddedRegistryClosure()
-	if len(manifest.Sources) != 1538 {
-		t.Fatalf("full closure has %d files, want 1538", len(manifest.Sources))
+	if len(manifest.Sources) != 1548 {
+		t.Fatalf("full closure has %d files, want 1548", len(manifest.Sources))
 	}
 	if e := manifest.Verify(dir); e != nil {
 		if os.IsNotExist(e) {

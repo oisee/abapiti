@@ -79,7 +79,7 @@ jobs:
             --artifact-type application/vnd.osd.system.v1 \
             --annotation "org.opencontainers.image.revision=$commit" \
             --annotation "org.opencontainers.image.version=$TAG" \
-            --annotation "org.osd.upstream.abaplint=577f875e"; then
+            --annotation "org.osd.upstream.abaplint=9f7f098c"; then
             echo "::warning::system index not created"
             exit 0
           fi

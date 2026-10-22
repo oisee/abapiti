@@ -5,7 +5,7 @@ import {mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync} from "node:fs
 import {tmpdir} from "node:os";
 import {join, resolve} from "node:path";
 
-export const upstreamPin = "577f875ebec44cfaf64841cfe71c8ab8dc32622e";
+export const upstreamPin = "9f7f098c21e93b8b534fff0f0148f0a900d29d16";
 export function verifyUpstream(repository) {
  const git = (...args) => execFileSync("git", ["-C", repository, ...args], {encoding:"utf8"}).trim();
  if (git("rev-parse", "HEAD") !== upstreamPin) throw new Error(`oracle upstream must be ${upstreamPin}`);
