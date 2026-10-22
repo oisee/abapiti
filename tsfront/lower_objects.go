@@ -15,8 +15,11 @@ func (l *lowerer) assignRecords(n *ast.Node) *hir.Expr {
 		l.diagf(n, "unsupported-call", "Object.assign needs a record target")
 		return nil
 	}
-	if l.unprunedFeatures && l.mapCheckerType(args[0], l.ck.GetTypeAtLocation(args[0])).Kind == hir.ClassRef {
-		return l.assignClassRecords(n)
+	if l.unprunedFeatures {
+		checked := l.ck.GetTypeAtLocation(args[0])
+		if checked != nil && checked.Symbol() != nil && checked.Symbol().Flags&ast.SymbolFlagsClass != 0 {
+			return l.assignClassRecords(n)
+		}
 	}
 	if len(args) == 2 {
 		if lit := ast.SkipParentheses(args[1]); lit.Kind == ast.KindObjectLiteralExpression {
