@@ -1178,6 +1178,7 @@ func (s jsString) replaceRegex(r *jsRegExp, v jsString) jsString {
 }
 
 func (s jsString) match(r *jsRegExp) *array[jsString] {
+ if r.zeroWidth {panic(newTrap("regexp match lookahead grammar is outside the checked match subset"))}
  if r.Flags.indexOf(str("g"))<0 {return r.exec(s)}
  r.LastIndex=0
  input:=unitText(s)
