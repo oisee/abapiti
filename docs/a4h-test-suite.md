@@ -6,7 +6,7 @@ background jobs and ST22 inspection belong to the coordinator.
 
 ## Build the two packages
 
-Use the pinned abaplint checkout (commit `577f875e`, core 2.120.56, `npm ci`
+Use the pinned abaplint checkout (commit `9f7f098c`, core 2.120.73, `npm ci`
 already completed), Go 1.26.0 and the project's normal Node dependencies:
 
 ```sh
@@ -161,7 +161,7 @@ all **18** `tools/*-test.mjs` scripts individually with Go 1.26.0; lint against
 ### v0.5.0 download names and path gate
 
 `tools/release-build.sh` retains the monolithic tests zip for compatibility and
-also publishes `abaplint-577f875e-a4h-tests-<part>.zip` (base, statements,
+also publishes `abaplint-9f7f098c-a4h-tests-<part>.zip` (base, statements,
 rules_1, rules_2, syntax, objects, rest), their manifests, and
 `parts.json`. The index's zip filenames refer to the
 published downloads; its archive hashes are unchanged by renaming.
@@ -174,7 +174,7 @@ objects and zero independence violations**. Current sizes are recorded in
 [the release inventory](release-v0.5.0-assets.tsv) and `parts.json`.
 
 Choose **either** the monolith **or** the parts, never both. Import the release
-core `abaplint-577f875e-a4h.zip`, then `abaplint-577f875e-a4h-tests-base.zip`,
+core `abaplint-9f7f098c-a4h.zip`, then `abaplint-9f7f098c-a4h-tests-base.zip`,
 then the six remaining parts in parallel. Import all parts before running tests.
 
 Before generating `SHA256SUMS`, the release script runs

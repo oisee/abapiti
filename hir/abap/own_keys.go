@@ -16,7 +16,7 @@ func (e *emitter) ownAdapter(c *hir.Class) bool {
 	if result, ok := e.ownAdapters[c.Name]; ok {
 		return result
 	}
-	result := c.Structural || hir.DataClassView(e.p, c.Name) && (e.liveClasses[c.Name] || c.Ctor != nil && len(c.Ctor.Params) == 0)
+	result := c.Structural || hir.OwnDataClass(e.p, c.Name) && (e.liveClasses[c.Name] || c.Ctor != nil && len(c.Ctor.Params) == 0)
 	if e.ownAdapters == nil {
 		e.ownAdapters = map[string]bool{}
 	}
@@ -284,7 +284,7 @@ func (e *emitter) ownClassImplementation(out *strings.Builder, c *hir.Class) {
 		}
 		visit(e.classBy(c.Super))
 		for _, f := range c.Fields {
-			if !f.Static && !seen[f.Name] {
+			if !f.Static && !f.PrivateSlot && !seen[f.Name] {
 				seen[f.Name] = true
 				fields = append(fields, f)
 			}
@@ -435,7 +435,7 @@ func (e *emitter) nativeOwnPresence(out *strings.Builder, c *hir.Class) {
 			out.WriteString("CASE p0.\n")
 			for base := c; base != nil; base = e.classBy(base.Super) {
 				for _, f := range base.Fields {
-					if !f.Static {
+					if !f.Static && !f.PrivateSlot {
 						fmt.Fprintf(out, "WHEN `%s`.\nresult = abap_true.\n", strings.ReplaceAll(f.Name, "`", "``"))
 					}
 				}

@@ -200,6 +200,27 @@ func classViewTargets(p *Program, additional map[string]bool) map[string]bool {
 // fields and unknown ancestry. Unused field-reader declarations are safe;
 // prototype dispatch is never fabricated.
 func DataClassView(p *Program, name string) bool {
+	return dataClassView(p, name, false)
+}
+
+// OwnDataClass admits the same native data layouts for own-property access,
+// without exposing ECMAScript private slots through the property adapter.
+func OwnDataClass(p *Program, name string) bool {
+	classes := map[string]*Class{}
+	for _, c := range p.Classes {
+		classes[c.Name] = c
+	}
+	for c := classes[name]; c != nil; c = classes[c.Super] {
+		for _, f := range c.Fields {
+			if !f.Static && f.PrivateSlot {
+				return dataClassView(p, name, true)
+			}
+		}
+	}
+	return DataClassView(p, name)
+}
+
+func dataClassView(p *Program, name string, own bool) bool {
 	classes := map[string]*Class{}
 	for _, c := range p.Classes {
 		classes[c.Name] = c
@@ -212,12 +233,12 @@ func DataClassView(p *Program, name string) bool {
 		}
 		seen[name] = true
 		for _, m := range c.Methods {
-			if !m.Static && (m.Internal || m.Abstract || !fieldReader(m.Body) || prototypeDispatch(p, m.Name)) {
+			if !m.Static && (m.Internal || m.Abstract || !fieldReader(m.Body) || !own && prototypeDispatch(p, m.Name)) {
 				return false
 			}
 		}
 		for _, f := range c.Fields {
-			if !f.Static && f.Private {
+			if !f.Static && f.Private && !(own && f.PrivateSlot) {
 				return false
 			}
 		}

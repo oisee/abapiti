@@ -34,7 +34,7 @@ func verifyAbaplintCheckout(root string) (*abaplintSource, error) {
 		return nil, fmt.Errorf("%s is not an abaplint checkout: %s missing", root, filepath.Join("packages", "core", "src", "registry.ts"))
 	}
 	if err := tsfront.EmbeddedRegistryClosure().Verify(core); err != nil {
-		return nil, fmt.Errorf("abaplint checkout %s does not match the pinned commit %s (packages/core 2.120.56)%s: %v", root, tsfront.RegistryUpstreamPin, describeHead(root), err)
+		return nil, fmt.Errorf("abaplint checkout %s does not match the pinned commit %s (packages/core 2.120.73)%s: %v", root, tsfront.RegistryUpstreamPin, describeHead(root), err)
 	}
 	src := &abaplintSource{Root: root, Packages: map[string]string{}}
 	for _, pkg := range tsfront.RegistryNodePackages() {

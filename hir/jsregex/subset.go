@@ -5,7 +5,8 @@ const execSpace = `[\x{0009}-\x{000D}\x{0020}\x{00A0}\x{1680}\x{2000}-\x{200A}\x
 
 // TranslateSubset certifies a grammar over UTF-16 units, not arbitrary RE2
 // syntax. Non-u ASCII case folding is explicit; Unicode flags/escapes,
-// lookarounds, backreferences, lazy repeats and repeated captures refuse.
+// lookarounds, backreferences and repeated captures refuse. Lazy quantifiers
+// preserve leftmost-first priority without changing the capture restrictions.
 func TranslateSubset(pattern, flags string) (string, bool) {
 	if pattern == "" {
 		return "", false
@@ -34,6 +35,16 @@ func TranslateSubset(pattern, flags string) (string, bool) {
 	}
 	if pattern == `^(-?)0+(?=\d)` && flags == "" {
 		return `^(-?)0+([0-9])`, true
+	}
+	if len(pattern) > 4 && pattern[:3] == "(?=" && pattern[len(pattern)-1] == ')' {
+		literal := pattern[3 : len(pattern)-1]
+		valid := true
+		for _, c := range literal {
+			valid = valid && (c >= 'A' && c <= 'Z' || c >= 'a' && c <= 'z' || c >= '0' && c <= '9' || c == '_' || c == ' ')
+		}
+		if valid {
+			return TranslateSubset(literal, flags)
+		}
 	}
 	p := subsetParser{pattern: pattern, insensitive: insensitive}
 	out, _, ok := p.expression(false)
@@ -198,6 +209,10 @@ func (p *subsetParser) expression(group bool) (string, bool, bool) {
 					return "", false, false
 				}
 				atom += repeat
+				if p.pos < len(p.pattern) && p.pattern[p.pos] == '?' {
+					atom += "?"
+					p.pos++
+				}
 				if p.pos < len(p.pattern) && (p.pattern[p.pos] == '*' || p.pattern[p.pos] == '+' || p.pattern[p.pos] == '?' || p.pattern[p.pos] == '{') {
 					return "", false, false
 				}
@@ -207,6 +222,10 @@ func (p *subsetParser) expression(group bool) (string, bool, bool) {
 				}
 				atom += string(q)
 				p.pos++
+				if p.pos < len(p.pattern) && p.pattern[p.pos] == '?' {
+					atom += "?"
+					p.pos++
+				}
 				if p.pos < len(p.pattern) {
 					q = p.pattern[p.pos]
 					if q == '*' || q == '+' || q == '?' || q == '{' {
@@ -267,6 +286,12 @@ func subsetPunctuation(c byte) bool {
 // Classes are normalized as an ASCII membership set. Negation remains a
 // complement over all UTF-16 units; it is not Go Unicode case folding.
 func (p *subsetParser) class() (string, bool) {
+	// ECMAScript's whitespace and non-whitespace union covers every UTF-16
+	// unit, including all four line terminators excluded by an ordinary dot.
+	if len(p.pattern)-p.pos >= 5 && (p.pattern[p.pos:p.pos+5] == `\s\S]` || p.pattern[p.pos:p.pos+5] == `\S\s]`) {
+		p.pos += 5
+		return `(?s:.)`, true
+	}
 	negate := false
 	if p.pos < len(p.pattern) && p.pattern[p.pos] == '^' {
 		negate = true

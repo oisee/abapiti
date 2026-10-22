@@ -113,7 +113,7 @@ func TestNumericFixtures(t *testing.T) {
 		t.Fatal(err)
 	}
 	for i, v := range ceils {
-		add(check(fmt.Sprintf("%s=>%s( '%s' )", class, names.Get("member.ceil"), fmt.Sprint(v)), !(v > -1 && v <= 0), ceilOracle[i]))
+		add(check(fmt.Sprintf("%s=>%s( '%s' )", class, names.Get("member.ceil"), fmt.Sprint(v)), !(v > -1 && v < 0), ceilOracle[i]))
 	}
 	add(check(class+"=>"+names.Get("member.zero")+"( )", true, 0))
 	add(check(class+"=>"+names.Get("member.loop")+"( `-7` )", true, -21))

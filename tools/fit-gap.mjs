@@ -8,7 +8,7 @@ import {tmpdir} from 'node:os';
 import {spawnSync} from 'node:child_process';
 import {createHash} from 'node:crypto';
 import {buildUpstream, verifyUpstream, upstreamPin} from './statements-upstream.mjs';
-import {declarationCandidates} from './registry-coverage-identity.mjs';
+import {declarationCandidates, generatedDeclarationKinds} from './registry-coverage-identity.mjs';
 import {validateWorkload} from './registry-workload.mjs';
 
 const self = fileURLToPath(import.meta.url);
@@ -133,13 +133,8 @@ if (process.argv[2] === '--all-worker') {
      if (!cache.has(jsPath)) {
       const raw = readFileSync(jsPath,'utf8');
       const map = new SourceMapConsumer(JSON.parse(readFileSync(jsPath+'.map','utf8')));
-      const generated = ts.createSourceFile(jsPath,raw,ts.ScriptTarget.Latest,true,ts.ScriptKind.JS), kinds = new Map();
-      function visit(n) {
-       if (ts.isClassDeclaration(n)||ts.isClassExpression(n)) kinds.set(n.getStart(generated),'Constructor');
-       else if (ts.isMethodDeclaration(n)||ts.isFunctionDeclaration(n)||ts.isGetAccessor(n)||ts.isSetAccessor(n)) kinds.set(n.getStart(generated),ts.SyntaxKind[n.kind]);
-       ts.forEachChild(n,visit);
-      }
-      visit(generated);
+      const generated = ts.createSourceFile(jsPath,raw,ts.ScriptTarget.Latest,true,ts.ScriptKind.JS);
+      const kinds = generatedDeclarationKinds(ts, generated);
       const offsets = [0]; for (let i=0;i<raw.length;i++) if (raw[i]==='\n') offsets.push(i+1);
       const mappings = []; map.eachMapping(m=>{if(m.originalLine != null) mappings.push({...m,offset:offsets[m.generatedLine-1]+m.generatedColumn});});
       map.destroy?.();

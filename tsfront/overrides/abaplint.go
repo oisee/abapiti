@@ -29,14 +29,6 @@ func Abaplint() *Registry {
 		Entry{ID: "abaplint-registry-scope", Key: Key{"src/_iregistry.ts", "IRegistry", "KindInterfaceDeclaration"}, SHA256: "2deebf3cc7d259794d99fc56a63ac2632f492386fbabbde56cad98eb16a013d3", Rationale: "only macro-reference lookup belongs to the no-registry statement-parser execution scope", Interface: func() *hir.Interface {
 			return &hir.Interface{Methods: []*hir.Method{{Name: "getMacroReferences", Virtual: true, Result: hir.Type{Kind: hir.InterfaceRef, Name: "src/_imacro_references.ts.IMacroReferences"}}}}
 		}},
-		Entry{ID: "abaplint-artifacts-keywords", Key: Key{"src/abap/artifacts.ts", "ArtifactsABAP.getKeywords", "KindMethodDeclaration"}, SHA256: "6ae2b6f43dedd59b9e0ce546492592f4890d9b8ba4a0624b534e30a5e94a508c", Rationale: "keyword introspection is outside statement parsing; invocation traps", Method: func() *hir.Method {
-			return excluded("getKeywords", hir.T(hir.Array, hir.Ref("src/abap/artifacts.ts.IKeyword")))
-		}},
-		Entry{ID: "abaplint-artifacts-class-name", Key: Key{"src/abap/artifacts.ts", "className", "KindFunctionDeclaration"}, SHA256: "067e03920167446960ac270359d8639f039f13e5645e428b68b346b06e7476d5", Rationale: "helper is used only by excluded keyword introspection; invocation traps", Method: func() *hir.Method {
-			m := excluded("className", hir.T(hir.String))
-			m.Params = []hir.Param{{Name: "cla", Type: hir.Ref(hir.RootObject)}}
-			return m
-		}},
 		Entry{ID: "abaplint-token-debug-description", Key: Key{"src/abap/1_lexer/tokens/abstract_token.ts", "AbstractToken", "KindMethodDeclaration"}, SHA256: "f40b0e404bdce56c7f5dfd13fe66c8315fe0b3f8aa851a8a861ea0abd738a537", Rationale: "symbol debug inspector is outside parser execution; invocation traps", Method: func() *hir.Method { m := excludedVirtual("debugDescription"); return m }},
 
 		Entry{ID: "abaplint-star-priority-sentinel", Key: Key{"src/abap/2_statements/combi.ts", "StarPriority.run", "KindMethodDeclaration"}, SHA256: "bebd76433152657b6a09a82617e80258e1510de67e5a27a1db4ce80be2dac2a1", Rationale: "sentinel is only compared with remaining token counts bounded by STATEMENT_MAX_TOKENS=20000", Expressions: map[string]func() *hir.Expr{"Number.MAX_SAFE_INTEGER": func() *hir.Expr { return hir.L(hir.T(hir.Number), 2147483647) }}},

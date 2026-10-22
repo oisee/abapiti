@@ -95,7 +95,8 @@ func (b *body) parseIntNumber(n, a string) {
 
 // numberCeil uses truncation only in the range where binary64 has fractional
 // values. At magnitude >= 2^52 every finite binary64 is already integral.
-// A dynamic zero may be -0; the ABI cannot preserve its sign portably.
+// Return a dynamic zero unchanged; negative fractions that round to -0 remain
+// outside the portable domain because they need a newly constructed signed zero.
 func (b *body) numberCeil(x *hir.Expr, n, a string) {
 	if x.X.Kind == hir.Lit {
 		f, err := strconv.ParseFloat(fmt.Sprint(x.X.Value), 64)
@@ -112,11 +113,11 @@ func (b *body) numberCeil(x *hir.Expr, n, a string) {
 	b.line("IF " + a + " <> " + a + " OR " + a + " > " + finite + " OR " + a + " < 0 - " + finite + ".")
 	b.line("RAISE EXCEPTION TYPE cx_sy_range_out_of_bounds.")
 	b.line("ENDIF.")
-	b.line("IF " + a + " > -1 AND " + a + " <= 0.")
+	b.line("IF " + a + " > -1 AND " + a + " < 0.")
 	b.line("RAISE EXCEPTION TYPE cx_sy_range_out_of_bounds.")
 	b.line("ENDIF.")
 	limit := b.constant("ceil_integral", "f", "4503599627370496")
-	b.line("IF " + a + " >= " + limit + " OR " + a + " <= 0 - " + limit + ".")
+	b.line("IF " + a + " = 0 OR " + a + " >= " + limit + " OR " + a + " <= 0 - " + limit + ".")
 	b.line(n + " = " + a + ".")
 	b.line("ELSE.")
 	b.line(n + " = trunc( " + a + " ).")

@@ -125,11 +125,14 @@ func (e *emitter) runtime(t hir.Type) {
 		}
 		line("METHODS includes IMPORTING p0 TYPE " + elem + " RETURNING VALUE(result) TYPE abap_bool.")
 		method("includes", "READ TABLE items WITH KEY table_line = p0 TRANSPORTING NO FIELDS.\nIF sy-subrc = 0.\nresult = abap_true.\nENDIF.\n")
-		if !t.Args[0].IsRef() && t.Args[0].Kind != hir.Optional {
+		optionalString := t.Args[0].Kind == hir.Optional && t.Args[0].Args[0].Kind == hir.String
+		if !t.Args[0].IsRef() && t.Args[0].Kind != hir.Optional || optionalString {
 			line("METHODS join IMPORTING p0 TYPE " + e.typ(hir.T(hir.Optional, hir.T(hir.String))) + " RETURNING VALUE(result) TYPE string.")
 		}
 		if t.Args[0].Kind == hir.String {
 			method("join", "IF p0 IS BOUND AND p0->has = abap_true.\nCONCATENATE LINES OF items INTO result SEPARATED BY p0->value RESPECTING BLANKS.\nELSE.\nCONCATENATE LINES OF items INTO result SEPARATED BY `,` RESPECTING BLANKS.\nENDIF.\n")
+		} else if optionalString {
+			method("join", "DATA row TYPE "+elem+".\nDATA part TYPE string.\nLOOP AT items INTO row.\nCLEAR part.\nIF row IS BOUND AND row->has = abap_true.\npart = row->value.\nENDIF.\nIF sy-tabix = 1.\nresult = part.\nELSEIF p0 IS BOUND AND p0->has = abap_true.\nCONCATENATE result p0->value part INTO result RESPECTING BLANKS.\nELSE.\nCONCATENATE result `,` part INTO result RESPECTING BLANKS.\nENDIF.\nENDLOOP.\n")
 		} else if !t.Args[0].IsRef() && t.Args[0].Kind != hir.Optional {
 			method("join", "DATA row TYPE "+elem+".\nDATA part TYPE string.\nLOOP AT items INTO row.\npart = |{ row }|.\nIF sy-tabix = 1.\nresult = part.\nELSEIF p0 IS BOUND AND p0->has = abap_true.\nCONCATENATE result p0->value part INTO result RESPECTING BLANKS.\nELSE.\nCONCATENATE result `,` part INTO result RESPECTING BLANKS.\nENDIF.\nENDLOOP.\n")
 		}
@@ -562,6 +565,7 @@ func (e *emitter) buildRegexpRuntime(id string, js bool) {
 PUBLIC SECTION.
 DATA source TYPE string.
 DATA flags TYPE string.
+DATA zero_width TYPE abap_bool.
 DATA posix TYPE string.
 DATA excluded TYPE string.
 DATA ignore_case TYPE abap_bool.
@@ -623,10 +627,23 @@ i = 0.
 in_class = abap_false.
 excluded = excluded_pattern.
 normalized = class_hyphens( pattern ).
+IF strlen( pattern ) > 4.
+  IF pattern(3) = '(?=' AND substring( val = pattern off = strlen( pattern ) - 1 ) = ')'.
+    DATA lookahead_literal TYPE string.
+    lookahead_literal = substring( val = pattern off = 3 len = strlen( pattern ) - 4 ).
+    IF lookahead_literal CO 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_ '.
+      zero_width = abap_true.
+      normalized = lookahead_literal.
+    ENDIF.
+  ENDIF.
+ENDIF.
 n = strlen( normalized ).
 WHILE i < n.
   c = normalized+i(1).
-  IF c = '\'.
+  IF i + 6 <= n AND ( normalized+i(6) = '[\s\S]' OR normalized+i(6) = '[\S\s]' ).
+    posix = posix && '[\s\S]'.
+    i = i + 5.
+  ELSEIF c = '\'.
     i = i + 1.
     IF i >= n.
       EXIT.

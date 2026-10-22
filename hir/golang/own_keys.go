@@ -54,7 +54,7 @@ func (e *emitter) ownKeyClass(c *hir.Class) {
 		}
 		visit(e.classBy(c.Super))
 		for _, f := range c.Fields {
-			if !f.Static && !seen[f.Name] {
+			if !f.Static && !f.PrivateSlot && !seen[f.Name] {
 				seen[f.Name] = true
 				keys = append(keys, f.Name)
 			}
@@ -133,7 +133,7 @@ func (e *emitter) newOwnKeys(c *hir.Class) {
 func constructorFieldOrder(c *hir.Class) []string {
 	declared := map[string]bool{}
 	for _, f := range c.Fields {
-		if !f.Static && !strings.HasPrefix(f.Name, "#") {
+		if !f.Static && !f.PrivateSlot {
 			declared[f.Name] = true
 		}
 	}

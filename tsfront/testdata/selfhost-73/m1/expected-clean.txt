@@ -1,0 +1,83 @@
+82
+allowed_object_naming|Error|gen/bsp/zosd_analytics_-annotations_-annotations_xml.w3mi.data.xml|1:1|1:39|Name exceeds max length, allowed is 40
+allowed_object_naming|Error|gen/bsp/zosd_booking_ap_-annotations_-annotations_xml.w3mi.data.xml|1:1|1:39|Name exceeds max length, allowed is 40
+allowed_object_naming|Error|gen/bsp/zosd_fleet2_-cockpit_controller_js_trace_json.w3mi.xml|1:1|1:39|Name exceeds max length, allowed is 40
+allowed_object_naming|Error|gen/bsp/zosd_fleet2_-cockpit_fragment_xml_trace_json.w3mi.xml|1:1|1:39|Name exceeds max length, allowed is 40
+allowed_object_naming|Error|gen/bsp/zosd_fleet2_-i18n_-i18n_properties_trace_json.w3mi.xml|1:1|1:39|Name exceeds max length, allowed is 40
+allowed_object_naming|Error|gen/bsp/zosd_fleet2_-list_controller_js_trace_json.w3mi.xml|1:1|1:39|Name exceeds max length, allowed is 40
+allowed_object_naming|Error|gen/bsp/zosd_fleet2_-startrun_fragment_xml_trace_json.w3mi.xml|1:1|1:39|Name exceeds max length, allowed is 40
+allowed_object_naming|Error|gen/bsp/zosd_fleet2_s_-i18n_-i18n_properties_trace_json.w3mi.xml|1:1|1:39|Name exceeds max length, allowed is 40
+allowed_object_naming|Error|gen/bsp/zosd_fleet2_s_-set_controller_js_trace_json.w3mi.xml|1:1|1:39|Name exceeds max length, allowed is 40
+allowed_object_naming|Error|gen/bsp/zosd_segw_app_-controller_-app_controller_js.w3mi.xml|1:1|1:39|Name exceeds max length, allowed is 40
+allowed_object_naming|Error|gen/bsp/zosd_taxi_anal_-annotations_-annotations_xml.w3mi.data.xml|1:1|1:39|Name exceeds max length, allowed is 40
+allowed_object_naming|Error|gen/bsp/zosd_taxi_anal_-ext_-controller_-listreportext_controller_js.w3mi.xml|1:1|1:39|Name exceeds max length, allowed is 40
+allowed_object_naming|Error|gen/bsp/zosg_workbench_-controller_-app_controller_js.w3mi.xml|1:1|1:39|Name exceeds max length, allowed is 40
+allowed_object_naming|Error|gen/cds/zc_osd_icf_handler.view.xml|1:1|1:39|Name exceeds max length, allowed is 16
+allowed_object_naming|Error|gen/cds/zc_osd_icf_origin.view.xml|1:1|1:39|Name exceeds max length, allowed is 16
+allowed_object_naming|Error|gen/cds/zc_stg_flightcube.view.xml|1:1|1:39|Name exceeds max length, allowed is 16
+allowed_object_naming|Error|gen/cds/zc_stg_travelcube.view.xml|1:1|1:39|Name exceeds max length, allowed is 16
+check_syntax|Error|gen/gui/zcl_osd_gui_osd_job_dump.clas.abap|93:12|93:25|Database table or view "zosd_job_seen" not found
+unknown_types|Error|gen/gui/zcl_osd_gui_osd_job_dump.clas.abap|16:10|16:17|Variable "LS_SEEN" contains unknown: ZOSD_JOB_SEEN not found, lookup
+check_syntax|Error|gen/gui/zcl_osd_gui_osd_job_e2e.clas.abap|161:12|161:25|Database table or view "zosd_job_seen" not found
+check_syntax|Error|gen/gui/zcl_osd_gui_osd_job_e2e.clas.abap|172:14|172:27|Database table or view "zosd_job_seen" not found
+check_syntax|Error|gen/gui/zcl_osd_gui_osd_job_e2e.clas.abap|190:14|190:27|Database table or view "zosd_job_seen" not found
+unknown_types|Error|gen/gui/zcl_osd_gui_osd_job_e2e.clas.abap|17:10|17:17|Variable "LS_SEEN" contains unknown: ZOSD_JOB_SEEN not found, lookup
+check_syntax|Error|gen/gui/zcl_osd_gui_osd_job_tick.clas.abap|95:12|95:25|Database table or view "zosd_job_seen" not found
+unknown_types|Error|gen/gui/zcl_osd_gui_osd_job_tick.clas.abap|16:10|16:17|Variable "LS_SEEN" contains unknown: ZOSD_JOB_SEEN not found, lookup
+allowed_object_naming|Error|gen/gui/zcl_osd_guitx_gg_ex_001.tran.xml|1:1|1:39|Name exceeds max length, allowed is 20
+allowed_object_naming|Error|gen/gui/zcl_osd_guitx_gg_ex_012.tran.xml|1:1|1:39|Name exceeds max length, allowed is 20
+allowed_object_naming|Error|gen/gui/zcl_osd_guitx_gg_ex_043.tran.xml|1:1|1:39|Name exceeds max length, allowed is 20
+allowed_object_naming|Error|gen/gui/zcl_osd_guitx_l3_fleet.tran.xml|1:1|1:39|Name exceeds max length, allowed is 20
+allowed_object_naming|Error|gen/gui/zcl_osd_guitx_l3_fleet2.tran.xml|1:1|1:39|Name exceeds max length, allowed is 20
+allowed_object_naming|Error|gen/gui/zcl_osd_guitx_l3_fleet2_conf.tran.xml|1:1|1:39|Name exceeds max length, allowed is 20
+allowed_object_naming|Error|gen/gui/zcl_osd_guitx_l3_fleet2_doc.tran.xml|1:1|1:39|Name exceeds max length, allowed is 20
+allowed_object_naming|Error|gen/gui/zcl_osd_guitx_l3_fleet3.tran.xml|1:1|1:39|Name exceeds max length, allowed is 20
+allowed_object_naming|Error|gen/gui/zcl_osd_guitx_l3_fleet3_conf.tran.xml|1:1|1:39|Name exceeds max length, allowed is 20
+allowed_object_naming|Error|gen/gui/zcl_osd_guitx_l3_fleet_seed.tran.xml|1:1|1:39|Name exceeds max length, allowed is 20
+allowed_object_naming|Error|gen/gui/zcl_osd_guitx_osd_job_doctor.tran.xml|1:1|1:39|Name exceeds max length, allowed is 20
+allowed_object_naming|Error|gen/gui/zcl_osd_guitx_osd_job_dump.tran.xml|1:1|1:39|Name exceeds max length, allowed is 20
+allowed_object_naming|Error|gen/gui/zcl_osd_guitx_osd_job_e2e.tran.xml|1:1|1:39|Name exceeds max length, allowed is 20
+allowed_object_naming|Error|gen/gui/zcl_osd_guitx_osd_job_tick.tran.xml|1:1|1:39|Name exceeds max length, allowed is 20
+allowed_object_naming|Error|gen/gui/zcl_osd_guitx_osd_ready.tran.xml|1:1|1:39|Name exceeds max length, allowed is 20
+allowed_object_naming|Error|gen/gui/zcl_osd_guitx_osd_sub_ctx.tran.xml|1:1|1:39|Name exceeds max length, allowed is 20
+allowed_object_naming|Error|gen/gui/zcl_osd_guitx_osd_sub_range.tran.xml|1:1|1:39|Name exceeds max length, allowed is 20
+allowed_object_naming|Error|gen/gui/zcl_osd_guitx_osd_sub_sem.tran.xml|1:1|1:39|Name exceeds max length, allowed is 20
+allowed_object_naming|Error|gen/gui/zcl_osd_guitx_osd_voyage.tran.xml|1:1|1:39|Name exceeds max length, allowed is 20
+allowed_object_naming|Error|libs/open-abap-gui/framework/zif_gg_list_processing_types_v1.intf.abap|1:1|1:50|Name exceeds max length, allowed is 30
+allowed_object_naming|Error|libs/open-abap-gui/framework/zif_gg_selection_screen_builder_v1.intf.abap|1:1|1:53|Name exceeds max length, allowed is 30
+unknown_types|Error|libs/open-abap-gui/src/alv/if_alv_message.intf.abap|5:13|5:20|Contains unknown, BAL_S_MSG not found, lookup
+check_syntax|Error|libs/open-abap-gui/src/salv/cl_salv_hierseq_table.clas.abap|136:42|136:46|DATA definition cannot be generic, DataReference
+check_syntax|Error|libs/open-abap-gui/src/salv/cl_salv_hierseq_table.clas.abap|137:42|137:46|DATA definition cannot be generic, DataReference
+unknown_types|Error|libs/open-abap-gui/src/alv/if_alv_message.intf.abap|5:13|5:20|Variable "R_S_MSG" contains unknown: BAL_S_MSG not found, lookup
+unknown_types|Error|libs/open-abap-gui/src/alv/if_alv_message.intf.abap|5:13|5:20|Variable "R_S_MSG" contains unknown: BAL_S_MSG not found, lookup
+allowed_object_naming|Error|packs/o4d/upstream/zo4d_00_sales%2epng.w3mi.xml|1:1|1:39|Name not allowed, expected to match /^[A-Z_-\d/<> ]+$/i
+allowed_object_naming|Error|packs/o4d/upstream/zo4d_02_ignite%2epng.w3mi.xml|1:1|1:39|Name not allowed, expected to match /^[A-Z_-\d/<> ]+$/i
+allowed_object_naming|Error|packs/o4d/upstream/zo4d_05_copper%2epng.w3mi.xml|1:1|1:39|Name not allowed, expected to match /^[A-Z_-\d/<> ]+$/i
+allowed_object_naming|Error|packs/o4d/upstream/zo4d_06_plasma%2epng.w3mi.xml|1:1|1:39|Name not allowed, expected to match /^[A-Z_-\d/<> ]+$/i
+allowed_object_naming|Error|packs/o4d/upstream/zo4d_07_twister%2epng.w3mi.xml|1:1|1:39|Name not allowed, expected to match /^[A-Z_-\d/<> ]+$/i
+allowed_object_naming|Error|packs/o4d/upstream/zo4d_08_mountains%2epng.w3mi.xml|1:1|1:39|Name not allowed, expected to match /^[A-Z_-\d/<> ]+$/i
+allowed_object_naming|Error|packs/o4d/upstream/zo4d_09_rotozoom%2epng.w3mi.xml|1:1|1:39|Name not allowed, expected to match /^[A-Z_-\d/<> ]+$/i
+allowed_object_naming|Error|packs/o4d/upstream/zo4d_10_voxel%2epng.w3mi.xml|1:1|1:39|Name not allowed, expected to match /^[A-Z_-\d/<> ]+$/i
+allowed_object_naming|Error|packs/o4d/upstream/zo4d_11_rotoplasma%2epng.w3mi.xml|1:1|1:39|Name not allowed, expected to match /^[A-Z_-\d/<> ]+$/i
+allowed_object_naming|Error|packs/o4d/upstream/zo4d_12_tesseract%2epng.w3mi.xml|1:1|1:39|Name not allowed, expected to match /^[A-Z_-\d/<> ]+$/i
+allowed_object_naming|Error|packs/o4d/upstream/zo4d_13_cell24%2epng.w3mi.xml|1:1|1:39|Name not allowed, expected to match /^[A-Z_-\d/<> ]+$/i
+allowed_object_naming|Error|packs/o4d/upstream/zo4d_14_cell16%2epng.w3mi.xml|1:1|1:39|Name not allowed, expected to match /^[A-Z_-\d/<> ]+$/i
+allowed_object_naming|Error|packs/o4d/upstream/zo4d_15_cell120%2epng.w3mi.xml|1:1|1:39|Name not allowed, expected to match /^[A-Z_-\d/<> ]+$/i
+allowed_object_naming|Error|packs/o4d/upstream/zo4d_17_amigaball%2epng.w3mi.xml|1:1|1:39|Name not allowed, expected to match /^[A-Z_-\d/<> ]+$/i
+allowed_object_naming|Error|packs/o4d/upstream/zo4d_18_glitch%2epng.w3mi.xml|1:1|1:39|Name not allowed, expected to match /^[A-Z_-\d/<> ]+$/i
+allowed_object_naming|Error|packs/o4d/upstream/zo4d_19_sierpinski%2epng.w3mi.xml|1:1|1:39|Name not allowed, expected to match /^[A-Z_-\d/<> ]+$/i
+allowed_object_naming|Error|packs/o4d/upstream/zo4d_20_neoncity%2epng.w3mi.xml|1:1|1:39|Name not allowed, expected to match /^[A-Z_-\d/<> ]+$/i
+allowed_object_naming|Error|packs/o4d/upstream/zo4d_21_joydiv%2epng.w3mi.xml|1:1|1:39|Name not allowed, expected to match /^[A-Z_-\d/<> ]+$/i
+allowed_object_naming|Error|packs/o4d/upstream/zo4d_22_sierptet%2epng.w3mi.xml|1:1|1:39|Name not allowed, expected to match /^[A-Z_-\d/<> ]+$/i
+allowed_object_naming|Error|packs/o4d/upstream/zo4d_23_quatjulia%2epng.w3mi.xml|1:1|1:39|Name not allowed, expected to match /^[A-Z_-\d/<> ]+$/i
+allowed_object_naming|Error|packs/o4d/upstream/zo4d_24_metaballs%2epng.w3mi.xml|1:1|1:39|Name not allowed, expected to match /^[A-Z_-\d/<> ]+$/i
+allowed_object_naming|Error|packs/o4d/upstream/zo4d_25_torus%2epng.w3mi.xml|1:1|1:39|Name not allowed, expected to match /^[A-Z_-\d/<> ]+$/i
+allowed_object_naming|Error|packs/o4d/upstream/zo4d_26_juliamorph%2epng.w3mi.xml|1:1|1:39|Name not allowed, expected to match /^[A-Z_-\d/<> ]+$/i
+allowed_object_naming|Error|packs/o4d/upstream/zo4d_27_constell%2epng.w3mi.xml|1:1|1:39|Name not allowed, expected to match /^[A-Z_-\d/<> ]+$/i
+allowed_object_naming|Error|packs/o4d/upstream/zo4d_99_qrcode%2epng.w3mi.xml|1:1|1:39|Name not allowed, expected to match /^[A-Z_-\d/<> ]+$/i
+allowed_object_naming|Error|packs/o4d/upstream/zoisee-ear-02%2emp3.w3mi.xml|1:1|1:39|Name not allowed, expected to match /^[A-Z_-\d/<> ]+$/i
+allowed_object_naming|Error|packs/o4d/upstream/zoisee-outro%2emp3.w3mi.xml|1:1|1:39|Name not allowed, expected to match /^[A-Z_-\d/<> ]+$/i
+allowed_object_naming|Error|packs/o4d/upstream/zoisee-sw%2emp3.w3mi.xml|1:1|1:39|Name not allowed, expected to match /^[A-Z_-\d/<> ]+$/i
+allowed_object_naming|Error|src/demo_sadl/zstg_sadl_mdl                     0001.iwmo.xml|1:1|1:39|Name exceeds max length, allowed is 36
+allowed_object_naming|Error|src/jobs/zosd_job_identity.tabl.xml|1:1|1:39|Name exceeds max length, allowed is 16
+allowed_object_naming|Error|src/zosd_test/segw/zosd_test_mdl                     0001.iwmo.xml|1:1|1:39|Name exceeds max length, allowed is 36

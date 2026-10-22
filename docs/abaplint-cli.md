@@ -3,8 +3,8 @@
 Translates the core of [abaplint](https://github.com/abaplint/abaplint) from TypeScript into ABAP. Generation is pure Go: no Node, npm or SAP system is needed.
 
 ```sh
-abapiti abaplint -o out                      # abaplint 577f875e is built into abapiti: no network
-abapiti abaplint ~/src/abaplint -o out       # or use a checkout (at 577f875e, after npm ci in packages/core)
+abapiti abaplint -o out                      # abaplint 9f7f098c is built into abapiti: no network
+abapiti abaplint ~/src/abaplint -o out       # or use a checkout (at 9f7f098c, after npm ci in packages/core)
 abapiti abaplint -o out --target native      # all / abap (ABAP set), a4h, osg, native, go
 abapiti abaplint -o small --scope zabapgit   # explicit legacy six-rule pruned build
 ```
@@ -23,19 +23,19 @@ this.
 
 ## Input
 
-abaplint commit `577f875ebec44cfaf64841cfe71c8ab8dc32622e` (`@abaplint/core` 2.120.56). Nothing else is accepted.
+abaplint commit `9f7f098c21e93b8b534fff0f0148f0a900d29d16` (`@abaplint/core` 2.120.73). Nothing else is accepted.
 
-- **No path**: abapiti unpacks the abaplint sources it carries (the 1,538 closure files of `packages/core` at 577f875e and abaplint's LICENSE, 0.5 MB compressed) and the type declarations of the three npm packages the translation reads (`fast-xml-parser` 5.10.1, `json5` 2.2.3, `vscode-languageserver-types` 3.18.0, with their licenses) into a temporary directory. Nothing is downloaded, so it works on networks that reach neither GitHub nor the npm registry.
+- **No path**: abapiti unpacks the abaplint sources it carries (the 1,548 closure files of `packages/core` at 9f7f098c and abaplint's LICENSE, 0.5 MB compressed) and the type declarations of the three npm packages the translation reads (`fast-xml-parser` 5.10.1, `json5` 2.2.3, `vscode-languageserver-types` 3.18.0, with their licenses) into a temporary directory. Nothing is downloaded, so it works on networks that reach neither GitHub nor the npm registry.
 - **A checkout path**: no downloads. The packages are looked up in `packages/core/node_modules`, then in the root `node_modules`.
 
-In both cases every source file of the closure (1,538 files reachable from `registry.ts`, `config.ts` and `files/memory_file.ts`) and every pinned file of the three npm packages (type declarations, package.json, license) must match its SHA-256 as recorded at the pin. If one does not match, the command stops and names the expected commit and the first file that differs. The fingerprinted overrides and the reachability manifest are recorded against the same pin. abapiti never builds anything from a different abaplint.
+In both cases every source file of the closure (1,548 files reachable from `registry.ts`, `config.ts` and `files/memory_file.ts`) and every pinned file of the three npm packages (type declarations, package.json, license) must match its SHA-256 as recorded at the pin. If one does not match, the command stops and names the expected commit and the first file that differs. The fingerprinted overrides and the reachability manifest are recorded against the same pin. abapiti never builds anything from a different abaplint.
 
 ## Output
 
 | Directory | Contents | Next step |
 |---|---|---|
 | `classes/` | the full translated core and runtime, with readable `ZCL_LNT_` / `ZIF_LNT_` names, shared by the ABAP targets | |
-| `a4h/` | `abaplint-577f875e-a4h.zip`: an abapGit offline repository with the classes, `ZCL_LNT_REGISTRY_A4H` and the report `ZLNT_REGISTRY_RUN` (package `$ZLNT`, set with `--package`; the legacy scope defaults to `$ZABAPLINT`) | import with abapGit, then run `ZLNT_REGISTRY_RUN` as a background job. The driver reads zabapgit from the `ZABAPITI_CORPUS` table through `ZCL_ABAPITI_CORPUS` and logs through `ZCL_ABAPITI_LOG`, so these must already be installed (they are not part of the zip) |
+| `a4h/` | `abaplint-9f7f098c-a4h.zip`: an abapGit offline repository with the classes, `ZCL_LNT_REGISTRY_A4H` and the report `ZLNT_REGISTRY_RUN` (package `$ZLNT`, set with `--package`; the legacy scope defaults to `$ZABAPLINT`) | import with abapGit, then run `ZLNT_REGISTRY_RUN` as a background job. The driver reads zabapgit from the `ZABAPITI_CORPUS` table through `ZCL_ABAPITI_CORPUS` and logs through `ZCL_ABAPITI_LOG`, so these must already be installed (they are not part of the zip) |
 | `osg/` | the classes; with `--input <dir> --deps <dir> --config <file>` also `ZCL_ABAPITI_REGISTRY_RUN`, which embeds those files and compares the issue dump with `--run-sha` | `npm run osgo:unit -- <out>/osg` (or `osgjs:unit`) in an open-steamgate checkout |
 | `native/` | `zabaplint.prog.abap` and `lib/` with the classes | in an open-steamgate checkout: `node tools/gogen/osabap.mjs native/zabaplint.prog.abap --lib native/lib` (set GOOS/GOARCH for cross builds), then `.out/osabap --file zabapgit_standalone.prog.abap --config abaplint.json -allow-read .` |
 

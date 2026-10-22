@@ -28,7 +28,7 @@ var abaplintCmd = &cobra.Command{
 	Use:   "abaplint [path-to-abaplint-checkout] -o <outdir>",
 	Short: "Translate abaplint (TypeScript) into ABAP classes or Go",
 	Long: `Translate the core of abaplint (github.com/abaplint/abaplint, commit
-577f875e, @abaplint/core 2.120.56) into ABAP, without Node.
+9f7f098c, @abaplint/core 2.120.73) into ABAP, without Node.
 
 With a checkout path, the checkout must be at that commit with "npm ci" done
 in packages/core. Without one, abapiti unpacks its built-in source archive and
@@ -186,7 +186,7 @@ func runAbaplint(cmd *cobra.Command, args []string) error {
 	if targets["go"] && len(targets) == 1 {
 		destination = "Go"
 	}
-	n.say("abapiti %s: translating abaplint %s (@abaplint/core 2.120.56) from TypeScript into %s", version, pin, destination)
+	n.say("abapiti %s: translating abaplint %s (@abaplint/core 2.120.73) from TypeScript into %s", version, pin, destination)
 
 	// 1. source
 	var src *abaplintSource

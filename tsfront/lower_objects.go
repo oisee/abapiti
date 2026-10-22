@@ -15,6 +15,12 @@ func (l *lowerer) assignRecords(n *ast.Node) *hir.Expr {
 		l.diagf(n, "unsupported-call", "Object.assign needs a record target")
 		return nil
 	}
+	if l.unprunedFeatures {
+		checked := l.ck.GetTypeAtLocation(args[0])
+		if checked != nil && checked.Symbol() != nil && checked.Symbol().Flags&ast.SymbolFlagsClass != 0 {
+			return l.assignClassRecords(n)
+		}
+	}
 	if len(args) == 2 {
 		if lit := ast.SkipParentheses(args[1]); lit.Kind == ast.KindObjectLiteralExpression {
 			if x, handled := l.assignLiteralFields(n, args[0], lit); handled {
@@ -154,4 +160,48 @@ func (l *lowerer) assignLiteralFields(n, targetNode, lit *ast.Node) (*hir.Expr, 
 		l.pendStmt(w)
 	}
 	return target, true
+}
+
+// assignClassRecords uses the existing live own-property view. Arguments are
+// evaluated before copying; each source's enumerable keys are snapshotted
+// before its values are read, and writes retain target identity.
+func (l *lowerer) assignClassRecords(n *ast.Node) *hir.Expr {
+	args := n.Arguments()
+	values := make([]*hir.Expr, 0, len(args))
+	for _, arg := range args {
+		value := l.expr(arg)
+		if value == nil {
+			return nil
+		}
+		values = append(values, l.tempInit(arg, value.Type, value))
+	}
+	target := values[0]
+	dyn := hir.T(hir.Dynamic)
+	boxed := l.tempInit(n, dyn, l.coerce(target, dyn))
+	for i, source := range values[1:] {
+		source = l.tempInit(args[i+1], dyn, l.coerce(source, dyn))
+		l.serial++
+		key := hir.V("assignKey"+itoa(l.serial), hir.T(hir.String))
+		keys := l.rtOp("dynamic.keys", source, hir.T(hir.Array, key.Type))
+		value := l.rtOp("dynamic.get", source, dyn, key)
+		put := l.rtOp("dynamic.put", boxed, hir.T(hir.Void), key, value)
+		body := hir.B(&hir.Stmt{Kind: hir.ExprStmt, Node: l.node(n), X: put})
+		for c := l.classByName(target.Type.Name); c != nil; c = l.classByName(c.Super) {
+			for _, field := range c.Fields {
+				if field.Static || field.PrivateSlot {
+					continue
+				}
+				saved := l.pend
+				l.pend = nil
+				converted := l.coerce(value, field.Type)
+				write := &hir.Stmt{Kind: hir.Assign, Node: l.node(n), X: &hir.Expr{Kind: hir.FieldGet, Node: l.node(n), Type: field.Type, X: target, Name: field.Name}, Y: converted}
+				branch := hir.B(append(l.pend, write)...)
+				l.pend = saved
+				body = hir.B(&hir.Stmt{Kind: hir.If, Node: l.node(n), X: &hir.Expr{Kind: hir.Binary, Op: "==", Type: hir.T(hir.Bool), X: key, Y: hir.L(key.Type, field.Name)}, Body: branch, Else: body})
+			}
+		}
+		copy := &hir.Stmt{Kind: hir.ForEach, Node: l.node(n), Name: key.Name, Type: key.Type, X: keys, Body: body}
+		l.pendStmt(&hir.Stmt{Kind: hir.If, Node: l.node(n), X: &hir.Expr{Kind: hir.Unary, Op: "!", Type: hir.T(hir.Bool), X: l.rtOp("dynamic.isNullish", source, hir.T(hir.Bool))}, Body: hir.B(copy)})
+	}
+	return target
 }

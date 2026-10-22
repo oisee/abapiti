@@ -236,7 +236,7 @@ func emitPackage(p *hir.Program, pkg string, profile bool) (map[string]string, *
 		runtime += regexSplitRuntimeSource
 		if e.regexA16 {
 			runtime = mustReplace(runtime, "func (s jsString) splitRegex(pattern *jsRegExp, limit float64) *array[jsString] {", `func (s jsString) splitRegex(pattern *jsRegExp, limit float64) *array[jsString] {
- if pattern.Flags.indexOf(str("u"))>=0 || pattern.labelGuard {panic(newTrap("regexp split is outside the checked split grammar"))}`, "regex split A16 guard")
+ if pattern.Flags.indexOf(str("u"))>=0 || pattern.labelGuard || pattern.zeroWidth {panic(newTrap("regexp split is outside the checked split grammar"))}`, "regex split A16 guard")
 		}
 	}
 	if e.extraRuntimeKeys {
@@ -1202,9 +1202,6 @@ func (b *body) expr(x *hir.Expr) string {
 			}
 		}
 		if t.Kind == hir.Number && (x.Op == "+" || x.Op == "-" || x.Op == "*" || x.Op == "/") {
-			if x.Op == "/" && (x.Y.Kind != hir.Lit || numberLiteral(x.Y.Value) == 0) {
-				e.unsupported(x.Node, "Number division requires a non-zero literal divisor")
-			}
 			if !e.nonfiniteNumbers {
 				code = "finite(" + code + ")"
 			}
@@ -1505,7 +1502,13 @@ func (b *body) stmt(s *hir.Stmt) {
 			owner := e.fieldOwner(e.classBy(s.X.X.Type.Name), s.X.Name)
 			storage := a + "." + e.getter(owner.Name) + "()"
 			b.line("%s.%s=%s", storage, e.member(s.X.Name), v)
-			if !strings.HasPrefix(s.X.Name, "#") {
+			privateSlot := false
+			for _, field := range owner.Fields {
+				if field.Name == s.X.Name {
+					privateSlot = field.PrivateSlot
+				}
+			}
+			if !privateSlot {
 				b.line("if %s.ownKeys!=nil {%s.ownKeys.set(str(%q),nil)}", storage, storage, s.X.Name)
 				if e.recordDeletion {
 					b.line("%s.propertyWritten(str(%q))", storage, s.X.Name)

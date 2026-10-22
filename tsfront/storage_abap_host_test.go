@@ -32,6 +32,11 @@ func storageABAPProbe(t *testing.T, p *hir.Program, ownerName, want, refusedMeth
 			exception = names.Get(exception)
 		}
 		fmt.Fprintf(&unit, "TRY.\n%s=>%s( ).\nCATCH %s.\nrefused = abap_true.\nENDTRY.\ncl_abap_unit_assert=>assert_true( refused ).\n", owner, names.Get("member."+refusedMethod), exception)
+		// An optional oracle method checks that the refused operation preserved
+		// observable state; its expected result is the same as the first run.
+		if len(refusalException) > 1 {
+			fmt.Fprintf(&unit, "actual = %s=>%s( ).\ncl_abap_unit_assert=>assert_equals( act = actual exp = `%s` ).\n", owner, names.Get("member."+refusalException[1]), strings.ReplaceAll(want, "`", "``"))
+		}
 	}
 	fmt.Fprint(&unit, "ENDMETHOD.\nENDCLASS.\n")
 	files[owner+".clas.testclasses.abap"] = unit.String()

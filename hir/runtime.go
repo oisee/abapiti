@@ -323,10 +323,10 @@ func RuntimeSignature(op string, t Type) ([]Type, Type, bool) {
 	case "array.includes":
 		return []Type{t.Args[0]}, b, true
 	case "array.join":
-		// Reference/optional elements require JavaScript ToString semantics
-		// which this runtime does not implement. Never emit invalid ABAP or
+		// Optional strings join as empty when absent. Other reference/optional
+		// elements require additional ToString semantics. Never emit invalid ABAP or
 		// silently substitute reference formatting.
-		if t.Args[0].IsRef() || t.Args[0].Kind == Optional {
+		if (t.Args[0].IsRef() || t.Args[0].Kind == Optional) && !(t.Args[0].Kind == Optional && t.Args[0].Args[0].Kind == String) {
 			return nil, Type{}, false
 		}
 		return []Type{T(Optional, T(String))}, T(String), true

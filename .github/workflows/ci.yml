@@ -574,8 +574,8 @@ jobs:
         run: |
           mkdir -p .tmp
           git clone --filter=blob:none https://github.com/abaplint/abaplint.git .tmp/abaplint
-          git -C .tmp/abaplint fetch origin 577f875ebec44cfaf64841cfe71c8ab8dc32622e
-          git -C .tmp/abaplint checkout 577f875ebec44cfaf64841cfe71c8ab8dc32622e
+          git -C .tmp/abaplint fetch origin 9f7f098c21e93b8b534fff0f0148f0a900d29d16
+          git -C .tmp/abaplint checkout 9f7f098c21e93b8b534fff0f0148f0a900d29d16
           cd .tmp/abaplint
           npm ci --ignore-scripts
           npm ci --ignore-scripts --prefix packages/core

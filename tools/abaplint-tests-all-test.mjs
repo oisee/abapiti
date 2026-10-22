@@ -91,20 +91,21 @@ try {
  const node = {total:2213, passed:2212, failed:0, pending:1, titles:Array(2213).fill('duplicate')};
  const run = {results:[{title:'duplicate',status:'passed',message:''},{title:'duplicate',status:'trapped',message:'lowering trap: test/root.ts:1:1: unsupported'}]};
  for (const {id, roots} of shards) {
-  writeFileSync(join(dir,`node-${id}.json`), JSON.stringify(node));
+  const oracleNode = id === 'abap-syntax' ? {...node, total:2641, passed:2640, titles:Array(2641).fill('duplicate')} : node;
+  writeFileSync(join(dir,`node-${id}.json`), JSON.stringify(oracleNode));
   writeFileSync(join(dir,`go-${id}.json`), JSON.stringify(run));
   execFileSync(process.execPath, [join(import.meta.dirname,'abaplint-tests-report.mjs'),join(dir,`node-${id}.json`),join(dir,`go-${id}.json`),join(dir,`report-${id}.json`)]);
   mkdirSync(join(dir,id)); writeFileSync(join(dir,id,'closure.json'),JSON.stringify({upstreamPin:'pin',roots}));
  }
- const all = {...node, total:11065, passed:11060, pending:5, titles:Array(11065).fill('duplicate')};
+ const all = {...node, total:11493, passed:11488, pending:5, titles:Array(11493).fill('duplicate')};
  const whole = () => writeFileSync(join(dir,'node-all.json'),JSON.stringify(all)); whole();
  const summarize = () => execFileSync(process.execPath,[join(import.meta.dirname,'abaplint-tests-summary.mjs'),dir,join(dir,'summary.json')], {stdio:'pipe'});
  summarize();
  const summary = JSON.parse(readFileSync(join(dir,'summary.json')));
- assert.equal(summary.shards.length,5); assert.equal(summary.uniqueTotal.total,11065);
+ assert.equal(summary.shards.length,5); assert.equal(summary.uniqueTotal.total,11493);
  assert.equal(summary.uniqueTotal.passed,5); assert.equal(summary.uniqueTotal.trapped,5);
- assert.equal(summary.uniqueTotal.notRun,11055);
- assert.equal(summary.wholeSuite.active,11060); assert.equal(summary.top20Traps[0].count,5);
+ assert.equal(summary.uniqueTotal.notRun,11483);
+ assert.equal(summary.wholeSuite.active,11488); assert.equal(summary.top20Traps[0].count,5);
  assert.equal(summary.wholeSuite.titlesReconciled,true); assert.equal(summary.nodeTotal.pending,5);
  writeFileSync(join(dir,'shards.json'),JSON.stringify(prioritizeShards(plan,'abap/syntax,root')));
  summarize();

@@ -18,7 +18,8 @@ export function adaptTestRegex(program, names) {
   if (!node || typeof node !== 'object') return;
   const text = constant(node);
   if (typeof text === 'string') {
-   const converted = text.replaceAll('(?<![\\s\\S])','\\A').replaceAll('(?![\\s\\S])','\\z');
+   const converted = text.replaceAll('(?<![\\s\\S])','\\A').replaceAll('(?![\\s\\S])','\\z')
+    .replaceAll('(?s:.)','(?:[^\\n]|\\n)');
    if (converted !== text) {
     // Folding a constant concat also covers assertions split by ABAP's literal
     // chunking. Dynamic concat operands and all unrelated literals stay intact.

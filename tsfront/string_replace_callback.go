@@ -23,13 +23,29 @@ func (l *lowerer) replaceCallback(n *ast.Node, recv, re, callback *hir.Expr) *hi
 		}
 	}
 	m := l.callableMethod(callback.Type)
-	if pattern.Kind != ast.KindRegularExpressionLiteral || re.Type.Kind != hir.RegExp || m == nil {
-		l.diagf(args[1], "unsupported-regex", "replace callback requires a literal RegExp and a lowered callable")
+	if re.Type.Kind != hir.RegExp || m == nil {
+		l.diagf(args[1], "unsupported-regex", "replace callback requires a RegExp and a lowered callable")
 		return nil
 	}
-	text := pattern.Text()
-	slash := strings.LastIndex(text, "/")
-	source, flags := text[1:slash], text[slash+1:]
+	source, flags := "", ""
+	if pattern.Kind == ast.KindRegularExpressionLiteral {
+		text := pattern.Text()
+		slash := strings.LastIndex(text, "/")
+		source, flags = text[1:slash], text[slash+1:]
+	} else if pattern.Kind == ast.KindNewExpression && len(m.Params) <= 1 && (len(m.Params) == 0 || !m.Params[0].Variadic) {
+		// A callback consuming only the whole match does not depend on the
+		// number of captures. Constructor flags still fix cursor semantics.
+		arguments := pattern.Arguments()
+		if len(arguments) == 2 && arguments[1].Kind == ast.KindStringLiteral {
+			flags = arguments[1].Text()
+		} else if len(arguments) != 1 {
+			l.diagf(pattern, "unsupported-regex", "replace callback requires known RegExp flags")
+			return nil
+		}
+	} else {
+		l.diagf(pattern, "unsupported-regex", "replace callback capture arguments require a literal RegExp")
+		return nil
+	}
 	global := strings.Contains(flags, "g")
 	if n.Expression().Name().Text() == "replaceAll" && !global {
 		l.diagf(pattern, "unsupported-regex", "replaceAll requires a global RegExp")
@@ -87,7 +103,7 @@ func (l *lowerer) replaceCallback(n *ast.Node, recv, re, callback *hir.Expr) *hi
 	l.serial++
 	maybe := hir.V("replaceMatch"+itoa(l.serial), hir.T(hir.Optional, matchType))
 	op := "regexp.exec"
-	if global {
+	if global && strings.ContainsAny(flags, "uv") {
 		op = "regexp.matchAllNext"
 	}
 	advance := rt(op, re, maybe.Type, recv)
@@ -99,6 +115,14 @@ func (l *lowerer) replaceCallback(n *ast.Node, recv, re, callback *hir.Expr) *hi
 	}
 	if !global {
 		collect = append(collect, &hir.Stmt{Kind: hir.Break, Node: l.node(n)})
+	} else if !strings.ContainsAny(flags, "uv") {
+		// RegExp @@replace advances an empty non-Unicode match by one
+		// UTF-16 unit. Collect matches before invoking any callbacks.
+		row := &hir.Expr{Kind: hir.Narrow, Type: matchType, X: maybe}
+		whole := &hir.Expr{Kind: hir.Narrow, Type: str, X: rt("array.get", row, hir.T(hir.Optional, str), hir.L(num, 0))}
+		empty := &hir.Expr{Kind: hir.Binary, Op: "==", Type: boolean, X: rt("string.length", whole, num), Y: hir.L(num, 0)}
+		next := binary("+", rt("array.matchIndex", row, num), hir.L(num, 1))
+		collect = append(collect, &hir.Stmt{Kind: hir.If, Node: l.node(n), X: empty, Body: hir.B(run(rt("regexp.setLastIndex", re, hir.T(hir.Void), next)))})
 	}
 	l.pendStmt(&hir.Stmt{Kind: hir.While, Node: l.node(n), X: hir.L(boolean, true), Body: hir.B(collect...)})
 	result := l.tempInit(n, str, hir.L(str, ""))

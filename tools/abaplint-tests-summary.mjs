@@ -63,7 +63,7 @@ if (manifest) {
  for (const title of all.titles) titles.set(title, (titles.get(title) ?? 0) - 1);
  if ([...titles.values()].some(n => n !== 0)) throw new Error('shard titles differ from whole-suite Node multiset');
  for (const key of Object.keys(nodeTotals)) if (nodeTotals[key] !== all[key]) throw new Error(`whole-suite Node ${key} mismatch`);
- if (all.passed + all.failed !== 11060) throw new Error(`pinned active suite denominator changed: ${all.passed + all.failed}`);
+ if (all.passed + all.failed !== 11488) throw new Error(`pinned active suite denominator changed: ${all.passed + all.failed}`);
  if (all.total !== all.passed + all.failed + all.pending) throw new Error('Node active/pending total mismatch');
  wholeSuite = {files:manifest.files.length, ...nodeTotals, active:all.passed + all.failed, titlesReconciled:true, excluded:manifest.excluded,
   wiringFailures:shards.filter(s => s.infrastructureFailure).map(s => ({name:s.name, files:specs.find(p => p.name === s.name).roots, reason:s.infrastructureFailure}))};
@@ -80,7 +80,7 @@ const result = {...(manifest?.target ? {target:manifest.target} : {}), nodeActiv
  artifacts:directory, artifactPrefix:prefix, shards, uniqueTotal:totals, nodeTotal:nodeTotals,
  ...(wholeSuite ? {wholeSuite} : {}),
  ...(manifest?.partial ? {selectedSuite:{shards:specs.map(s => s.name), files:manifest.files.length, excluded:manifest.excluded, active:nodeTotals.passed + nodeTotals.failed}} : {}),
- countingRule:'passed/active counts only original Node-active titles (11,060 in the complete pinned suite); Node-pending titles are outside that denominator. nodeActive.notPassing is split into traps, unregistered, skipped, FAIL and async-pending. Typed lowering/runtime refusals are trapped; genuine assertion mismatches and other non-refusal throws are failed. Not-run remains separate; no failed record is relabeled by the report.',
+ countingRule:'passed/active counts only original Node-active titles (11,488 in the complete pinned suite); Node-pending titles are outside that denominator. nodeActive.notPassing is split into traps, unregistered, skipped, FAIL and async-pending. Typed lowering/runtime refusals are trapped; genuine assertion mismatches and other non-refusal throws are failed. Not-run remains separate; no failed record is relabeled by the report.',
  asyncInitializationFailures:shards.flatMap(s => s.initialization).filter(r => r.message.includes('unsupported-async')).length,
  registrationParity:shards.every(s => s.unregisteredTitles.length === 0 && s.unmatched === 0),
  allTraps:[...traps.values()].sort((a,b) => b.count-a.count || a.message.localeCompare(b.message)),

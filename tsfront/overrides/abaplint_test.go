@@ -89,8 +89,6 @@ func TestRun3Overrides(t *testing.T) {
 		{"src/abap/2_statements/expand_macros.ts", "ExpandMacros.find", "KindMethodDeclaration", "public find(", "\n  }"},
 		{"src/_iregistry.ts", "IRegistry", "KindInterfaceDeclaration", "export interface IRegistry", "\n}"},
 		{"src/_iregistry.ts", "IRunInput", "KindInterfaceDeclaration", "export interface IRunInput", "\n}"},
-		{"src/abap/artifacts.ts", "ArtifactsABAP.getKeywords", "KindMethodDeclaration", "public static getKeywords(", "\n  }"},
-		{"src/abap/artifacts.ts", "className", "KindFunctionDeclaration", "function className(", "\n}"},
 		{"src/abap/1_lexer/tokens/abstract_token.ts", "AbstractToken", "KindMethodDeclaration", "public [Symbol.for(", "\n  }"},
 	}
 	for _, c := range cases {
