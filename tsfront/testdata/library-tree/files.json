@@ -1,0 +1,50 @@
+[
+  {
+    "Filename": "zoutline.clas.testclasses.abap",
+    "Raw": "CLASS ltcl_test DEFINITION FOR TESTING.\n PUBLIC SECTION. METHODS run FOR TESTING.\nENDCLASS.\nCLASS ltcl_test IMPLEMENTATION.\n METHOD run. ENDMETHOD.\nENDCLASS."
+  },
+  {
+    "Filename": "zoutline.clas.abap",
+    "Raw": "CLASS zoutline DEFINITION PUBLIC.\n PUBLIC SECTION.\n  DATA: BEGIN OF payload,\n    text TYPE string,\n    number TYPE i,\n  END OF payload.\n  METHODS run IMPORTING value TYPE string.\n PROTECTED SECTION.\n  DATA count TYPE i.\n PRIVATE SECTION.\n  CONSTANTS title TYPE string VALUE `Hello 😀`.\nENDCLASS.\nCLASS zoutline IMPLEMENTATION.\n METHOD run.\n  DATA unused TYPE i ##NEEDED.\n  count = strlen( value ).\n ENDMETHOD.\nENDCLASS."
+  },
+  {
+    "Filename": "zoutline.clas.locals_imp.abap",
+    "Raw": "CLASS lcl_helper IMPLEMENTATION.\n METHOD helper. ENDMETHOD.\nENDCLASS."
+  },
+  {
+    "Filename": "zoutline.clas.locals_def.abap",
+    "Raw": "CLASS lcl_helper DEFINITION.\n PUBLIC SECTION. METHODS helper.\nENDCLASS."
+  },
+  {
+    "Filename": "zoutline.prog.screen_0100.abap",
+    "Raw": "MODULE status_0100 OUTPUT.\n WRITE 'screen'.\nENDMODULE."
+  },
+  {
+    "Filename": "zoutline.prog.abap",
+    "Raw": "REPORT zoutline.\nDATA value TYPE i ##NEEDED.\nINITIALIZATION.\n value = 1.\nSTART-OF-SELECTION.\n WRITE: / value, / '##literal'.\nEND-OF-SELECTION.\n WRITE |😀{ value }|."
+  },
+  {
+    "Filename": "zoutline.intf.abap",
+    "Raw": "INTERFACE zoutline PUBLIC.\n METHODS run.\nENDINTERFACE."
+  },
+  {
+    "Filename": "zbad.prog.abap",
+    "Raw": "REPORT zbad.\nthis is not abap.\nCLASS unfinished DEFINITION."
+  },
+  {
+    "Filename": "zempty.prog.abap",
+    "Raw": ""
+  },
+  {
+    "Filename": "zother.devc.xml",
+    "Raw": "<abapGit/>"
+  },
+  {
+    "Filename": "zpragma.prog.abap",
+    "Raw": "##NEEDED.\n##NO_TEXT\n"
+  },
+  {
+    "Filename": "zoutline.intf.extra.abap",
+    "Raw": "INTERFACE ignored.\nENDINTERFACE."
+  }
+]
