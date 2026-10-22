@@ -19,6 +19,9 @@ func TestStringRepeatAndMatchRuntime(t *testing.T) {
  g:=newRegExp(str("&"),str("g"));g.LastIndex=99
  all:=str("&&&").match(g);check(len(all.Items)==3 && all.Items[0]==str("&") && g.LastIndex==0)
  check(str("xyz").match(g)==nil && g.LastIndex==0)
+ look:=newRegExp(str("(?=TODO)"),str("gi"));hit:=look.exec(str("TODO"))
+ check(hit!=nil && hit.Items[0]==str("") && look.LastIndex==0)
+ fault(func(){str("TODO").match(look)})
  fmt.Println("ok")`
 	if got := execute(t, &hir.Program{}, main); got != "ok\n" {
 		t.Fatal(got)
