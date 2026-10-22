@@ -23,9 +23,10 @@ func TestDataAPI(t *testing.T) {
  first:=&tokenStub{"a",&positionStub{2,3},&positionStub{2,4}}
  last:=&tokenStub{"last",&positionStub{4,5},&positionStub{4,9}}
  child:=&expressionStub{"CDSName","a",&array[any]{Items:[]any{&tokenNodeStub{first}}},first,first}
- d.tree=&expressionStub{"CDSSelect","a last",&array[any]{Items:[]any{&tokenNodeStub{first},child,&tokenNodeStub{last},child}},first,last}
+ child2:=&expressionStub{"CDSAs","last",&array[any]{Items:[]any{&tokenNodeStub{last}}},last,last}
+ d.tree=&expressionStub{"CDSSelect","a last",&array[any]{Items:[]any{&tokenNodeStub{first},child,&tokenNodeStub{last},child2}},first,last}
  tree,_,_:=c.CDS("zdata")
- if tree.Kind!="CDSSelect"||tree.Text!="a last"||tree.Start!=(Pos{2,3})||tree.End!=(Pos{4,9})||len(tree.Children)!=2||tree.Children[0].Kind!="CDSName"||tree.Children[0].Children!=nil{t.Fatal(tree)}
+ if tree.Kind!="CDSSelect"||tree.Text!="a last"||tree.Start!=(Pos{2,3})||tree.End!=(Pos{4,9})||len(tree.Children)!=2||tree.Children[0].Kind!="CDSName"||tree.Children[0].Children!=nil||tree.Children[1].Kind!="CDSAs"||tree.Children[1].Text!="last"{t.Fatal(tree)}
  tree.Children[0].Text="changed"
  again,_,_:=c.CDS("zdata");if again.Children[0].Text!="a"{t.Fatal("expression aliases core")}
  table:=&tableStub{objectStub:obj,parsed:kindStub{"not a structure"},keys:&array[jsString]{Items:[]jsString{str("zKey"),str("Akey")}}}
