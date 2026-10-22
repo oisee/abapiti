@@ -19,7 +19,7 @@ func RegistryGoLibrary(pkg string, names *hir.Names) string {
 
 func registryGoLibrarySymbols(pkg string, n *hir.Names) *strings.Replacer {
 	pairs := []string{"@package@", pkg}
-	for _, name := range []string{"parsePrivate", "run", "addFile", "addDependency", "parse", "getFileByName", "findObjectForFile", "findIssuesObject", "getFiles", "getObjects", "next", "close", "done", "value", "getRaw", "getObjectName", "getName", "setDirty", "isDirty", "updateFile", "removeFile", "getKey", "getSeverity", "getFilename", "getMessage", "getStart", "getEnd", "getRow", "getCol", "getObject", "getType", "getABAPFiles", "getMainABAPFile", "getSequencedFiles", "getStructure", "getStatements", "get", "getChildren", "getFirstStatement", "getFirstToken", "getLastToken", "getTokens", "getStr", "getTree", "getSQLViewName", "concatTokens", "parseType", "listKeys", "getComponents", "name"} {
+	for _, name := range []string{"syntaxResult", "parsePrivate", "run", "addFile", "addDependency", "parse", "getFileByName", "findObjectForFile", "findIssuesObject", "getFiles", "getObjects", "next", "close", "done", "value", "getRaw", "getObjectName", "getName", "setDirty", "isDirty", "updateFile", "removeFile", "getKey", "getSeverity", "getFilename", "getMessage", "getStart", "getEnd", "getRow", "getCol", "getObject", "getType", "getABAPFiles", "getMainABAPFile", "getSequencedFiles", "getStructure", "getStatements", "get", "getChildren", "getFirstStatement", "getFirstToken", "getLastToken", "getTokens", "getStr", "getTree", "getSQLViewName", "concatTokens", "parseType", "listKeys", "getComponents", "name"} {
 		pairs = append(pairs, "@"+name+"@", n.Get("member."+name))
 	}
 	for marker, id := range map[string]string{
@@ -31,6 +31,7 @@ func registryGoLibrarySymbols(pkg string, n *hir.Names) *strings.Replacer {
 		"AbstractType":            "ref.src/abap/types/basic/_abstract_type.ts.AbstractType",
 		"Component":               "ref.src/abap/types/basic/structure_type.ts.IStructureComponent",
 		"Registry":                "ref.src/registry.ts.Registry",
+		"ABAPObjectBase":          "base.src/objects/_abap_object.ts.ABAPObject",
 		"ABAPObject":              "ref.src/objects/_abap_object.ts.ABAPObject",
 		"ABAPFile":                "ref.src/abap/abap_file.ts.ABAPFile",
 		"StatementNode":           "ref.src/abap/nodes/statement_node.ts.StatementNode",

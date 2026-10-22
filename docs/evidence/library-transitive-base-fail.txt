@@ -1,0 +1,55 @@
+=== RUN   TestRegistryGoLibraryTransitive
+    golang_library_transitive_test.go:40: full-core transitive fixtures: exit status 1
+        === RUN   TestTransitiveConsumers
+        === RUN   TestTransitiveConsumers/inheritance/cached-syntax
+            transitive_test.go:41: CLAS ZA: incremental issues [], fresh [{za.clas.abap check_syntax Error Method "foo" not found, methodCallChain 7 1 7 4}]
+            transitive_test.go:41: expected "Method \"foo\" not found", got []
+        === RUN   TestTransitiveConsumers/inheritance/unprimed-syntax
+            transitive_test.go:44: CLAS ZA: incremental issues [{za.clas.abap check_syntax Error Method "foo" not found, methodCallChain 7 1 7 4}], fresh []
+            transitive_test.go:44: baseline/restore issues: [{za.clas.abap check_syntax Error Method "foo" not found, methodCallChain 7 1 7 4}]
+        === RUN   TestTransitiveConsumers/interface-alias/cached-syntax
+            transitive_test.go:41: CLAS ZA: incremental issues [], fresh [{za.clas.abap check_syntax Error Method "foo" not found, methodCallChain 7 1 7 4}]
+            transitive_test.go:41: expected "Method \"foo\" not found", got []
+        === RUN   TestTransitiveConsumers/interface-alias/unprimed-syntax
+            transitive_test.go:44: CLAS ZA: incremental issues [{za.clas.abap check_syntax Error Method "foo" not found, methodCallChain 7 1 7 4}], fresh []
+            transitive_test.go:44: baseline/restore issues: [{za.clas.abap check_syntax Error Method "foo" not found, methodCallChain 7 1 7 4}]
+        === RUN   TestTransitiveConsumers/include-chain/cached-syntax
+            transitive_test.go:41: PROG ZA: incremental issues [], fresh [{za.prog.abap check_syntax Error "foo" not found, findTop 3 7 3 10}]
+            transitive_test.go:41: expected "\"foo\" not found", got []
+        === RUN   TestTransitiveConsumers/include-chain/unprimed-syntax
+            transitive_test.go:44: PROG ZA: incremental issues [{za.prog.abap check_syntax Error "foo" not found, findTop 3 7 3 10}], fresh []
+            transitive_test.go:44: baseline/restore issues: [{za.prog.abap check_syntax Error "foo" not found, findTop 3 7 3 10}]
+        === RUN   TestTransitiveConsumers/macro-chain/cached-syntax
+            transitive_test.go:41: PROG ZA: incremental issues [], fresh [{za.prog.abap check_syntax Error "missing" not found, findTop 3 1 3 8}]
+            transitive_test.go:41: expected "\"missing\" not found", got []
+            transitive_test.go:41: PROG ZA: incremental tree differs from fresh
+            transitive_test.go:43: reparsed 2 owners, want 3
+        === RUN   TestTransitiveConsumers/macro-chain/unprimed-syntax
+            transitive_test.go:41: PROG ZA: incremental issues [], fresh [{za.prog.abap check_syntax Error "missing" not found, findTop 3 1 3 8}]
+            transitive_test.go:41: expected "\"missing\" not found", got []
+            transitive_test.go:41: PROG ZA: incremental tree differs from fresh
+            transitive_test.go:43: reparsed 2 owners, want 3
+        === RUN   TestTransitiveConsumers/typepool-structure/cached-syntax
+            transitive_test.go:41: CLAS ZA: incremental issues [], fresh [{za.clas.abap check_syntax Error Component "bar" not found in structure 7 11 7 14}]
+            transitive_test.go:41: expected "Component \"bar\" not found", got []
+        === RUN   TestTransitiveConsumers/typepool-structure/unprimed-syntax
+            transitive_test.go:44: CLAS ZA: incremental issues [{za.clas.abap check_syntax Error Component "bar" not found in structure 7 11 7 14}], fresh []
+            transitive_test.go:44: baseline/restore issues: [{za.clas.abap check_syntax Error Component "bar" not found in structure 7 11 7 14}]
+        --- FAIL: TestTransitiveConsumers (0.25s)
+            --- FAIL: TestTransitiveConsumers/inheritance/cached-syntax (0.04s)
+            --- FAIL: TestTransitiveConsumers/inheritance/unprimed-syntax (0.02s)
+            --- FAIL: TestTransitiveConsumers/interface-alias/cached-syntax (0.03s)
+            --- FAIL: TestTransitiveConsumers/interface-alias/unprimed-syntax (0.02s)
+            --- FAIL: TestTransitiveConsumers/include-chain/cached-syntax (0.03s)
+            --- FAIL: TestTransitiveConsumers/include-chain/unprimed-syntax (0.02s)
+            --- FAIL: TestTransitiveConsumers/macro-chain/cached-syntax (0.03s)
+            --- FAIL: TestTransitiveConsumers/macro-chain/unprimed-syntax (0.02s)
+            --- FAIL: TestTransitiveConsumers/typepool-structure/cached-syntax (0.02s)
+            --- FAIL: TestTransitiveConsumers/typepool-structure/unprimed-syntax (0.02s)
+        FAIL
+        FAIL	librarytreefixture	0.255s
+        FAIL
+--- FAIL: TestRegistryGoLibraryTransitive (72.46s)
+FAIL
+FAIL	github.com/oisee/abapiti/tsfront	72.804s
+FAIL

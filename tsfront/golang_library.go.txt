@@ -88,8 +88,9 @@ func (c *Checker) unindex(obj @Object@) {
 
 // Update batches edits without parsing. nil removes a file; &"" installs an
 // empty file. The host implements overlay+restore by deferring Update(original).
-// Only direct lexical readers are invalidated, including comments/strings.
-// Following readers transitively discards unrelated parsed trees and definitions.
+// Reparse the owner and direct lexical readers (including comments/strings).
+// Transitive consumers lose only cached syntax, except potential stored macro
+// expansions: those must be rebuilt from source, even before the first check.
 func (c *Checker) Update(filename string, raw *string) {
  libraryMu.Lock(); defer libraryMu.Unlock()
  c.require()
@@ -112,14 +113,48 @@ func (c *Checker) Update(filename string, raw *string) {
  dirty := map[@Object@]bool{}
  if obj != nil { c.index(obj); dirty[obj] = true }
  name := strings.ToUpper(file.@getObjectName@().String())
- for reader := range c.readers[name] {
-  c.stats.ReaderVisits++
-  if dirty[reader] { continue }
-  dirty[reader] = true
-  reader.@setDirty@()
+ // Walk owner names, not words in consumer sources. Visit each name once so
+ // cycles, multiple object types sharing a name, and diamonds terminate.
+ consumers := map[@Object@]bool{}
+ names := []string{name}
+ seen := map[string]bool{name:true}
+ for at := 0; at < len(names); at++ {
+  for reader := range c.readers[names[at]] {
+   c.stats.ReaderVisits++
+   consumers[reader] = true
+   if at == 0 { dirty[reader] = true }
+   next := strings.ToUpper(reader.@getName@().String())
+   if !seen[next] { seen[next] = true; names = append(names, next) }
+  }
  }
+ for reader := range consumers {
+  if abap, ok := reader.(@ABAPObject@); ok {
+   // Use the emitted base accessor: one field write, retaining parsed files,
+   // OO definitions, text/XML caches, and the object's clean parse flag.
+   abap.@ABAPObjectBase@().@syntaxResult@ = nil
+   if !dirty[reader] && libraryStoredMacros(abap) { dirty[reader] = true }
+  }
+ }
+ for reader := range dirty { reader.@setDirty@() }
  for object := range dirty { c.pending[object] = true }
  c.stats.DirtiedObjects += int32(len(dirty))
+}
+
+// ExpandMacros inserts expanded statements into parsed files. A MacroCall
+// therefore needs a source reparse when an upstream owner changes. Unknown is
+// also a potential macro call (e.g. adding a previously missing definition).
+// The core's macro reference table is incomplete for nested/include expansion;
+// conservatively rebuild these candidates within the lexical consumer closure.
+func libraryStoredMacros(obj @ABAPObject@) bool {
+ files := obj.@getABAPFiles@()
+ for i := int32(0); i < libraryLength(files); i++ {
+  statements := libraryUnwrap(libraryAt(files, i)).(@ABAPFile@).@getStatements@()
+  for j := int32(0); j < libraryLength(statements); j++ {
+   kind := classOf(libraryUnwrap(libraryAt(statements, j)).(@StatementNode@).@get@()).Name.String()
+   if kind == "MacroCall" || kind == "Unknown" { return true }
+  }
+ }
+ return false
 }
 
 // Full-core arrays can be live views; small emitted packages use plain Items.

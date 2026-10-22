@@ -274,8 +274,12 @@ preserved. `Check` resolves the owning object and uses `findIssuesObject`,
 returning ordered structured issues (`Filename`, `Key`, `Severity`, `Message`,
 `Row`, `Column`, `EndRow`, `EndColumn`), without the batch report/dump transport.
 Coordinates must be finite integers representable as int32. `Update` dirties the edited owner and its
-direct lexical readers using the same conservative word pattern as OSG;
-parsing stays lazy until Check, CheckObject, Tree, CDS, DDIC or Files.
+direct lexical readers using the same conservative word pattern as OSG.
+Every transitive lexical consumer also loses its cached syntax result without
+reparsing. Potential stored macro consumers (MacroCall/Unknown statements) in
+that closure reparse to rebuild expansion from source. Native Node can return
+stale syntax for these consumers; fresh-state checking defines correctness.
+Parsing stays lazy until Check, CheckObject, Tree, CDS, DDIC or Files.
 Removing an include preserves sibling readers;
 removing the last file discards the old object identity. `Stats` exposes work
 counters, not a timing or engine parity certificate. `ParseRuns`/`ParseObjects`
