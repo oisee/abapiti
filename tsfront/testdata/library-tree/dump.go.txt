@@ -1,0 +1,45 @@
+package main
+
+import (
+ "encoding/json"
+ "os"
+ "sort"
+ "strings"
+ lint "zabaplint"
+)
+
+type object struct { Type, Name string }
+func main() {
+ var input struct { Files []lint.File; Config string }
+ raw, err := os.ReadFile(os.Args[1]); if err != nil { panic(err) }
+ if err = json.Unmarshal(raw, &input); err != nil { panic(err) }
+ var checker lint.Checker
+ checker.Prime(input.Files, nil, input.Config)
+ // Derive registry identities from filenames, then let CheckObject establish
+ // existence (excluded and unknown objects are omitted, as in the Node oracle).
+ objects := map[object]bool{}
+ for _, f := range input.Files {
+  parts := strings.Split(f.Filename[strings.LastIndex(f.Filename,"/")+1:], ".")
+  if len(parts)<3 { continue }
+  name := strings.ReplaceAll(strings.ReplaceAll(strings.ToUpper(parts[0]), "%23", "/"), "#", "/")
+  objects[object{strings.ToUpper(parts[1]),name}] = true
+ }
+ ordered := make([]object,0,len(objects))
+ for obj := range objects { ordered=append(ordered,obj) }
+ sort.Slice(ordered,func(i,j int)bool { return ordered[i].Type+"\x00"+ordered[i].Name < ordered[j].Type+"\x00"+ordered[j].Name })
+ encoder := json.NewEncoder(os.Stdout)
+ for _, obj := range ordered {
+  files,found := checker.Tree(obj.Type,obj.Name)
+  if !found { continue }
+  concat := make([][]string,0,len(files))
+  for _, f := range files {
+   statements := make([]string,0,len(f.Statements))
+   for _, statement := range f.Statements { statements=append(statements,lint.ConcatTokens(statement.Tokens)) }
+   concat=append(concat,statements)
+  }
+  issues,found := checker.CheckObject(obj.Type,obj.Name)
+  if !found { panic("object disappeared") }
+  err = encoder.Encode(struct {Type,Name string; Found bool; Files []lint.FileTree; Concat [][]string; Issues []lint.Issue}{obj.Type,obj.Name,found,files,concat,issues})
+  if err != nil { panic(err) }
+ }
+}

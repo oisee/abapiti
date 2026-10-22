@@ -7,6 +7,7 @@ import (
  "regexp"
  "strings"
  "sync"
+ "unicode/utf16"
 )
 
 // File retains logical paths and exact source bytes. Dependencies are not
@@ -156,9 +157,27 @@ func (c *Checker) Check(filename string) []Issue {
  if file == nil { panic("file is not in the registry: " + filename) }
  obj := c.registry.@findObjectForFile@(file)
  if obj == nil { panic("object is not in the registry: " + filename) }
+ return c.checkObject(obj)
+}
+
+// CheckObject uses the registry lookup verbatim: names are case insensitive,
+// object types are case sensitive. A missing object returns nil, false.
+func (c *Checker) CheckObject(typ, name string) ([]Issue, bool) {
+ libraryMu.Lock(); defer libraryMu.Unlock()
+ c.require()
+ obj := c.registry.@getObject@(present(str(typ)), present(str(name)))
+ if obj == nil { return nil, false }
+ return c.checkObject(obj), true
+}
+
+func (c *Checker) countParse() {
  dirty := int32(0)
  for object := range c.words { if object.@isDirty@() { dirty++ } }
  if dirty > 0 { c.stats.ParseRuns++; c.stats.ParseObjects += dirty }
+}
+
+func (c *Checker) checkObject(obj @Object@) []Issue {
+ c.countParse()
  issues := c.registry.@findIssuesObject@(obj)
  out := make([]Issue, 0, libraryLength(issues))
  for at := int32(0); at < libraryLength(issues); at++ {
@@ -170,3 +189,105 @@ func (c *Checker) Check(filename string) []Issue {
  return out
 }
 func (c *Checker) Stats() Stats { libraryMu.Lock(); defer libraryMu.Unlock(); return c.stats }
+
+// Pos retains raw, one-based abaplint coordinates. End positions are exclusive.
+type Pos struct { Row, Col int32 }
+// Pragma records lexer identity, which concatTokens needs even if a caller
+// changes Str. String length for adjacency is measured in UTF-16 code units.
+type Token struct { Str string; Start, End Pos; Pragma bool }
+type Node struct {
+ Kind string
+ Statement bool
+ Start, End Pos
+ Tokens []Token
+ Children []Node
+ // The pinned core follows only the first-child chain. For every structure
+ // with valid token bounds this is its first depth-first statement, so nil.
+ FirstStatement *Node
+}
+type FileTree struct { Filename string; Structure *Node; Statements []Node }
+
+// ConcatTokens matches StatementNode.concatTokens, skipping pragma tokens
+// without changing the previous non-pragma token used for adjacency.
+func ConcatTokens(tokens []Token) string {
+ var out strings.Builder
+ var prev *Token
+ for i := range tokens {
+  token := &tokens[i]
+  if token.Pragma { continue }
+  if out.Len() != 0 && (prev == nil || prev.Start.Row != token.Start.Row || int64(prev.Start.Col) + int64(len(utf16.Encode([]rune(prev.Str)))) != int64(token.Start.Col)) { out.WriteByte(' ') }
+  out.WriteString(token.Str)
+  prev = token
+ }
+ return out.String()
+}
+
+func libraryPos(pos @Position@) Pos {
+ return Pos{Row: libraryCoordinate(pos.@getRow@()), Col: libraryCoordinate(pos.@getCol@())}
+}
+func libraryToken(token @AbstractToken@) Token {
+ return Token{Str: token.@getStr@().String(), Start: libraryPos(token.@getStart@()), End: libraryPos(token.@getEnd@()), Pragma: descriptorInstance(token, &@PragmaDescriptor@)}
+}
+func libraryStatement(statement @StatementNode@) Node {
+ out := Node{Kind: classOf(statement.@get@()).Name.String(), Statement: true,
+  Start: libraryPos(statement.@getFirstToken@().@getStart@()), End: libraryPos(statement.@getLastToken@().@getEnd@())}
+ tokens := statement.@getTokens@()
+ out.Tokens = make([]Token, 0, libraryLength(tokens))
+ for i := int32(0); i < libraryLength(tokens); i++ { out.Tokens = append(out.Tokens, libraryToken(libraryUnwrap(libraryAt(tokens, i)).(@AbstractToken@))) }
+ return out
+}
+func libraryStructure(structure @StructureNode@) Node {
+ out := Node{Kind: classOf(structure.@get@()).Name.String()}
+ children := structure.@getChildren@()
+ if libraryLength(children) > 0 {
+  out.Start = libraryPos(structure.@getFirstToken@().@getStart@())
+  out.End = libraryPos(structure.@getLastToken@().@getEnd@())
+ }
+ out.Children = make([]Node, 0, libraryLength(children))
+ for i := int32(0); i < libraryLength(children); i++ {
+  child := libraryUnwrap(libraryAt(children, i))
+  switch node := child.(type) {
+  case @StatementNode@: out.Children = append(out.Children, libraryStatement(node))
+  case @StructureNode@: out.Children = append(out.Children, libraryStructure(node))
+  default: panic(fmt.Sprintf("unexpected structure child %T", child))
+  }
+ }
+ return out
+}
+func libraryUnwrap(value any) any {
+ if d, ok := value.(*dynamic); ok { if d == nil { return nil }; return d.Value }
+ return value
+}
+
+// Tree parses pending edits, then copies outline data while holding libraryMu.
+// Non-ABAP objects are found but have no ABAP files (an empty slice).
+func (c *Checker) Tree(typ, name string) ([]FileTree, bool) {
+ libraryMu.Lock(); defer libraryMu.Unlock()
+ c.require()
+ obj := c.registry.@getObject@(present(str(typ)), present(str(name)))
+ if obj == nil { return nil, false }
+ c.countParse()
+ c.registry.@parse@()
+ out := make([]FileTree, 0)
+ abap, ok := obj.(@ABAPObject@)
+ if !ok { return out, true }
+ files := abap.@getABAPFiles@()
+ ordered := make([]@ABAPFile@, 0, libraryLength(files))
+ if obj.@getType@().String() == "CLAS" || obj.@getType@().String() == "INTF" {
+  files = abap.@getSequencedFiles@()
+  for i := int32(0); i < libraryLength(files); i++ { ordered = append(ordered, libraryUnwrap(libraryAt(files, i)).(@ABAPFile@)) }
+ } else {
+  main := abap.@getMainABAPFile@()
+  if main != nil { ordered = append(ordered, main) }
+  for i := int32(0); i < libraryLength(files); i++ { file := libraryUnwrap(libraryAt(files, i)).(@ABAPFile@); if file != main { ordered = append(ordered, file) } }
+ }
+ for _, file := range ordered {
+  tree := FileTree{Filename: file.@getFilename@().String()}
+  if structure := file.@getStructure@(); structure != nil { node := libraryStructure(structure); tree.Structure = &node }
+  statements := file.@getStatements@()
+  tree.Statements = make([]Node, 0, libraryLength(statements))
+  for i := int32(0); i < libraryLength(statements); i++ { tree.Statements = append(tree.Statements, libraryStatement(libraryUnwrap(libraryAt(statements, i)).(@StatementNode@))) }
+  out = append(out, tree)
+ }
+ return out, true
+}

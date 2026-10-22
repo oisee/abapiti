@@ -252,7 +252,7 @@ abapiti abaplint --target go --go-package abaplint -o out-library
 ```
 
 `--go-package` defaults to `main`, preserving CLI generation and its automatic
-build. Another valid Go package name uses `hir/golang.EmitPackage` and emits
+build. Another valid Go package name uses `hir/golang.EmitPackageWithNames` and emits
 `library.go` beside the translated core, without building an executable or
 emitting the CLI/site profiler. It requires the full `core` scope. Mixing old
 CLI/library output files is refused; use separate fresh output directories.
@@ -275,7 +275,7 @@ returning ordered structured issues (`Filename`, `Key`, `Severity`, `Message`,
 `Row`, `Column`, `EndRow`, `EndColumn`), without the batch report/dump transport.
 Coordinates must be finite integers representable as int32. `Update` dirties
 transitive lexical readers using the same conservative word pattern as OSG;
-parsing stays lazy until Check. Removing an include preserves sibling readers;
+parsing stays lazy until Check, CheckObject or Tree. Removing an include preserves sibling readers;
 removing the last file discards the old object identity. `Stats` exposes work
 counters, not a timing or engine parity certificate.
 
@@ -293,5 +293,56 @@ Focused library tests cover the wrapper/runtime lifecycle with a small core
 double and every template placeholder against identifiers from a real emitted
 HIR graph and its name table:
 `go test ./tsfront -run '^TestRegistryGoLibrary' -count=1`.
-Full generated-core library compilation and consumer HTTP/performance gates are
-separate acceptance work; this test does not certify those results.
+The opt-in full-core fixture test below checks the actual pinned parser;
+consumer HTTP/performance gates remain separate acceptance work.
+
+The library also exports object checks and detached outline snapshots:
+
+```go
+issues, found := checker.CheckObject("CLAS", "ZCL_EXAMPLE")
+files, found := checker.Tree("CLAS", "ZCL_EXAMPLE")
+text := abaplint.ConcatTokens(files[0].Statements[0].Tokens)
+```
+
+Both lookups use `Registry.getObject` directly: names are case insensitive,
+object types are case sensitive, and absence returns `(nil, false)`. A present
+non-ABAP object returns an empty file slice from `Tree`. `CheckObject` preserves
+`findIssuesObject` issue ordering, duplicates and coordinates, just like `Check`.
+`Tree` parses pending edits without running rules. Both APIs hold `libraryMu`,
+and returned trees contain Go values that callers may retain or edit after the
+lock is released. Trees contain statement and structure nodes only; expressions
+are represented by their statement's flattened `getTokens()` list.
+
+`Node.Kind` uses the core's constructor descriptor name. `Pos` contains raw,
+one-based row/column coordinates, and token ends come directly from
+`AbstractToken.getEnd()` (the start row and start column plus UTF-16 string
+length, even for multiline tokens). Node bounds use the first token's start and
+last token's end. An empty structure has no token positions: its `Start` and
+`End` are zero positions. It remains a non-nil structure with empty children;
+a file with no parsed structure instead has `Structure == nil`.
+
+`FirstStatement` is nil for the pinned parser's structures. In .73,
+`StructureNode.getFirstStatement()` immediately recurses through the first
+child, rather than trying subsequent siblings. A structure with accessible token
+bounds has a nonempty first-child chain terminating at its first depth-first
+statement; the two results therefore coincide. Empty structures return undefined
+and have no statement descendant. The Node oracle independently compares the
+actual `getFirstStatement()` result against a depth-first search.
+
+Class and interface files use `getSequencedFiles()` verbatim, including class
+include ordering and the interface's main-file-only behavior. Other ABAP objects
+retain `getABAPFiles()` order with `getMainABAPFile()` moved to the front.
+`FileTree.Statements` comes from the file's statement list, which can contain
+statements omitted from its structure (for example pragma-only statements).
+
+`Token` has one additional field, `Pragma bool`, recording lexer identity.
+Matched statements usually remove pragmas from `getTokens()`, but unknown,
+empty and pragma-only statements can retain them. `ConcatTokens` skips tokens
+with this flag and uses the previous non-pragma token's start and UTF-16 string
+length for adjacency, preserving punctuation, chain expansion and spacing.
+Looking for a `##` prefix in text would lose the token's original class identity.
+
+The full-core fixture test can be enabled with
+`ABAPITI_LIBRARY_TREE_DIR=/absolute/path/to/out-library/go`; see
+[`testdata/library-tree`](../tsfront/testdata/library-tree/README.md) for the
+Node/Go differential driver and reproducible inputs.

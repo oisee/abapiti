@@ -1,0 +1,86 @@
+package librarytree_test
+
+import (
+ "encoding/json"
+ "os"
+ "reflect"
+ "sync"
+ "testing"
+ lint "zabaplint"
+)
+
+func prime(t *testing.T) *lint.Checker {
+ t.Helper()
+ raw,err:=os.ReadFile("files.json");if err!=nil{t.Fatal(err)}
+ var files []lint.File
+ if err=json.Unmarshal(raw,&files);err!=nil{t.Fatal(err)}
+ c:=new(lint.Checker)
+ c.Prime(files,nil,`{"syntax":{"version":"open-abap","errorNamespace":"."},"rules":{"parser_error":true,"check_syntax":true}}`)
+ return c
+}
+func walk(n lint.Node, fn func(lint.Node)) { fn(n);for _,c:=range n.Children{walk(c,fn)} }
+func TestOutline(t *testing.T) {
+ c:=prime(t)
+ files,found:=c.Tree("CLAS","zoutline")
+ if !found||len(files)!=4{t.Fatalf("class files: %v %d",found,len(files))}
+ want:=[]string{"zoutline.clas.locals_def.abap","zoutline.clas.locals_imp.abap","zoutline.clas.abap","zoutline.clas.testclasses.abap"}
+ for i,f:=range files {if f.Filename!=want[i]{t.Fatal(f.Filename,want[i])}}
+ kinds:=map[string]int{}
+ walk(*files[2].Structure,func(n lint.Node){
+  kinds[n.Kind]++
+  if n.FirstStatement!=nil{t.Fatal("unexpected FirstStatement",n)}
+  if n.Statement {
+   if n.Children!=nil||len(n.Tokens)==0{t.Fatal("statement shape",n)}
+   if n.Start!=n.Tokens[0].Start||n.End!=n.Tokens[len(n.Tokens)-1].End{t.Fatal("bounds",n)}
+  } else if n.Tokens!=nil||len(n.Children)==0 {t.Fatal("structure shape",n)}
+ })
+ for _,k:=range []string{"ClassDefinition","PublicSection","ProtectedSection","PrivateSection","MethodDef","Method","DataBegin","DataEnd"}{if kinds[k]==0{t.Fatal("missing kind",k,kinds)}}
+ if files[2].Statements[0].Start!=(lint.Pos{Row:1,Col:1}){t.Fatal("coordinates")}
+ last:=files[2].Statements[len(files[2].Statements)-1]
+ if last.End!=(lint.Pos{Row:18,Col:10}){t.Fatal("exclusive end",last.End)}
+ interfaces,found:=c.Tree("INTF","ZOUTLINE")
+ if !found||len(interfaces)!=1||interfaces[0].Filename!="zoutline.intf.abap"{t.Fatal("interface sequencing",interfaces,found)}
+ programs,found:=c.Tree("PROG","ZOUTLINE")
+ if !found||len(programs)!=2||programs[0].Filename!="zoutline.prog.abap"{t.Fatal(programs,found)}
+ kinds=map[string]int{}
+ for _,n:=range programs[0].Statements{kinds[n.Kind]++}
+ for _,k:=range []string{"Initialization","StartOfSelection","EndOfSelection"}{if kinds[k]!=1{t.Fatal(k,kinds)}}
+ bad,_:=c.Tree("PROG","ZBAD")
+ if len(bad)!=1||bad[0].Structure!=nil||len(bad[0].Statements)!=3||bad[0].Statements[1].Kind!="Unknown"{t.Fatal("failed parse",bad)}
+ empty,_:=c.Tree("PROG","ZEMPTY")
+ if empty[0].Structure==nil||empty[0].Structure.Start!=(lint.Pos{})||empty[0].Structure.End!=(lint.Pos{})||len(empty[0].Statements)!=0{t.Fatal("empty structure",empty)}
+ if files,found:=c.Tree("DEVC","ZOTHER");!found||files==nil||len(files)!=0{t.Fatal(files,found)}
+ for _,typ:=range []string{"clas","MISSING"}{if f,found:=c.Tree(typ,"ZOUTLINE");found||f!=nil{t.Fatal(f,found)}}
+ if i,found:=c.CheckObject("CLAS","missing");found||i!=nil{t.Fatal(i,found)}
+ byFile:=c.Check("zbad.prog.abap")
+ byObject,found:=c.CheckObject("PROG","zbad")
+ if !found||len(byObject)==0||!reflect.DeepEqual(byFile,byObject){t.Fatal(byFile,byObject,found)}
+}
+func TestPragmasAndUpdate(t *testing.T){
+ c:=prime(t)
+ files,_:=c.Tree("PROG","ZOUTLINE")
+ if got:=lint.ConcatTokens(files[0].Statements[1].Tokens);got!="DATA value TYPE i ."{t.Fatal(got)}
+ if got:=lint.ConcatTokens(files[0].Statements[5].Tokens);got!="WRITE / value,"{t.Fatal(got)}
+ if got:=lint.ConcatTokens(files[0].Statements[6].Tokens);got!="WRITE / '##literal'."{t.Fatal(got)}
+ pragmas,_:=c.Tree("PROG","ZPRAGMA")
+ pragmaStatements:=pragmas[0].Statements
+ if !pragmaStatements[0].Tokens[0].Pragma||lint.ConcatTokens(pragmaStatements[0].Tokens)!="."||lint.ConcatTokens(pragmaStatements[1].Tokens)!=""{t.Fatal("pragma identity",pragmaStatements)}
+ original:=files[0].Statements[0].Tokens[0].Str
+ files[0].Statements[0].Tokens[0].Str="changed copy"
+ again,_:=c.Tree("PROG","ZOUTLINE")
+ if again[0].Statements[0].Tokens[0].Str!=original{t.Fatal("tree aliases core")}
+ raw:="REPORT zoutline.\nWRITE 'updated'."
+ before:=c.Stats();c.Update("zoutline.prog.abap",&raw)
+ updated,_:=c.Tree("PROG","ZOUTLINE")
+ if len(updated[0].Statements)!=2||lint.ConcatTokens(updated[0].Statements[1].Tokens)!="WRITE 'updated'."{t.Fatal(updated)}
+ if c.Stats().ParseRuns!=before.ParseRuns+1{t.Fatal("lazy parse stats",c.Stats(),before)}
+ if lint.ConcatTokens(again[0].Statements[0].Tokens)!="REPORT zoutline."{t.Fatal("snapshot changed")}
+ c.Update("zoutline.prog.abap",nil);c.Update("zoutline.prog.screen_0100.abap",nil)
+ if f,found:=c.Tree("PROG","ZOUTLINE");found||f!=nil{t.Fatal(f,found)}
+}
+func TestConcurrentReaders(t *testing.T){
+ c:=prime(t);other:=prime(t)
+ var wg sync.WaitGroup
+ for _,checker:=range []*lint.Checker{c,other}{wg.Go(func(){for i:=0;i<3;i++{checker.Tree("CLAS","ZOUTLINE");checker.CheckObject("PROG","ZBAD")}})}
+ wg.Wait()
+}
