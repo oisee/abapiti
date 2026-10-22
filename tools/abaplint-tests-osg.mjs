@@ -98,7 +98,7 @@ else {
  else {
   // The pinned frontend retains module globals; process exit releases all of
   // them before compilation, even when an explicit GC cannot collect them.
-  const frontend=spawnSync(process.execPath,[join(import.meta.dirname,'abaplint-tests-osg-frontend.mjs'),input,out,osg,cacheRoot ?? ''],{env:process.env,stdio:'inherit'});
+  const frontend=spawnSync(process.execPath,[...process.execArgv,join(import.meta.dirname,'abaplint-tests-osg-frontend.mjs'),input,out,osg,cacheRoot ?? ''],{env:process.env,stdio:'inherit'});
   if(frontend.status!==0)throw new Error(`OSG frontend exited ${frontend.status}: ${frontend.error?.message ?? frontend.signal ?? ''}`);
   const state=JSON.parse(readFileSync(join(out,'frontend.json'),'utf8'));
   ({refusals,regexAdapter}=state);
