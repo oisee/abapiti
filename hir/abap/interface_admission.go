@@ -17,6 +17,7 @@ type interfaceAdmission struct {
 	adapter      string
 	node         hir.Node
 	refusal      string
+	arrayViews   bool
 	dependencies []*interfaceAdmission
 }
 
@@ -144,6 +145,11 @@ func (e *emitter) collectInterfaceAdmissions() {
 			}
 		}
 	}
+	for _, a := range e.interfaceAdmissionOrder {
+		if a.refusal == "" && a.arrayViews {
+			e.arrayViews = true
+		}
+	}
 }
 
 func (e *emitter) planInterfaceAdmission(src, dst hir.Type, node hir.Node) *interfaceAdmission {
@@ -203,7 +209,6 @@ func (e *emitter) planInterfaceAdmission(src, dst hir.Type, node hir.Node) *inte
 		}
 	}
 	if a.adapter != "" {
-		e.liveRuntime()
 		// Delegating a differently typed result or argument can itself require
 		// another structural admission. Plan those edges before declarations.
 		for _, slot := range iface.Methods {
@@ -234,11 +239,18 @@ func (e *emitter) planInterfaceAdmission(src, dst hir.Type, node hir.Node) *inte
 
 func (e *emitter) planInterfaceDelegate(a *interfaceAdmission, slot, impl *hir.Method) {
 	member := a.class.Name + "." + slot.Name
+	arrayConversion := func(src, dst hir.Type) {
+		if interfaceBase(dst).Kind == hir.Array && !e.interfaceABI(src).Equal(e.interfaceABI(dst)) {
+			a.arrayViews = true
+		}
+	}
+	arrayConversion(impl.Result, slot.Result)
 	if impl.Result.Kind == hir.Void && slot.Result.Kind != hir.Void && slot.Result.Kind != hir.Optional && !slot.Result.IsRef() {
 		a.refusal = "void result of " + member + " cannot retain undefined"
 	}
 	for j, p := range impl.Params {
 		if j < len(slot.Params) {
+			arrayConversion(slot.Params[j].Type, p.Type)
 			if p.Variadic != slot.Params[j].Variadic {
 				a.refusal = "rest parameter of " + member + " has a different calling convention"
 			}
@@ -614,30 +626,45 @@ func (b *body) interfaceDelegate(c *hir.Class, slot *hir.Method, source string) 
 }
 
 func (b *body) interfaceConvert(value string, src, dst hir.Type) string {
-	// Optional any/unknown uses the same ABAP reference as Dynamic. Keep
-	// absence through reference and optional result slots before unboxing.
+	if src.Equal(dst) {
+		return value
+	}
+	// Optional any/unknown has the same storage as Dynamic, including its
+	// unbound undefined value. It is not an optional primitive wrapper.
 	if interfaceBase(src).Kind == hir.Dynamic {
 		src = hir.T(hir.Dynamic)
-		if dst.Kind == hir.Optional && !dst.Args[0].IsRef() {
-			n := b.temp(dst)
-			b.liveUnbox(n, value, dst)
-			return n
-		}
-		if referenceStorage(dst) && interfaceBase(dst).Kind != hir.Dynamic {
-			n := b.temp(dst)
-			b.line("CLEAR " + n + ".\nIF " + value + " IS BOUND.")
-			b.line(n + " = " + b.convert(value, src, interfaceBase(dst)) + ".\nENDIF.")
-			return n
-		}
 	}
 	if interfaceBase(dst).Kind == hir.Dynamic {
-		dst = hir.T(hir.Dynamic)
+		return b.convert(value, src, hir.T(hir.Dynamic))
 	}
-	return b.convert(value, src, dst)
+	from, to := interfaceBase(src), interfaceBase(dst)
+	if (from.Kind == hir.ClassRef || from.Kind == hir.InterfaceRef) && (to.Kind == hir.ClassRef || to.Kind == hir.InterfaceRef) {
+		// Nominal references may need a planned structural admission or the
+		// original object behind an interface adapter.
+		return b.convert(value, src, dst)
+	}
+	if b.e.interfaceABI(src).Equal(b.e.interfaceABI(dst)) {
+		return value
+	}
+	// An adapter can dispatch to a sibling with a different storage layout:
+	// arrays are not nominal class/interface references, optional primitives
+	// have wrappers, and union families use their checked payload admission.
+	// Reuse the live boundary so array conversions retain identity and writes.
+	d := b.temp(hir.T(hir.Dynamic))
+	b.boxDynamic(d, value, src)
+	n := b.temp(dst)
+	if referenceStorage(dst) {
+		b.line("IF " + d + " IS BOUND.")
+	}
+	b.liveUnbox(n, d, dst)
+	if referenceStorage(dst) {
+		b.line("ENDIF.")
+	}
+	return n
 }
 
 func (e *emitter) interfaceConvertible(src, dst hir.Type) bool {
-	return e.interfaceABI(src).Equal(e.interfaceABI(dst)) || dst.Kind == hir.Dynamic || src.Kind == hir.Dynamic || referenceStorage(src) && referenceStorage(dst) || dst.Kind == hir.Optional && src.Equal(dst.Args[0])
+	return e.interfaceABI(src).Equal(e.interfaceABI(dst)) || interfaceBase(dst).Kind == hir.Dynamic || interfaceBase(src).Kind == hir.Dynamic || referenceStorage(src) && referenceStorage(dst) || dst.Kind == hir.Optional && src.Equal(dst.Args[0])
 }
 
 // Callable data properties use their function object's call slot. A scalar
