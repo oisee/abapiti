@@ -31,7 +31,7 @@ func inline(p *hir.Program) error {
 	var stats map[string]int
 	switch mode := os.Getenv("ABAPITI_INLINE"); mode {
 	case "0":
-		return nil
+		return copyPropagate(p)
 	case "classic":
 		n, stats = hir.InlineStats(p)
 	case "", "1", "grace":
@@ -59,11 +59,23 @@ func inline(p *hir.Program) error {
 			fmt.Fprintf(os.Stderr, "inline: %6d %s\n", stats[k], k)
 		}
 	}
-	if n == 0 {
+	if n > 0 {
+		if errors := hir.Verify(p); len(errors) > 0 {
+			return fmt.Errorf("HIR inlining produced invalid HIR (ABAPITI_INLINE=0 disables the pass): %w", errors[0])
+		}
+	}
+	return copyPropagate(p)
+}
+
+// copyPropagate drops declared copies of locals, most of them the
+// inliner's receiver and argument bindings (rewrite.CopyPropagate);
+// ABAPITI_COPYPROP=0 disables it.
+func copyPropagate(p *hir.Program) error {
+	if os.Getenv("ABAPITI_COPYPROP") == "0" || rewrite.CopyPropagate(p) == 0 {
 		return nil
 	}
 	if errors := hir.Verify(p); len(errors) > 0 {
-		return fmt.Errorf("HIR inlining produced invalid HIR (ABAPITI_INLINE=0 disables the pass): %w", errors[0])
+		return fmt.Errorf("copy propagation produced invalid HIR (ABAPITI_COPYPROP=0 disables it): %w", errors[0])
 	}
 	return nil
 }

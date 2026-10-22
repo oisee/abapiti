@@ -598,7 +598,7 @@ func (e *emitter) overrideBody(c *hir.Class, slot *hir.Method) *hir.Method {
 
 func (e *emitter) narrowedBridge(c *hir.Class, m, slot *hir.Method) string {
 	slot = e.emittedMethod(c, slot)
-	b := &body{e: e, c: c, m: m, implemented: e.member(m.Name), locals: map[string]string{}}
+	b := &body{e: e, c: c, m: m, implemented: e.member(m.Name), locals: map[string]string{}, wholeMethod: true}
 	for _, p := range m.Params {
 		n := b.temp(p.Type)
 		b.locals[p.Name] = n
@@ -835,13 +835,29 @@ type body struct {
 	finalizers                   []int
 	lastInit, lastName, lastType string
 	constants                    map[string]string
+	// wholeMethod: code is a complete method body, never spliced into a
+	// loop elsewhere. openLoops counts the DO/WHILE/LOOP blocks emitted so
+	// far; below zero means the nesting is unknown.
+	wholeMethod bool
+	openLoops   int
+	// declared maps each variable to its ABAP type. Inside a statement,
+	// assigned holds the locals its expressions may write (hir.AssignedLocals);
+	// any other local keeps its value between its evaluation and its use.
+	declared map[string]string
+	assigned map[string]bool
+	// fresh holds the temps no line has mentioned since their declaration
+	// (track).
+	fresh map[string]bool
+	// expr builds destFor's value in dest instead of a new temp (into).
+	dest    string
+	destFor *hir.Expr
 }
 
 func (e *emitter) body(c *hir.Class, m *hir.Method, name string) string {
 	m = e.emittedMethod(c, m)
 	e.currentMethod = m
 	defer func() { e.currentMethod = nil }()
-	b := &body{e: e, c: c, m: m, implemented: name, locals: map[string]string{}}
+	b := &body{e: e, c: c, m: m, implemented: name, locals: map[string]string{}, wholeMethod: true}
 	if name == "constructor" && c.Super != "" && !e.liveClasses[c.Name] {
 		if _, _, _, valid := e.splitSuperConstructor(m.Body); !valid {
 			e.refuse(fmt.Errorf("class %s constructor: requires a single top-level super constructor call without early return or THIS access", c.Name))
@@ -898,7 +914,7 @@ func (e *emitter) overrideImplementation(c *hir.Class, impl, slot *hir.Method) s
 	clone.Result = e.emittedMethod(c, slot).Result
 	e.currentMethod = impl
 	defer func() { e.currentMethod = nil }()
-	b := &body{e: e, c: c, m: &clone, implemented: e.member(slot.Name), locals: map[string]string{}}
+	b := &body{e: e, c: c, m: &clone, implemented: e.member(slot.Name), locals: map[string]string{}, wholeMethod: true}
 	for j, p := range impl.Params {
 		inherited := slot.Params[j]
 		// A required primitive cannot represent undefined passed through the
@@ -942,6 +958,11 @@ func (b *body) initialize(owner string) {
 // iteration. Fold an immediately following assignment into its declaration;
 // explicit conversions retain the HIR type rather than ABAP literal inference.
 func (b *body) line(s string) {
+	if s != "" {
+		if s = b.track(s); s == "" {
+			return
+		}
+	}
 	prefix := b.lastName + " = "
 	if b.lastInit != "" && b.lastType != "REF TO object" && strings.HasPrefix(s, prefix) {
 		code := b.code.String()
@@ -965,17 +986,68 @@ func (b *body) line(s string) {
 	b.lastInit, b.lastName, b.lastType = "", "", ""
 	b.code.WriteString(s + "\n")
 }
+
+// track drops the CLEARs of untouched temps from s and follows the loop
+// nesting. A temp declared where executesOnce holds is untouched until a
+// line mentions it; a CLEAR of it that also runs at most once is a no-op.
+func (b *body) track(s string) string {
+	lines := strings.Split(s, "\n")
+	kept := lines[:0]
+	for _, l := range lines {
+		if n, ok := strings.CutPrefix(l, "CLEAR "); ok && b.fresh[strings.TrimSuffix(n, ".")] && strings.HasSuffix(n, ".") && b.executesOnce() {
+			continue
+		}
+		if len(b.fresh) > 0 {
+			for _, w := range strings.FieldsFunc(l, func(r rune) bool {
+				return !(r == '_' || r >= '0' && r <= '9' || r >= 'a' && r <= 'z' || r >= 'A' && r <= 'Z')
+			}) {
+				delete(b.fresh, w)
+			}
+		}
+		switch {
+		case l == "DO." || strings.HasPrefix(l, "DO ") && strings.HasSuffix(l, " TIMES.") || strings.HasPrefix(l, "WHILE ") || strings.HasPrefix(l, "LOOP AT "):
+			if b.openLoops >= 0 {
+				b.openLoops++
+			}
+		case l == "ENDDO." || l == "ENDWHILE." || l == "ENDLOOP.":
+			if b.openLoops > 0 {
+				b.openLoops--
+			} else {
+				b.openLoops = -1
+			}
+		}
+		kept = append(kept, l)
+	}
+	return strings.Join(kept, "\n")
+}
+
+// executesOnce: a statement emitted now runs at most once per call. ABAP
+// has no backward jumps besides loops, and every temp has a fresh name, so
+// a temp declared here still holds its initial value: CLEAR is a no-op.
+func (b *body) executesOnce() bool     { return b.wholeMethod && b.openLoops == 0 }
 func (b *body) temp(t hir.Type) string { return b.rawTemp(b.e.typ(t)) }
 func (b *body) rawTemp(typ string) string {
 	b.serial++
 	n := fmt.Sprintf("t%d", b.serial)
 	var init string
-	if strings.HasPrefix(typ, "REF TO ") || strings.Contains(typ, " LENGTH ") {
+	if b.executesOnce() {
+		init = "DATA " + n + " TYPE " + typ + ".\n"
+	} else if strings.HasPrefix(typ, "REF TO ") || strings.Contains(typ, " LENGTH ") {
 		init = "DATA " + n + " TYPE " + typ + ".\nCLEAR " + n + ".\n"
 	} else {
 		init = "DATA(" + n + ") = VALUE " + typ + "( ).\n"
 	}
 	b.line(strings.TrimSuffix(init, "\n"))
+	if b.declared == nil {
+		b.declared = map[string]string{}
+	}
+	b.declared[n] = typ
+	if b.executesOnce() {
+		if b.fresh == nil {
+			b.fresh = map[string]bool{}
+		}
+		b.fresh[n] = true
+	}
 	if !strings.Contains(typ, " LENGTH ") {
 		b.lastInit, b.lastName, b.lastType = init, n, typ
 	}
@@ -1036,14 +1108,200 @@ func (b *body) convert(value string, src, dst hir.Type) string {
 // the emitted class or one of its ancestors is me itself: the copy into a
 // temporary would only be a same-type or upcast assignment.
 func (b *body) receiver(x *hir.Expr) string {
+	if b.isMe(x) {
+		return "me"
+	}
+	return b.operand(x)
+}
+
+func (b *body) isMe(x *hir.Expr) bool {
 	if x.Kind == hir.This && x.Type.Kind == hir.ClassRef && x.Type.Name != hir.RootObject {
 		for c := b.c; c != nil; c = b.e.classBy(c.Super) {
 			if c.Name == x.Type.Name {
-				return "me"
+				return true
 			}
 		}
 	}
+	return false
+}
+
+// operand is expr for a consumer that only reads the result once, in the
+// current statement. A local of the same ABAP type is its own storage:
+// copying it into a temp first is observable only if the local changed
+// in between, which hir.AssignedLocals rules out. Consumers that write to
+// or re-read the result later (loops, runtime operations) keep expr.
+func (b *body) operand(x *hir.Expr) string {
+	if n, ok := b.forwarded(x); ok {
+		return n
+	}
 	return b.expr(x)
+}
+
+// operandValue is value for an operand consumer.
+func (b *body) operandValue(x *hir.Expr, dst hir.Type) string {
+	if n, ok := b.forwarded(x); ok {
+		return b.convert(n, x.Type, dst)
+	}
+	return b.value(x, dst)
+}
+
+// into evaluates x into n, a temp that holds its initial value and that no
+// HIR local names yet: nothing can observe n before the statement is done,
+// so x may build its value in n directly instead of in a new temp.
+func (b *body) into(n string, x *hir.Expr, dst hir.Type) {
+	if _, ok := b.forwarded(x); ok || x.Kind == hir.FieldGet || x.Kind == hir.StaticGet || !x.Type.Equal(dst) || taggedNumber(dst) {
+		b.line(n + " = " + b.terminalValue(x, dst) + ".")
+		return
+	}
+	b.dest, b.destFor = n, x
+	if r := b.expr(x); r != n && r != "" {
+		b.line(n + " = " + r + ".")
+	}
+}
+
+// terminal is operand for a consumer that uses the result at once: nothing
+// is evaluated between this operand and its use, and the use is not a
+// method parameter (IMPORTING passes by reference, and a callee can reach
+// fields). A plain field read can then wait until its use (fieldRead).
+func (b *body) terminal(x *hir.Expr) string {
+	if n, ok := b.forwarded(x); ok {
+		return n
+	}
+	if n, ok := b.fieldRead(x); ok {
+		return n
+	}
+	return b.expr(x)
+}
+
+// terminalValue is value for a terminal consumer.
+func (b *body) terminalValue(x *hir.Expr, dst hir.Type) string {
+	if n, ok := b.forwarded(x); ok {
+		return b.convert(n, x.Type, dst)
+	}
+	if n, ok := b.fieldRead(x); ok {
+		return b.convert(n, x.Type, dst)
+	}
+	return b.value(x, dst)
+}
+
+// fieldRead evaluates the receiver of a plain instance or static field read
+// whose declared ABAP type is the type of x, and returns the field itself.
+// Live view fields read through a method and keep expr.
+func (b *body) fieldRead(x *hir.Expr) (string, bool) {
+	if b.assigned == nil || x == nil {
+		return "", false
+	}
+	var owner *hir.Class
+	switch x.Kind {
+	case hir.FieldGet:
+		if x.X.Type.Kind != hir.ClassRef {
+			return "", false
+		}
+		owner = b.e.fieldOwner(b.e.classBy(x.X.Type.Name), x.Name)
+	case hir.StaticGet:
+		owner = b.e.fieldOwner(b.e.classBy(x.Owner), x.Name)
+	default:
+		return "", false
+	}
+	if owner == nil || b.e.liveClasses[owner.Name] {
+		return "", false
+	}
+	for _, f := range owner.Fields {
+		if f.Name != x.Name || f.Static != (x.Kind == hir.StaticGet) || b.e.typ(f.Type) != b.e.typ(x.Type) {
+			continue
+		}
+		if x.Kind == hir.FieldGet {
+			// The field read waits for its use, so a receiver read can too.
+			r := "me"
+			if !b.isMe(x.X) {
+				r = b.terminal(x.X)
+			}
+			return r + "->" + b.e.member(x.Name), true
+		}
+		if _, constant := b.e.staticConstant(x.Owner, x.Name); !constant {
+			b.initialize(x.Owner)
+		}
+		return b.e.name(x.Owner) + "=>" + b.e.member(x.Name), true
+	}
+	return "", false
+}
+
+// quietAll: quiet holds for every x.
+func quietAll(xs []*hir.Expr) bool {
+	for _, x := range xs {
+		if !quiet(x) {
+			return false
+		}
+	}
+	return true
+}
+
+// quiet: evaluating x writes nothing and runs no user code.
+func quiet(x *hir.Expr) bool {
+	if x == nil {
+		return true
+	}
+	switch x.Kind {
+	case hir.Lit, hir.Local, hir.This:
+		return true
+	case hir.Conditional:
+		v, ok := literalCondition(x.X)
+		if v {
+			return ok && quiet(x.Y)
+		}
+		return ok && quiet(x.Z)
+	}
+	return false
+}
+
+// forwarded is the storage of a local that x reads, seen through literal
+// conditionals that keep the ABAP type (an optional reference view).
+func (b *body) forwarded(x *hir.Expr) (string, bool) {
+	if b.assigned == nil || x == nil {
+		return "", false
+	}
+	typ := b.e.typ(x.Type)
+	for x.Kind == hir.Conditional || x.Kind == hir.Narrow {
+		if x.Kind == hir.Narrow {
+			// Narrowing an optional reference to its base is a plain copy.
+			if x.X.Type.Kind != hir.Optional || !x.X.Type.Args[0].IsRef() || !x.X.Type.Args[0].Equal(x.Type) {
+				return "", false
+			}
+			x = x.X
+		} else if v, ok := literalCondition(x.X); !ok {
+			return "", false
+		} else if v {
+			x = x.Y
+		} else {
+			x = x.Z
+		}
+		if x == nil || b.e.typ(x.Type) != typ {
+			return "", false
+		}
+	}
+	if x.Kind != hir.Local || b.assigned[x.Name] {
+		return "", false
+	}
+	n, ok := b.locals[x.Name]
+	if !ok || b.declared[n] != typ {
+		return "", false
+	}
+	return n, true
+}
+
+// initialLiteral: x is undefined of the ABAP type typ; its value is the
+// type's initial value, which the emitter would only copy from a new temp.
+func (b *body) initialLiteral(x *hir.Expr, typ string) bool {
+	return x != nil && x.Kind == hir.Lit && x.Value == nil && x.Type.Kind == hir.Optional && !taggedNumber(x.Type) && b.e.typ(x.Type) == typ
+}
+
+// literalCondition is the value of a boolean literal condition.
+func literalCondition(x *hir.Expr) (bool, bool) {
+	if x == nil || x.Kind != hir.Lit || x.Type.Kind != hir.Bool {
+		return false, false
+	}
+	v, ok := x.Value.(bool)
+	return v, ok
 }
 func (b *body) value(x *hir.Expr, dst hir.Type) string {
 	// Optional numeric storage has a tagged nonfinite lane. Numeric parsers
@@ -1060,6 +1318,11 @@ func (b *body) value(x *hir.Expr, dst hir.Type) string {
 	return b.convert(b.expr(x), x.Type, dst)
 }
 func (b *body) expr(x *hir.Expr) string {
+	dest := ""
+	if b.destFor == x {
+		dest = b.dest
+	}
+	b.dest, b.destFor = "", nil
 	if x == nil {
 		return ""
 	}
@@ -1100,7 +1363,18 @@ func (b *body) expr(x *hir.Expr) string {
 		b.call(x, "")
 		return ""
 	}
-	n := b.temp(t)
+	if x.Kind == hir.Conditional {
+		if v, ok := literalCondition(x.X); ok {
+			if v {
+				return b.value(x.Y, t)
+			}
+			return b.value(x.Z, t)
+		}
+	}
+	n := dest
+	if n == "" || b.declared[n] != e.typ(t) {
+		n = b.temp(t)
+	}
 	if b.numberStorageExpr(x, n) {
 		return n
 	}
@@ -1427,7 +1701,12 @@ func (b *body) expr(x *hir.Expr) string {
 	case hir.DirectCall, hir.VirtualCall, hir.SuperCall:
 		b.call(x, n)
 	case hir.Binary:
-		a := b.expr(x.X)
+		var a string
+		if x.Op == "&&" || x.Op == "||" || quiet(x.Y) {
+			a = b.terminal(x.X)
+		} else {
+			a = b.operand(x.X)
+		}
 		if x.Op == "&&" || x.Op == "||" {
 			b.line(n + " = " + a + ".")
 			test := "abap_true"
@@ -1440,7 +1719,7 @@ func (b *body) expr(x *hir.Expr) string {
 			break
 		}
 
-		z := b.expr(x.Y)
+		z := b.terminal(x.Y)
 		if e.types["runtime.liveView"] && (x.Op == "==" || x.Op == "!=") && referenceStorage(x.X.Type) && referenceStorage(x.Y.Type) {
 			left, right := b.temp(hir.T(hir.Dynamic)), b.temp(hir.T(hir.Dynamic))
 			b.boxDynamic(left, a, x.X.Type)
@@ -1530,7 +1809,7 @@ func (b *body) expr(x *hir.Expr) string {
 			}
 		}
 	case hir.Unary:
-		a := b.expr(x.X)
+		a := b.terminal(x.X)
 		if x.Op == "!" {
 			b.line(n + " = xsdbool( " + a + " = abap_false ).")
 		} else if t.Kind == hir.Number {
@@ -1544,7 +1823,7 @@ func (b *body) expr(x *hir.Expr) string {
 			}
 		}
 	case hir.Conditional:
-		a := b.expr(x.X)
+		a := b.terminal(x.X)
 		b.line("IF " + a + " = abap_true.")
 		b.line(n + " = " + b.value(x.Y, t) + ".")
 		b.line("ELSE.")
@@ -1556,7 +1835,7 @@ func (b *body) expr(x *hir.Expr) string {
 			b.line("IF " + d + " IS BOUND AND " + d + "->tag = " + e.name("runtime.dynamic") + "=>tag_ref.\n" + n + " = xsdbool( " + d + "->oval IS INSTANCE OF " + e.name(x.Owner) + " ).\nENDIF.")
 			break
 		}
-		a := b.expr(x.X)
+		a := b.operand(x.X)
 		if x.Y != nil {
 			// A dynamic class-value operand: walk the descriptor chain.
 			cv := b.expr(x.Y)
@@ -1613,7 +1892,7 @@ func (b *body) expr(x *hir.Expr) string {
 		for _, stmt := range x.Stmt.List {
 			b.stmt(stmt)
 		}
-		b.line(n + " = " + b.value(x.Y, t) + ".")
+		b.into(n, x.Y, t)
 		b.locals = old
 	case hir.Narrow:
 		a := b.expr(x.X)
@@ -1666,7 +1945,7 @@ func (b *body) expr(x *hir.Expr) string {
 			b.line(n + " ?= " + a + ".")
 		}
 	case hir.IsUndefined:
-		a := b.expr(x.X)
+		a := b.terminal(x.X)
 		b.line("IF " + a + " IS INITIAL.")
 		b.line(n + " = abap_true.")
 		if x.X.Type.Kind == hir.Optional && !x.X.Type.Args[0].IsRef() {
@@ -1675,7 +1954,7 @@ func (b *body) expr(x *hir.Expr) string {
 		}
 		b.line("ENDIF.")
 	case hir.ToBoolean:
-		a := b.expr(x.X)
+		a := b.terminal(x.X)
 		at := x.X.Type
 		if at.Kind == hir.Optional && !at.Args[0].IsRef() {
 			b.line("IF " + a + " IS BOUND.")
@@ -1985,7 +2264,15 @@ func (b *body) call(x *hir.Expr, n string) {
 		owner = b.c.Super
 		recv = "super->"
 	} else if x.X != nil {
-		recv = b.receiver(x.X) + "->"
+		// With quiet arguments nothing runs between the receiver and the call.
+		r, ok := "", false
+		if quietAll(x.Args) {
+			r, ok = b.fieldRead(x.X)
+		}
+		if !ok {
+			r = b.receiver(x.X)
+		}
+		recv = r + "->"
 		owner = x.X.Type.Name
 	} else {
 		recv = e.name(owner) + "=>"
@@ -2027,7 +2314,7 @@ func (b *body) call(x *hir.Expr, n string) {
 	}
 	args := []string{}
 	for i, a := range x.Args {
-		args = append(args, e.param(m.Params[i].Name)+" = "+b.value(a, m.Params[i].Type))
+		args = append(args, e.param(m.Params[i].Name)+" = "+b.operandValue(a, m.Params[i].Type))
 	}
 	target := n
 	if x.Kind == hir.SuperCall && n != "" && !x.Type.Equal(m.Result) {
@@ -2091,6 +2378,52 @@ func tableIndex(x *hir.Expr) (string, bool) {
 	return strconv.FormatInt(k+1, 10), true
 }
 
+// Runtime operations whose emission below only reads its receiver temp
+// (opReadsReceiver) or its argument temps (opReadsArgs); others write some
+// of them, e.g. string.slice clamps its index arguments in place. Audited
+// per operation; opFieldReceiver also runs no user code before the
+// receiver's last read, so a field receiver can wait for its use.
+var (
+	opReadsReceiver = map[string]bool{
+		"array.length": true, "array.push": true, "array.get": true,
+		"map.get": true, "map.set": true, "map.has": true, "set.has": true, "set.add": true,
+		"dynamic.strictEquals": true, "dynamic.typeof": true, "dynamic.typeofValue": true,
+		"dynamic.toString": true, "dynamic.recordString": true, "dynamic.of": true,
+		"dynamic.get": true, "dynamic.put": true, "dynamic.isNullish": true,
+		"dynamic.asString": true, "dynamic.asNumber": true, "chai.box": true,
+		"string.length": true, "string.concat": true, "string.substr": true, "string.substring": true,
+		"string.slice": true, "string.charAt": true, "string.at": true, "string.startsWith": true,
+		"string.endsWith": true, "string.indexOf": true, "string.toUpperCase": true,
+		"string.toLowerCase": true, "i32.toString": true, "i64.toString": true,
+	}
+	opFieldReceiver = map[string]bool{
+		"array.length": true, "array.push": true, "map.get": true, "map.set": true, "map.has": true,
+		"dynamic.strictEquals": true, "dynamic.typeof": true, "dynamic.typeofValue": true,
+		"dynamic.of": true, "dynamic.isNullish": true, "chai.box": true,
+		"string.length": true, "string.concat": true, "string.startsWith": true,
+		"string.endsWith": true, "string.indexOf": true, "string.toUpperCase": true,
+		"string.toLowerCase": true,
+	}
+	opReadsArgs = map[string]bool{
+		"array.push": true, "map.get": true, "map.set": true, "map.has": true, "set.has": true,
+		"set.add": true, "dynamic.strictEquals": true, "string.concat": true,
+		"string.startsWith": true, "string.endsWith": true, "string.indexOf": true,
+	}
+)
+
+// opReceiver evaluates the receiver of a runtime operation.
+func (b *body) opReceiver(x *hir.Expr) string {
+	if opFieldReceiver[x.Op] && quietAll(x.Args) {
+		if n, ok := b.fieldRead(x.X); ok {
+			return n
+		}
+	}
+	if opReadsReceiver[x.Op] {
+		return b.operand(x.X)
+	}
+	return b.expr(x.X)
+}
+
 func (b *body) runtimeOp(x *hir.Expr, n string) {
 	if base := hir.CheckedMapBaseOp(x.Op); base != x.Op {
 		copy := *x
@@ -2150,7 +2483,7 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 		b.line(n + " = " + b.expr(hir.L(hir.T(hir.Number), value)) + ".")
 		return
 	}
-	a := b.expr(x.X)
+	a := b.opReceiver(x)
 	if x.Op == "number.ceil" {
 		b.numberCeil(x, n, a)
 		return
@@ -2171,7 +2504,11 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 		if i < len(ps) {
 			typ = ps[i]
 		}
-		args = append(args, b.value(v, typ))
+		if opReadsArgs[x.Op] {
+			args = append(args, b.operandValue(v, typ))
+		} else {
+			args = append(args, b.value(v, typ))
+		}
 	}
 	if x.Op == "map.get" && x.X.Type.Args[1].Kind == hir.Optional {
 		// Keep the physical getter ABI: its outer box records membership.
@@ -2288,6 +2625,11 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 			b.line(n + " = " + b.e.name("runtime.orderingSubset") + "=>" + method + "( p0 = " + a + " p1 = " + args[0] + " ).")
 			return
 		}
+		if x.Op == "string.concat" {
+			// Needs no length.
+			b.line(n + " = |{ " + a + " }{ " + args[0] + " }|.")
+			return
+		}
 		length := b.temp(hir.T(hir.I32))
 		b.line(length + " = strlen( " + a + " ).")
 		// ABAP strlen and sections count UTF-16 code units, like JavaScript.
@@ -2296,8 +2638,6 @@ func (b *body) runtimeOp(x *hir.Expr, n string) {
 		switch x.Op {
 		case "string.length":
 			b.line(n + " = " + length + ".")
-		case "string.concat":
-			b.line(n + " = |{ " + a + " }{ " + args[0] + " }|.")
 		case "string.slice":
 			lo, hi := args[0], args[1]
 			for _, v := range []string{lo, hi} {
@@ -3025,6 +3365,9 @@ func (b *body) stmt(s *hir.Stmt) {
 		e.currentNode = &s.Node
 		defer func() { e.currentNode = old }()
 	}
+	assigned := b.assigned
+	b.assigned = hir.AssignedLocals(s.X, s.Y)
+	defer func() { b.assigned = assigned }()
 	switch s.Kind {
 	case hir.Block:
 		old := b.locals
@@ -3038,8 +3381,9 @@ func (b *body) stmt(s *hir.Stmt) {
 		b.locals = old
 	case hir.VarDecl:
 		n := b.temp(s.Type)
-		if s.X != nil {
-			b.line(n + " = " + b.value(s.X, s.Type) + ".")
+		// The temp starts initial at its evaluation point (rawTemp).
+		if s.X != nil && !b.initialLiteral(s.X, b.declared[n]) {
+			b.into(n, s.X, s.Type)
 		}
 		b.locals[s.Name] = n
 	case hir.Assign:
@@ -3051,12 +3395,12 @@ func (b *body) stmt(s *hir.Stmt) {
 			owner := e.fieldOwner(e.classBy(s.X.X.Type.Name), s.X.Name)
 			if owner != nil && e.liveClasses[owner.Name] {
 				a := b.receiver(s.X.X)
-				v := b.value(s.Y, s.X.Type)
+				v := b.operandValue(s.Y, s.X.Type)
 				b.line(a + "->" + e.name("view.write."+owner.Name+"."+s.X.Name) + "( p0 = " + v + " ).")
 				return
 			}
 			a := b.receiver(s.X.X)
-			v := b.value(s.Y, s.X.Type)
+			v := b.terminalValue(s.Y, s.X.Type)
 			b.line(a + "->" + e.member(s.X.Name) + " = " + v + ".")
 			if e.recordDelete {
 				b.line("DELETE " + a + "->" + e.name("record.deleted") + " WHERE table_line = `" + strings.ReplaceAll(s.X.Name, "`", "``") + "`.")
@@ -3078,7 +3422,20 @@ func (b *body) stmt(s *hir.Stmt) {
 			b.line(a + "->put( p0 = " + i + " p1 = " + v + " ).")
 			return
 		}
-		b.line(target + " = " + b.value(s.Y, s.X.Type) + ".")
+		if s.X.Kind == hir.Local && b.initialLiteral(s.Y, b.declared[target]) {
+			b.line("CLEAR " + target + ".")
+			return
+		}
+		if s.X.Kind == hir.Local && (s.Y.Kind == hir.DirectCall || s.Y.Kind == hir.VirtualCall) && s.Y.Type.Equal(s.X.Type) && !taggedNumber(s.Y.Type) && b.declared[target] == e.typ(s.Y.Type) {
+			// A call writes its result once, after its receiver and
+			// arguments, and only when it returns normally.
+			b.dest, b.destFor = target, s.Y
+			if r := b.expr(s.Y); r != target && r != "" {
+				b.line(target + " = " + r + ".")
+			}
+			return
+		}
+		b.line(target + " = " + b.terminalValue(s.Y, s.X.Type) + ".")
 	case hir.ExprStmt:
 		if s.X.Kind == hir.RuntimeOp && s.X.Op == "array.push" {
 			// The new length is unused.
@@ -3087,7 +3444,15 @@ func (b *body) stmt(s *hir.Stmt) {
 		}
 		b.expr(s.X)
 	case hir.If:
-		a := b.expr(s.X)
+		if v, ok := literalCondition(s.X); ok {
+			if v {
+				b.stmt(s.Body)
+			} else {
+				b.stmt(s.Else)
+			}
+			return
+		}
+		a := b.terminal(s.X)
 		b.line("IF " + a + " = abap_true.")
 		b.stmt(s.Body)
 		if s.Else != nil {
@@ -3097,7 +3462,7 @@ func (b *body) stmt(s *hir.Stmt) {
 		b.line("ENDIF.")
 	case hir.While:
 		b.line("DO.")
-		a := b.expr(s.X)
+		a := b.terminal(s.X)
 		b.line("IF " + a + " = abap_false.")
 		b.line("EXIT.")
 		b.line("ENDIF.")
@@ -3158,7 +3523,7 @@ func (b *body) stmt(s *hir.Stmt) {
 		if s.X != nil && (b.m.Result.Kind == hir.Void || s.X.Type.Kind == hir.Void) {
 			b.expr(s.X)
 		} else if s.X != nil {
-			value = b.value(s.X, b.m.Result)
+			value = b.terminalValue(s.X, b.m.Result)
 		}
 		b.complete(hir.Return, value)
 	case hir.Trap:

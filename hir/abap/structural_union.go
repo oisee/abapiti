@@ -48,7 +48,7 @@ func (e *emitter) structuralUnionProjection(t hir.Type, member string) string {
 	e.files[file] = ""
 	e.liveRuntime()
 	d, refusal := e.name("runtime.dynamic"), e.name("view.refusal")
-	b := &body{e: e, m: &hir.Method{Result: result}, locals: map[string]string{}}
+	b := &body{e: e, m: &hir.Method{Result: result}, locals: map[string]string{}, wholeMethod: true}
 	b.line("IF p0 IS NOT BOUND.\nRAISE EXCEPTION TYPE " + refusal + " EXPORTING reason = `structural union requires a record`.\nENDIF.")
 	adapter := b.rawTemp("REF TO " + e.name("view.storage"))
 	b.line("IF p0->tag <> " + d + "=>tag_object.\nIF p0->tag <> " + d + "=>tag_ref.\nRAISE EXCEPTION TYPE " + refusal + " EXPORTING reason = `structural union requires object storage`.\nENDIF.\nTRY.\n" + adapter + " ?= p0->oval.\nCATCH cx_sy_move_cast_error.\nRAISE EXCEPTION TYPE " + refusal + " EXPORTING reason = `structural union refuses nominal storage`.\nENDTRY.\nIF " + adapter + "->structural( ) <> abap_true.\nRAISE EXCEPTION TYPE " + refusal + " EXPORTING reason = `structural union refuses nominal storage`.\nENDIF.\nENDIF.")
@@ -83,7 +83,7 @@ func (e *emitter) structuralUnionProjection(t hir.Type, member string) string {
 		guard := e.name("view.guard")
 		definition += "INTERFACES " + guard + ".\nCLASS-METHODS validate IMPORTING p0 TYPE REF TO " + d + " RETURNING VALUE(result) TYPE REF TO " + d + ".\n"
 		implementation += method("validate", b)
-		decode := &body{e: e, m: &hir.Method{Result: result}, locals: map[string]string{}}
+		decode := &body{e: e, m: &hir.Method{Result: result}, locals: map[string]string{}, wholeMethod: true}
 		checked := decode.temp(hir.T(hir.Dynamic))
 		decode.line(checked + " = validate( p0 ).")
 		decode.liveView(&hir.Expr{Type: result}, "result", checked, true)

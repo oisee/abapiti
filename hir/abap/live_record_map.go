@@ -25,12 +25,12 @@ func (e *emitter) liveRecordMapRuntime(t hir.Type) {
 	}
 	code.WriteString("METHOD " + storage + "~structural.\nENDMETHOD.\nMETHOD " + storage + "~source.\n" + source + "ENDMETHOD.\n")
 	code.WriteString("METHOD " + storage + "~has.\nRAISE EXCEPTION TYPE " + e.name("view.refusal") + " EXPORTING reason = `live_record_map.go: has: native record-map presence not implemented`.\nENDMETHOD.\nMETHOD " + storage + "~delete.\nRAISE EXCEPTION TYPE " + e.name("view.refusal") + " EXPORTING reason = `live_record_map.go: delete: native record-map deletion not implemented`.\nENDMETHOD.\n")
-	b := &body{e: e, m: &hir.Method{Result: hir.T(hir.Void)}, locals: map[string]string{}}
+	b := &body{e: e, m: &hir.Method{Result: hir.T(hir.Void)}, locals: map[string]string{}, wholeMethod: true}
 	b.line("READ TABLE entries WITH KEY by_k COMPONENTS k = p0 INTO DATA(row).\nIF sy-subrc = 0.")
 	b.boxDynamic("result", "row-v", t.Args[1])
 	b.line("ENDIF.")
 	code.WriteString("METHOD " + storage + "~get.\n" + b.constantDeclarations() + b.code.String() + "ENDMETHOD.\n")
-	b = &body{e: e, m: &hir.Method{Result: hir.T(hir.Void)}, locals: map[string]string{}}
+	b = &body{e: e, m: &hir.Method{Result: hir.T(hir.Void)}, locals: map[string]string{}, wholeMethod: true}
 	value := t.Args[1]
 	v := "p1"
 	if value.Kind != hir.Dynamic {
