@@ -6,22 +6,34 @@
 // --main makes main call ZCL_ABAPITI_MAIN=>RUN (emit-abap --initialize) and
 // report an ABAP exception or Go panic with its host location and the
 // exception's string attributes (a located trap's source_location), exit 3.
+// Before RUN, --main configures ZCL_ABAPITI_HOSTIO with absolute snapshot and
+// stdout paths (defaults OUT/fs-snapshot.json and OUT/gogen.go; override with
+// --snapshot FILE and --stdout FILE). These paths are fixed at build time.
+// At run time set OSD_DATASET_HOME to the Node reference's working directory.
+// OSD_DATASET_READ must cover the OSG checkout, its lib folders and snapshot;
+// OSD_DATASET_WRITE must cover the stdout path (and any other host writes).
 // Input assembly and build flags come from osg-harness-input.mjs, shared with
 // tools/abaplint-tests-osg.mjs so the two cannot drift.
-// Usage: selfhost-step4b-osg.mjs [--build [--main]] ABAP-SRC OUT OSG
+// Usage: selfhost-step4b-osg.mjs [--build [--main]] [--snapshot FILE --stdout FILE] ABAP-SRC OUT OSG
 import {mkdirSync, writeFileSync} from 'node:fs';
 import {join, resolve} from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {performance} from 'node:perf_hooks';
+import {parseArgs} from 'node:util';
 import {osgNodeHeap, osgPinnedCheckout, osgInputFolders, osgFixtureObjects, osgCompileClosure, osgRefusals, osgEmitGo, osgRelease, osgBuildSettings, osgBuildArgs, osgTimedBuild, osgCopyRuntime} from './osg-harness-input.mjs';
 
 osgNodeHeap();
-const args = process.argv.slice(2);
-const build = args[0] === '--build';
-const entry = build && args[1] === '--main';
-const [inputArg, outArg, osgArg] = args.slice(Number(build) + Number(entry));
-if (!inputArg || !outArg || !osgArg) throw new Error('usage: selfhost-step4b-osg.mjs [--build [--main]] ABAP-SRC OUT OSG');
-const input = resolve(inputArg), out = resolve(outArg), osg = resolve(osgArg);
+const {values, positionals} = parseArgs({options: {
+  build: {type: 'boolean'}, main: {type: 'boolean'},
+  snapshot: {type: 'string'}, stdout: {type: 'string'},
+}, allowPositionals: true});
+const build = values.build, entry = values.main;
+if (positionals.length !== 3 || entry && !build || !entry && (values.snapshot || values.stdout)) {
+  throw new Error('usage: selfhost-step4b-osg.mjs [--build [--main]] [--snapshot FILE --stdout FILE] ABAP-SRC OUT OSG');
+}
+const [input, out, osg] = positionals.map(p => resolve(p));
+const snapshot = resolve(values.snapshot ?? join(out, 'fs-snapshot.json'));
+const stdout = resolve(values.stdout ?? join(out, 'gogen.go'));
 const pin = osgPinnedCheckout(osg);
 if (out.startsWith(osg + '/')) throw new Error('OUT must be outside the OSG checkout');
 mkdirSync(out, {recursive: true});
@@ -42,7 +54,8 @@ func hostLocation() string {
 }
 var located=regexp.MustCompile("(?i)source.?location|text|msg")
 // exceptionAttributes lists the raised object's non-empty string attributes
-// (own and inherited): a located trap carries its source location there.
+// (own, inherited and Error payloads): a located trap carries its source
+// location there, while a translated JS Error carries its message in payload.
 func exceptionAttributes(x any) string {
  r,ok:=abap.AsRaised(x)
  if !ok {return ""}
@@ -53,7 +66,8 @@ func exceptionAttributes(x any) string {
   if v.Kind()!=reflect.Struct||depth>8 {return}
   for i:=0;i<v.NumField();i++ {
    f,fv:=v.Type().Field(i),v.Field(i)
-   if f.Anonymous {walk(fv,depth+1);continue}
+   if f.Anonymous||strings.EqualFold(f.Name,"payload")||strings.Contains(strings.ToLower(f.Name),"message") {walk(fv,depth+1)}
+   if f.Anonymous {continue}
    s:=""
    if fv.Kind()==reflect.String {s=fv.String()} else if located.MatchString(f.Name)&&fv.CanInterface() {s=fmt.Sprint(fv.Interface())}
    if strings.TrimSpace(s)!="" {parts=append(parts,f.Name+"="+s)}
@@ -67,7 +81,9 @@ func main(){
   fmt.Fprintf(os.Stderr,"step4b: run failed: %s (at %s)\\n",strings.SplitN(fmt.Sprint(x),"\\n",2)[0],hostLocation())
   if a:=exceptionAttributes(x);a!="" {fmt.Fprintf(os.Stderr,"step4b: exception: %s\\n",a)}
   os.Exit(3)}}()
- ZCL_ABAPITI_MAIN_RUN(&abap.Session{})
+ session:=&abap.Session{}
+ ZCL_ABAPITI_HOSTIO_CONFIGURE(session, ${JSON.stringify(snapshot)}, ${JSON.stringify(stdout)}, "X", "X")
+ ZCL_ABAPITI_MAIN_RUN(session)
 }
 `;
 let started = performance.now();
