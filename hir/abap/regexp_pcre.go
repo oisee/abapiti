@@ -15,6 +15,11 @@ func pcreRegexPattern(pattern string) string {
 	var out strings.Builder
 	inClass := false
 	for i := 0; i < len(pattern); i++ {
+		if !inClass && strings.HasPrefix(pattern[i:], "(?s:.)") {
+			out.WriteString(`(?:[^\n]|\n)`)
+			i += len("(?s:.)") - 1
+			continue
+		}
 		c := pattern[i]
 		if c == '\\' && i+1 < len(pattern) {
 			if !inClass && (pattern[i+1] == 'A' || pattern[i+1] == 'z') {

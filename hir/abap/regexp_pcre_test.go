@@ -24,6 +24,8 @@ func TestPCREReviewedPatternSyntax(t *testing.T) {
 		`\x{0020}\x{0023}\x{000B}`:            "[ ][#][\v]",
 		`\x{005B}\x{005C}\x{0024}`:            `\[\\\$`,
 		`[\x{005D}\x{002D}\x{005E}]`:          `[\]\-\^]`,
+		`<DD03P>(?s:.)*?</DD03P>`:             `<DD03P>(?:[^\n]|\n)*?</DD03P>`,
+		`[(?s:.)]`:                            `[(?s:.)]`,
 	}
 	for in, want := range cases {
 		if got := pcreRegexPattern(in); got != want {
