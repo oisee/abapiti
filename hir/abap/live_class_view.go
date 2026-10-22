@@ -428,19 +428,24 @@ func (b *body) liveView(x *hir.Expr, n, a string, fresh ...bool) {
 		adapter := b.rawTemp("REF TO " + e.name("view.storage"))
 		b.line("IF " + a + "->tag <> " + d + "=>tag_ref.\nRAISE EXCEPTION TYPE " + trap + " EXPORTING reason = `live_class_view.go: liveView: source is neither object graph nor reference`.\nENDIF.")
 		b.line(castOrRaise(adapter, a+"->oval", e.name("view.storage"), "RAISE EXCEPTION TYPE "+trap+" EXPORTING reason = `live_class_view.go: liveView: reference does not implement view storage`.") + "\nIF " + adapter + "->structural( ) <> abap_true.\nRAISE EXCEPTION TYPE " + trap + " EXPORTING reason = `live_class_view.go: liveView: reference storage is not structural`.\nENDIF.\nENDIF.")
-		args := []string{"view_source = " + a}
 		c := e.classBy(x.Type.Name)
-		if c.Ctor != nil {
-			for _, p := range c.Ctor.Params {
-				args = append(args, e.param(p.Name)+" = "+b.temp(p.Type))
-			}
-		}
 		native := e.name(c.Name)
 		if c.Abstract {
 			native = e.name("view.proxy." + c.Name)
 			e.files[native+".clas.abap"] = "CLASS " + native + " DEFINITION PUBLIC INHERITING FROM " + e.name(c.Name) + " CREATE PUBLIC.\nPUBLIC SECTION.\nPROTECTED SECTION.\nPRIVATE SECTION.\nENDCLASS.\nCLASS " + native + " IMPLEMENTATION.\nENDCLASS.\n"
 		}
-		b.line(n + " = NEW " + native + "( " + strings.Join(args, " ") + " ).")
+		if e.wideShape(c) {
+			// A wide shape has no constructor: bind the source as its constructor would.
+			b.line(n + " = NEW " + native + "( ).\n" + n + "->" + e.name("view.source") + " = " + a + ".")
+		} else {
+			args := []string{"view_source = " + a}
+			if c.Ctor != nil {
+				for _, p := range c.Ctor.Params {
+					args = append(args, e.param(p.Name)+" = "+b.temp(p.Type))
+				}
+			}
+			b.line(n + " = NEW " + native + "( " + strings.Join(args, " ") + " ).")
+		}
 	}
 	b.line("ENDIF.\nENDIF.")
 }
