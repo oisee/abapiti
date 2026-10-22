@@ -1019,7 +1019,9 @@ func (b *body) initialize(owner string) {
 // explicit conversions retain the HIR type rather than ABAP literal inference.
 func (b *body) line(s string) {
 	prefix := b.lastName + " = "
-	if b.lastInit != "" && b.lastType != "REF TO object" && strings.HasPrefix(s, prefix) {
+	// A caller may emit several statements at once. Only fold a single-line
+	// assignment: wrapping a statement block in CONV/CAST produces invalid ABAP.
+	if b.lastInit != "" && b.lastType != "REF TO object" && strings.HasPrefix(s, prefix) && !strings.ContainsAny(s, "\r\n") {
 		code := b.code.String()
 		b.code.Reset()
 		b.code.WriteString(strings.TrimSuffix(code, b.lastInit))

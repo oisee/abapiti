@@ -150,7 +150,8 @@ func (b *body) structuralField(valid, adapter string, f hir.StructuralField) {
 		case hir.Array:
 			e.isArrayUsed = true
 			array := b.temp(hir.T(hir.Bool))
-			b.line(array + " = abap_false.\nIF " + v + "->tag = " + d + "tag_array.\n" + array + " = abap_true.\nELSEIF " + v + "->tag = " + d + "tag_ref AND " + v + "->oval IS INSTANCE OF " + e.name("runtime.arraymark") + ".\n" + array + " = abap_true.\nENDIF.")
+			b.line(array + " = abap_false.")
+			b.line("IF " + v + "->tag = " + d + "tag_array.\n" + array + " = abap_true.\nELSEIF " + v + "->tag = " + d + "tag_ref AND " + v + "->oval IS INSTANCE OF " + e.name("runtime.arraymark") + ".\n" + array + " = abap_true.\nENDIF.")
 			condition = array + " = abap_true"
 		}
 		if condition != "" {
