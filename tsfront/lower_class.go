@@ -391,7 +391,13 @@ func (l *lowerer) propertySignature(m *ast.Node, c *hir.Class) {
 	if (m.QuestionToken() != nil || primitiveAbsence) && typ.Kind != hir.Optional {
 		typ = hir.T(hir.Optional, typ)
 	}
-	f := hir.Field{Node: l.node(m), Name: name, Type: typ, Static: static, Private: m.ModifierFlags()&ast.ModifierFlagsPrivate != 0 || m.Name().Kind == ast.KindPrivateIdentifier, Readonly: m.ModifierFlags()&ast.ModifierFlagsReadonly != 0}
+	f := hir.Field{Node: l.node(m), Name: name, Type: typ, Static: static, Private: m.ModifierFlags()&ast.ModifierFlagsPrivate != 0 || m.Name().Kind == ast.KindPrivateIdentifier, Readonly: m.ModifierFlags()&ast.ModifierFlagsReadonly != 0, PrivateSlot: m.Name().Kind == ast.KindPrivateIdentifier}
+	for _, existing := range c.Fields {
+		if existing.Name == f.Name && existing.Static == f.Static && existing.PrivateSlot != f.PrivateSlot {
+			l.diagf(m, "unsupported-member", "private slot and ordinary property %q need distinct storage", name)
+			return
+		}
+	}
 	c.Fields = append(c.Fields, f)
 	if l.unprunedFeatures && !static && m.Initializer() == nil && typ.Kind != hir.Optional && m.Name().Kind != ast.KindPrivateIdentifier && m.ModifierFlags()&(ast.ModifierFlagsAmbient|ast.ModifierFlagsAbstract) == 0 && l.prog.prog.Options().GetUseDefineForClassFields() {
 		c.UndefinedDefineFields = true

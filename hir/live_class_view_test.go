@@ -94,3 +94,15 @@ func TestDataClassViewBoundary(t *testing.T) {
 		t.Fatal("unknown ancestry must refuse")
 	}
 }
+
+func TestOwnDataClassPrivateSlotsKeepStructuralViewClosed(t *testing.T) {
+	c := &Class{Name: "Box", Fields: []Field{{Name: "#n", Type: T(Number), Private: true, PrivateSlot: true}}}
+	p := &Program{Classes: []*Class{c}}
+	if DataClassView(p, "Box") || !OwnDataClass(p, "Box") {
+		t.Fatal("native own-property adapter must not admit a structural private-slot view")
+	}
+	c.Fields[0].PrivateSlot = false
+	if OwnDataClass(p, "Box") {
+		t.Fatal("TypeScript private properties retain the existing layout boundary")
+	}
+}

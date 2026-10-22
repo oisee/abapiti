@@ -165,7 +165,10 @@ type Field struct {
 	Type              Type
 	Static            bool
 	Private, Readonly bool
+	// PrivateSlot is ECMAScript #private state, never an own property.
+	PrivateSlot bool `json:",omitempty"`
 }
+
 type Param struct {
 	Name string
 	Type Type

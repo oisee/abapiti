@@ -174,7 +174,7 @@ func (e *emitter) shapeFields(c *hir.Class) {
 	var order []string
 	for base := c; base != nil; base = e.classBy(base.Super) {
 		for _, f := range base.Fields {
-			if f.Static {
+			if f.Static || f.PrivateSlot {
 				continue
 			}
 			if _, ok := fields[f.Name]; !ok {

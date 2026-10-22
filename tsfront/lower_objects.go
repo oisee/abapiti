@@ -188,7 +188,7 @@ func (l *lowerer) assignClassRecords(n *ast.Node) *hir.Expr {
 		body := hir.B(&hir.Stmt{Kind: hir.ExprStmt, Node: l.node(n), X: put})
 		for c := l.classByName(target.Type.Name); c != nil; c = l.classByName(c.Super) {
 			for _, field := range c.Fields {
-				if field.Static {
+				if field.Static || field.PrivateSlot {
 					continue
 				}
 				saved := l.pend

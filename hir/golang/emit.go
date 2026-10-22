@@ -1502,7 +1502,13 @@ func (b *body) stmt(s *hir.Stmt) {
 			owner := e.fieldOwner(e.classBy(s.X.X.Type.Name), s.X.Name)
 			storage := a + "." + e.getter(owner.Name) + "()"
 			b.line("%s.%s=%s", storage, e.member(s.X.Name), v)
-			if !strings.HasPrefix(s.X.Name, "#") {
+			privateSlot := false
+			for _, field := range owner.Fields {
+				if field.Name == s.X.Name {
+					privateSlot = field.PrivateSlot
+				}
+			}
+			if !privateSlot {
 				b.line("if %s.ownKeys!=nil {%s.ownKeys.set(str(%q),nil)}", storage, storage, s.X.Name)
 				if e.recordDeletion {
 					b.line("%s.propertyWritten(str(%q))", storage, s.X.Name)
