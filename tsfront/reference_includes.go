@@ -28,8 +28,11 @@ func (l *lowerer) referenceAssertionIncludes(n *ast.Node, recv *hir.Expr, args [
 	result := l.tempInit(n, boolean, hir.L(boolean, false))
 	l.serial++
 	element := hir.V("includesValue"+itoa(l.serial), recv.Type.Args[0])
+	saved := l.pend
+	l.pend = nil
 	equal := l.rtOp("dynamic.strictEquals", l.coerce(element, dyn), boolean, value)
-	body := hir.B(&hir.Stmt{Kind: hir.If, Node: l.node(n), X: equal, Body: hir.B(&hir.Stmt{Kind: hir.Assign, Node: l.node(n), X: result, Y: hir.L(boolean, true)}, &hir.Stmt{Kind: hir.Break, Node: l.node(n)})})
+	body := hir.B(append(l.pend, &hir.Stmt{Kind: hir.If, Node: l.node(n), X: equal, Body: hir.B(&hir.Stmt{Kind: hir.Assign, Node: l.node(n), X: result, Y: hir.L(boolean, true)}, &hir.Stmt{Kind: hir.Break, Node: l.node(n)})})...)
+	l.pend = saved
 	l.pendStmt(&hir.Stmt{Kind: hir.ForEach, Node: l.node(n), Name: element.Name, Type: element.Type, X: recv, Body: body})
 	return result, true
 }
