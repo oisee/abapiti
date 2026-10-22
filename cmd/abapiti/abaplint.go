@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/oisee/abapiti/hir"
 	"github.com/oisee/abapiti/hir/abap"
 	gohir "github.com/oisee/abapiti/hir/golang"
 	"github.com/oisee/abapiti/tsfront"
@@ -317,11 +318,12 @@ func runAbaplint(cmd *cobra.Command, args []string) error {
 				return err
 			}
 		} else {
-			files, err = gohir.EmitPackage(lowering.Prog, goPackage)
+			var names *hir.Names
+			files, names, err = gohir.EmitPackageWithNames(lowering.Prog, goPackage)
 			if err != nil {
 				return err
 			}
-			files["library.go"] = tsfront.RegistryGoLibrary(goPackage)
+			files["library.go"] = tsfront.RegistryGoLibrary(goPackage, names)
 		}
 		files["go.mod"] = tsfront.ExternGoMod("zabaplint", externs, work)
 		// A library and CLI must use distinct output directories. Otherwise old

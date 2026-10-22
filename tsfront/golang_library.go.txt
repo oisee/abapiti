@@ -24,7 +24,9 @@ type Stats struct {
 var libraryMu sync.Mutex
 var libraryWords = regexp.MustCompile(`(/[A-Z0-9_]{1,10}/)?[A-Z0-9_]{1,40}`)
 
-// Checker owns a persistent registry. Failures panic with a cause: the host must
+// Checker owns a persistent registry. A global libraryMu serialises all Checkers,
+// including reads: one checking thread per process.
+// Failures panic with a cause: the host must
 // refuse that check. Failed Prime/Update requires re-prime; a failed Check can
 // be retried after the host restores an overlay with Update.
 type Checker struct {

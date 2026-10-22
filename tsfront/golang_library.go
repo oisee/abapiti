@@ -2,8 +2,9 @@ package tsfront
 
 import (
 	_ "embed"
-	"github.com/oisee/abapiti/hir"
 	"strings"
+
+	"github.com/oisee/abapiti/hir"
 )
 
 //go:embed golang_library.go.txt
@@ -11,13 +12,12 @@ var registryGoLibrary string
 
 // RegistryGoLibrary exposes the pinned generated core without publishing its
 // internal symbols. It is emitted beside hir.go, never patched into generated code.
-// pkg must have been validated by golang.EmitPackage.
-func RegistryGoLibrary(pkg string) string {
-	return registryGoLibrarySymbols(pkg).Replace(registryGoLibrary)
+// pkg and names must come from the same golang.EmitPackageWithNames call.
+func RegistryGoLibrary(pkg string, names *hir.Names) string {
+	return registryGoLibrarySymbols(pkg, names).Replace(registryGoLibrary)
 }
 
-func registryGoLibrarySymbols(pkg string) *strings.Replacer {
-	n := hir.NewNames()
+func registryGoLibrarySymbols(pkg string, n *hir.Names) *strings.Replacer {
 	pairs := []string{"@package@", pkg}
 	for _, name := range []string{"addFile", "addDependency", "parse", "getFileByName", "findObjectForFile", "findIssuesObject", "getFiles", "getObjects", "next", "close", "done", "value", "getRaw", "getObjectName", "getName", "setDirty", "isDirty", "updateFile", "removeFile", "getKey", "getSeverity", "getFilename", "getMessage", "getStart", "getEnd", "getRow", "getCol"} {
 		pairs = append(pairs, "@"+name+"@", n.Get("member."+name))

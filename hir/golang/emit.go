@@ -22,11 +22,19 @@ func Emit(p *hir.Program) (map[string]string, error) { return EmitPackage(p, "ma
 
 // EmitPackage selects the package name. Output contains only standard-library dependencies.
 func EmitPackage(p *hir.Program, pkg string) (map[string]string, error) {
-	files, _, err := emitPackage(p, pkg, false)
-	if err == nil {
-		internLiteralFiles(files, pkg)
-	}
+	files, _, err := EmitPackageWithNames(p, pkg)
 	return files, err
+}
+
+// EmitPackageWithNames returns the same name table used to emit the package.
+// Companion code must use this table when referring to generated identifiers.
+func EmitPackageWithNames(p *hir.Program, pkg string) (map[string]string, *hir.Names, error) {
+	files, e, err := emitPackage(p, pkg, false)
+	if err != nil {
+		return nil, nil, err
+	}
+	internLiteralFiles(files, pkg)
+	return files, e.names, nil
 }
 
 func emitPackage(p *hir.Program, pkg string, profile bool) (map[string]string, *emitter, error) {

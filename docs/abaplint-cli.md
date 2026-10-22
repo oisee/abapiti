@@ -284,12 +284,14 @@ After failed Prime/Update the host must discard or re-prime that checker.
 For an overlay, the host saves the original source (or absence), defers
 `Update(filename, original)`, installs the buffer, and calls Check. A failed
 Check may be retried after successful restoration; failed restoration requires
-discard/re-prime. Serialize that entire host transaction. The library also
-serializes individual calls across Checker instances because translated core
-globals assume sequential access. No file I/O or Node runtime is used by this
-API. Configuration and input discovery belong to the consumer.
+discard/re-prime. Serialize that entire host transaction. A global `libraryMu`
+serialises all Checkers, including reads: one checking thread per process.
+Translated core globals assume sequential access. No file I/O or Node runtime
+is used by this API. Configuration and input discovery belong to the consumer.
 
-Focused wrapper/runtime test, using a small core double:
-`go test ./tsfront -run '^TestRegistryGoLibrary$' -count=1`.
+Focused library tests cover the wrapper/runtime lifecycle with a small core
+double and every template placeholder against identifiers from a real emitted
+HIR graph and its name table:
+`go test ./tsfront -run '^TestRegistryGoLibrary' -count=1`.
 Full generated-core library compilation and consumer HTTP/performance gates are
 separate acceptance work; this test does not certify those results.

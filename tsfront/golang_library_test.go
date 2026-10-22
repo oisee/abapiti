@@ -1,9 +1,13 @@
 package tsfront
 
 import (
+	"go/scanner"
+	"go/token"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
+	"strings"
 	"testing"
 
 	"github.com/oisee/abapiti/hir"
@@ -13,13 +17,13 @@ import (
 // Compile the emitted library wrapper against a small core double and the real
 // generated Go runtime. No full closure build is needed for this lifecycle gate.
 func TestRegistryGoLibrary(t *testing.T) {
-	files, err := gohir.EmitPackage(&hir.Program{}, "lintlib")
+	files, names, err := gohir.EmitPackageWithNames(&hir.Program{}, "lintlib")
 	if err != nil {
 		t.Fatal(err)
 	}
-	files["library.go"] = RegistryGoLibrary("lintlib")
+	files["library.go"] = RegistryGoLibrary("lintlib", names)
 	files["go.mod"] = "module zabaplint\n\ngo 1.26.0\n"
-	files["stub.go"] = registryGoLibrarySymbols("lintlib").Replace(`package lintlib
+	files["stub.go"] = registryGoLibrarySymbols("lintlib", names).Replace(`package lintlib
  import("path";"strings")
  type @Registry@ = *registryStub
  type @Object@ interface {
@@ -158,5 +162,99 @@ func TestRegistryGoLibrary(t *testing.T) {
 	cmd.Env = append(os.Environ(), "GOWORK=off", "GOPROXY=off")
 	if out, err := cmd.CombinedOutput(); err != nil {
 		t.Fatalf("emitted library: %v\n%s", err, out)
+	}
+}
+
+// Use real HIR declarations rather than wrapper-shaped Go stubs. Snapshot the
+// emitter's names before rendering: resolving a missing identity while rendering
+// must not make a placeholder appear to have been emitted by the package.
+func TestRegistryGoLibraryEmittedNames(t *testing.T) {
+	registry := &hir.Class{Name: "src/registry.ts.Registry"}
+	for _, name := range []string{"addFile", "addDependency", "parse", "getFileByName", "findObjectForFile", "findIssuesObject", "getFiles", "getObjects", "next", "close", "done", "value", "getRaw", "getObjectName", "getName", "setDirty", "isDirty", "updateFile", "removeFile", "getKey", "getSeverity", "getFilename", "getMessage", "getStart", "getEnd", "getRow", "getCol"} {
+		registry.Methods = append(registry.Methods, &hir.Method{
+			Name: name, Result: hir.T(hir.Void), Body: &hir.Stmt{Kind: hir.Block},
+		})
+	}
+	p := &hir.Program{
+		Classes: []*hir.Class{registry,
+			{Name: "src/issue.ts.Issue"},
+			{Name: "harness/registry_run.ts.RegistryRun"},
+			{Name: "src/files/memory_file.ts.MemoryFile"},
+		},
+		Interfaces: []*hir.Interface{
+			{Name: "src/objects/_iobject.ts.IObject"},
+			{Name: "src/files/_ifile.ts.IFile"},
+		},
+	}
+	files, names, err := gohir.EmitPackageWithNames(p, "lintlib")
+	if err != nil {
+		t.Fatal(err)
+	}
+	byID := map[string]string{}
+	for name, id := range names.Pairs() {
+		byID[id] = name
+	}
+	// Collect actual Go identifiers so a name-table entry alone is insufficient.
+	identifiers := map[string]bool{}
+	for filename, source := range files {
+		if !strings.HasSuffix(filename, ".go") {
+			continue
+		}
+		var scan scanner.Scanner
+		set := token.NewFileSet()
+		scan.Init(set.AddFile(filename, -1, len(source)), []byte(source), nil, 0)
+		for {
+			_, tok, literal := scan.Scan()
+			if tok == token.EOF {
+				break
+			}
+			if tok == token.IDENT {
+				identifiers[literal] = true
+			}
+		}
+	}
+	special := map[string]string{
+		"Registry": "ref.src/registry.ts.Registry",
+		"Object":   "ref.src/objects/_iobject.ts.IObject",
+		"File":     "ref.src/files/_ifile.ts.IFile",
+		"Issue":    "ref.src/issue.ts.Issue",
+		"newRun":   "new.harness/registry_run.ts.RegistryRun",
+		"newFile":  "new.src/files/memory_file.ts.MemoryFile",
+	}
+	marker := regexp.MustCompile(`@([A-Za-z]+)@`)
+	want := marker.ReplaceAllStringFunc(registryGoLibrary, func(placeholder string) string {
+		key := strings.Trim(placeholder, "@")
+		if key == "package" {
+			return "lintlib"
+		}
+		id := special[key]
+		if id == "" {
+			id = "member." + key
+		}
+		name, ok := byID[id]
+		if !ok || !identifiers[name] {
+			t.Fatalf("placeholder %s: %s has no identifier in emitted package (name %q)", placeholder, id, name)
+		}
+		return name
+	})
+	if got := RegistryGoLibrary("lintlib", names); got != want || strings.Contains(got, "@") {
+		t.Fatal("library placeholders differ from the package emitter's identifiers")
+	}
+	// A deliberately different naming policy catches reintroducing NewNames
+	// inside the renderer, even while today's default names are deterministic.
+	alternate := hir.NewReadableNames(p, "LIB")
+	alternateWant := marker.ReplaceAllStringFunc(registryGoLibrary, func(placeholder string) string {
+		key := strings.Trim(placeholder, "@")
+		if key == "package" {
+			return "lintlib"
+		}
+		id := special[key]
+		if id == "" {
+			id = "member." + key
+		}
+		return alternate.Get(id)
+	})
+	if got := RegistryGoLibrary("lintlib", alternate); got != alternateWant || got == want {
+		t.Fatal("library renderer ignored the supplied name table")
 	}
 }
