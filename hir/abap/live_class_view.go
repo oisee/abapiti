@@ -29,6 +29,17 @@ func (e *emitter) liveRuntime() {
 	e.files[storage+".intf.abap"] = "INTERFACE " + storage + " PUBLIC.\nMETHODS structural RETURNING VALUE(result) TYPE abap_bool.\nMETHODS source RETURNING VALUE(result) TYPE REF TO " + d + ".\nMETHODS get IMPORTING p0 TYPE string RETURNING VALUE(result) TYPE REF TO " + d + ".\nMETHODS put IMPORTING p0 TYPE string p1 TYPE REF TO " + d + ".\nMETHODS has IMPORTING p0 TYPE string RETURNING VALUE(result) TYPE abap_bool.\nMETHODS delete IMPORTING p0 TYPE string RETURNING VALUE(result) TYPE abap_bool.\nENDINTERFACE.\n"
 	guard := e.name("view.guard")
 	e.files[guard+".intf.abap"] = "INTERFACE " + guard + " PUBLIC.\nMETHODS check IMPORTING p0 TYPE REF TO " + d + ".\nENDINTERFACE.\n"
+	trap := e.viewRefusal()
+	// Native structural shapes expose their existing slots through the same graph API.
+	text := e.files[d+".clas.abap"]
+	text = strings.Replace(text, "METHOD get.\n", "METHOD get.\nIF tag = tag_ref.\nDATA adapter TYPE REF TO "+storage+".\n"+castOrRaise("adapter", "oval", storage, "RAISE EXCEPTION TYPE "+trap+" EXPORTING reason = `live_class_view.go: dynamic.get: reference does not implement view storage`.")+"\nresult = adapter->get( p0 ).\nRETURN.\nENDIF.\n", 1)
+	text = strings.Replace(text, "METHOD put.\n", "METHOD put.\nIF tag = tag_ref.\nDATA adapter TYPE REF TO "+storage+".\n"+castOrRaise("adapter", "oval", storage, "RAISE EXCEPTION TYPE "+trap+" EXPORTING reason = `live_class_view.go: dynamic.put: reference does not implement view storage`.")+"\nadapter->put( p0 = p0 p1 = p1 ).\nRETURN.\nENDIF.\n", 1)
+	e.files[d+".clas.abap"] = text
+	e.recordGraphRuntime()
+}
+
+// viewRefusal emits the shared exception without activating the live storage ABI.
+func (e *emitter) viewRefusal() string {
 	trap := e.name("view.refusal")
 	e.files[trap+".clas.abap"] = "CLASS " + trap + ` DEFINITION PUBLIC INHERITING FROM cx_no_check CREATE PUBLIC.
 PUBLIC SECTION.
@@ -48,13 +59,9 @@ result = |ABAP view refused: { reason }|.
 ENDMETHOD.
 ENDCLASS.
 `
-	// Native structural shapes expose their existing slots through the same graph API.
-	text := e.files[d+".clas.abap"]
-	text = strings.Replace(text, "METHOD get.\n", "METHOD get.\nIF tag = tag_ref.\nDATA adapter TYPE REF TO "+storage+".\n"+castOrRaise("adapter", "oval", storage, "RAISE EXCEPTION TYPE "+trap+" EXPORTING reason = `live_class_view.go: dynamic.get: reference does not implement view storage`.")+"\nresult = adapter->get( p0 ).\nRETURN.\nENDIF.\n", 1)
-	text = strings.Replace(text, "METHOD put.\n", "METHOD put.\nIF tag = tag_ref.\nDATA adapter TYPE REF TO "+storage+".\n"+castOrRaise("adapter", "oval", storage, "RAISE EXCEPTION TYPE "+trap+" EXPORTING reason = `live_class_view.go: dynamic.put: reference does not implement view storage`.")+"\nadapter->put( p0 = p0 p1 = p1 ).\nRETURN.\nENDIF.\n", 1)
-	e.files[d+".clas.abap"] = text
-	e.recordGraphRuntime()
+	return trap
 }
+
 func (e *emitter) liveRoot(c *hir.Class) bool {
 	return e.liveClasses[c.Name] && !e.liveClasses[c.Super]
 }
