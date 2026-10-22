@@ -5,7 +5,8 @@ const execSpace = `[\x{0009}-\x{000D}\x{0020}\x{00A0}\x{1680}\x{2000}-\x{200A}\x
 
 // TranslateSubset certifies a grammar over UTF-16 units, not arbitrary RE2
 // syntax. Non-u ASCII case folding is explicit; Unicode flags/escapes,
-// lookarounds, backreferences, lazy repeats and repeated captures refuse.
+// lookarounds, backreferences and repeated captures refuse. Lazy quantifiers
+// preserve leftmost-first priority without changing the capture restrictions.
 func TranslateSubset(pattern, flags string) (string, bool) {
 	if pattern == "" {
 		return "", false
@@ -198,6 +199,10 @@ func (p *subsetParser) expression(group bool) (string, bool, bool) {
 					return "", false, false
 				}
 				atom += repeat
+				if p.pos < len(p.pattern) && p.pattern[p.pos] == '?' {
+					atom += "?"
+					p.pos++
+				}
 				if p.pos < len(p.pattern) && (p.pattern[p.pos] == '*' || p.pattern[p.pos] == '+' || p.pattern[p.pos] == '?' || p.pattern[p.pos] == '{') {
 					return "", false, false
 				}
@@ -207,6 +212,10 @@ func (p *subsetParser) expression(group bool) (string, bool, bool) {
 				}
 				atom += string(q)
 				p.pos++
+				if p.pos < len(p.pattern) && p.pattern[p.pos] == '?' {
+					atom += "?"
+					p.pos++
+				}
 				if p.pos < len(p.pattern) {
 					q = p.pattern[p.pos]
 					if q == '*' || q == '+' || q == '?' || q == '{' {
