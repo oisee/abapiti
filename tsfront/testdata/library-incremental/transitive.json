@@ -1,0 +1,242 @@
+[
+  {
+    "Files": [
+      {
+        "Filename": "za.clas.abap",
+        "Raw": "CLASS za DEFINITION PUBLIC INHERITING FROM zb.\nPUBLIC SECTION.\nMETHODS run.\nENDCLASS.\nCLASS za IMPLEMENTATION.\nMETHOD run.\nfoo( ).\nENDMETHOD.\nENDCLASS."
+      },
+      {
+        "Filename": "zb.clas.abap",
+        "Raw": "CLASS zb DEFINITION PUBLIC INHERITING FROM zc.\nPUBLIC SECTION.\n\nENDCLASS.\nCLASS zb IMPLEMENTATION.\n\nENDCLASS."
+      },
+      {
+        "Filename": "zc.clas.abap",
+        "Raw": "CLASS zc DEFINITION PUBLIC .\nPUBLIC SECTION.\nMETHODS foo.\nENDCLASS.\nCLASS zc IMPLEMENTATION.\nMETHOD foo.\nENDMETHOD.\nENDCLASS."
+      }
+    ],
+    "Config": "{\"syntax\":{\"version\":\"open-abap\",\"errorNamespace\":\".\"},\"rules\":{\"parser_error\":true,\"check_syntax\":true}}",
+    "Queries": [
+      {
+        "Type": "CLAS",
+        "Name": "ZA"
+      }
+    ],
+    "Steps": [
+      {
+        "Label": "edited",
+        "Updates": [
+          {
+            "Filename": "zc.clas.abap",
+            "Raw": "CLASS zc DEFINITION PUBLIC .\nPUBLIC SECTION.\n\nENDCLASS.\nCLASS zc IMPLEMENTATION.\n\nENDCLASS."
+          }
+        ],
+        "Queries": [
+          {
+            "Type": "CLAS",
+            "Name": "ZA"
+          }
+        ],
+        "After": [
+          {
+            "Filename": "zc.clas.abap",
+            "Raw": "CLASS zc DEFINITION PUBLIC .\nPUBLIC SECTION.\nMETHODS foo.\nENDCLASS.\nCLASS zc IMPLEMENTATION.\nMETHOD foo.\nENDMETHOD.\nENDCLASS."
+          }
+        ]
+      }
+    ],
+    "Name": "inheritance",
+    "Error": "Method \"foo\" not found"
+  },
+  {
+    "Files": [
+      {
+        "Filename": "za.clas.abap",
+        "Raw": "CLASS za DEFINITION PUBLIC INHERITING FROM zb.\nPUBLIC SECTION.\nMETHODS run.\nENDCLASS.\nCLASS za IMPLEMENTATION.\nMETHOD run.\nfoo( ).\nENDMETHOD.\nENDCLASS."
+      },
+      {
+        "Filename": "zb.clas.abap",
+        "Raw": "CLASS zb DEFINITION PUBLIC .\nPUBLIC SECTION.\nINTERFACES zif.\nALIASES foo FOR zif~foo.\nENDCLASS.\nCLASS zb IMPLEMENTATION.\nMETHOD zif~foo.\nENDMETHOD.\nENDCLASS."
+      },
+      {
+        "Filename": "zif.intf.abap",
+        "Raw": "INTERFACE zif PUBLIC.\nMETHODS foo.\nENDINTERFACE."
+      }
+    ],
+    "Config": "{\"syntax\": {\"version\": \"open-abap\", \"errorNamespace\": \".\"}, \"rules\": {\"parser_error\": true, \"check_syntax\": true}}",
+    "Queries": [
+      {
+        "Type": "CLAS",
+        "Name": "ZA"
+      }
+    ],
+    "Steps": [
+      {
+        "Label": "edited",
+        "Updates": [
+          {
+            "Filename": "zif.intf.abap",
+            "Raw": "INTERFACE zif PUBLIC.\nMETHODS bar.\nENDINTERFACE."
+          }
+        ],
+        "Queries": [
+          {
+            "Type": "CLAS",
+            "Name": "ZA"
+          }
+        ],
+        "After": [
+          {
+            "Filename": "zif.intf.abap",
+            "Raw": "INTERFACE zif PUBLIC.\nMETHODS foo.\nENDINTERFACE."
+          }
+        ]
+      }
+    ],
+    "Name": "interface-alias",
+    "Error": "Method \"foo\" not found"
+  },
+  {
+    "Files": [
+      {
+        "Filename": "za.prog.abap",
+        "Raw": "REPORT za.\nINCLUDE zb.\nWRITE foo."
+      },
+      {
+        "Filename": "zb.prog.abap",
+        "Raw": "INCLUDE zc."
+      },
+      {
+        "Filename": "zc.prog.abap",
+        "Raw": "DATA foo TYPE i."
+      }
+    ],
+    "Config": "{\"syntax\":{\"version\":\"open-abap\",\"errorNamespace\":\".\"},\"rules\":{\"parser_error\":true,\"check_syntax\":true}}",
+    "Queries": [
+      {
+        "Type": "PROG",
+        "Name": "ZA"
+      }
+    ],
+    "Steps": [
+      {
+        "Label": "edited",
+        "Updates": [
+          {
+            "Filename": "zc.prog.abap",
+            "Raw": "DATA bar TYPE i."
+          }
+        ],
+        "Queries": [
+          {
+            "Type": "PROG",
+            "Name": "ZA"
+          }
+        ],
+        "After": [
+          {
+            "Filename": "zc.prog.abap",
+            "Raw": "DATA foo TYPE i."
+          }
+        ]
+      }
+    ],
+    "Name": "include-chain",
+    "Error": "\"foo\" not found"
+  },
+  {
+    "Files": [
+      {
+        "Filename": "za.prog.abap",
+        "Raw": "REPORT za.\nINCLUDE zb.\nhello."
+      },
+      {
+        "Filename": "zb.prog.abap",
+        "Raw": "INCLUDE zc."
+      },
+      {
+        "Filename": "zc.prog.abap",
+        "Raw": "DEFINE hello.\nWRITE 'ok'.\nEND-OF-DEFINITION."
+      }
+    ],
+    "Config": "{\"syntax\":{\"version\":\"open-abap\",\"errorNamespace\":\".\"},\"rules\":{\"parser_error\":true,\"check_syntax\":true}}",
+    "Queries": [
+      {
+        "Type": "PROG",
+        "Name": "ZA"
+      }
+    ],
+    "Steps": [
+      {
+        "Label": "edited",
+        "Updates": [
+          {
+            "Filename": "zc.prog.abap",
+            "Raw": "DEFINE hello.\nWRITE missing.\nEND-OF-DEFINITION."
+          }
+        ],
+        "Queries": [
+          {
+            "Type": "PROG",
+            "Name": "ZA"
+          }
+        ],
+        "After": [
+          {
+            "Filename": "zc.prog.abap",
+            "Raw": "DEFINE hello.\nWRITE 'ok'.\nEND-OF-DEFINITION."
+          }
+        ]
+      }
+    ],
+    "Name": "macro-chain",
+    "Error": "\"missing\" not found"
+  },
+  {
+    "Files": [
+      {
+        "Filename": "za.clas.abap",
+        "Raw": "CLASS za DEFINITION PUBLIC INHERITING FROM zb.\nPUBLIC SECTION.\nMETHODS run.\nENDCLASS.\nCLASS za IMPLEMENTATION.\nMETHOD run.\nWRITE foo-bar.\nENDMETHOD.\nENDCLASS."
+      },
+      {
+        "Filename": "zb.clas.abap",
+        "Raw": "CLASS zb DEFINITION PUBLIC .\nPUBLIC SECTION.\nTYPE-POOLS ztp.\nDATA foo TYPE ztp_foo.\nENDCLASS.\nCLASS zb IMPLEMENTATION.\n\nENDCLASS."
+      },
+      {
+        "Filename": "ztp.type.abap",
+        "Raw": "TYPE-POOL ztp.\nTYPES: BEGIN OF ztp_foo, bar TYPE i, END OF ztp_foo."
+      }
+    ],
+    "Config": "{\"syntax\": {\"version\": \"open-abap\", \"errorNamespace\": \".\"}, \"rules\": {\"parser_error\": true, \"check_syntax\": true}}",
+    "Queries": [
+      {
+        "Type": "CLAS",
+        "Name": "ZA"
+      }
+    ],
+    "Steps": [
+      {
+        "Label": "edited",
+        "Updates": [
+          {
+            "Filename": "ztp.type.abap",
+            "Raw": "TYPE-POOL ztp.\nTYPES: BEGIN OF ztp_foo, baz TYPE i, END OF ztp_foo."
+          }
+        ],
+        "Queries": [
+          {
+            "Type": "CLAS",
+            "Name": "ZA"
+          }
+        ],
+        "After": [
+          {
+            "Filename": "ztp.type.abap",
+            "Raw": "TYPE-POOL ztp.\nTYPES: BEGIN OF ztp_foo, bar TYPE i, END OF ztp_foo."
+          }
+        ]
+      }
+    ],
+    "Name": "typepool-structure",
+    "Error": "Component \"bar\" not found"
+  }
+]

@@ -1,0 +1,48 @@
+package transitive_test
+
+import (
+ "encoding/json"
+ "os"
+ "reflect"
+ "strings"
+ "testing"
+ lint "zabaplint"
+)
+
+type query struct { Type, Name string }
+type update struct { Filename string; Raw *string }
+type step struct { Label string; Updates, After []update; Queries []query }
+type scenario struct { Name, Error, Config string; Files []lint.File; Queries []query; Steps []step }
+
+func TestTransitiveConsumers(t *testing.T) {
+ raw,err:=os.ReadFile("transitive.json");if err!=nil{t.Fatal(err)}
+ var cases []scenario;if err=json.Unmarshal(raw,&cases);err!=nil{t.Fatal(err)}
+ for _,s:=range cases {for _,cached:=range []bool{true,false}{
+  name:=s.Name+"/unprimed-syntax";if cached{name=s.Name+"/cached-syntax"}
+  t.Run(name,func(t *testing.T){
+   var c lint.Checker;c.Prime(s.Files,nil,s.Config)
+   files:=append([]lint.File(nil),s.Files...)
+   compare:=func(queries []query,expected string){
+    t.Helper();var fresh lint.Checker;fresh.Prime(files,nil,s.Config)
+    for _,q:=range queries{
+     got,gf:=c.CheckObject(q.Type,q.Name);want,wf:=fresh.CheckObject(q.Type,q.Name)
+     if gf!=wf||!reflect.DeepEqual(got,want){t.Errorf("%s %s: incremental issues %v, fresh %v",q.Type,q.Name,got,want)}
+     if expected!="" {found:=false;for _,i:=range got{if strings.Contains(i.Message,expected){found=true}};if !found{t.Errorf("expected %q, got %v",expected,got)}} else if len(got)!=0{t.Errorf("baseline/restore issues: %v",got)}
+     tree,tf:=c.Tree(q.Type,q.Name);freshTree,ff:=fresh.Tree(q.Type,q.Name)
+     if tf!=ff||!reflect.DeepEqual(tree,freshTree){t.Errorf("%s %s: incremental tree differs from fresh",q.Type,q.Name)}
+    }
+   }
+   apply:=func(updates []update){for _,u:=range updates{
+    c.Update(u.Filename,u.Raw)
+    for i,f:=range files{if f.Filename==u.Filename{if u.Raw==nil{files=append(files[:i],files[i+1:]...)}else{files[i].Raw=*u.Raw};break}}
+   }}
+   if cached{compare(s.Queries,"")}
+   for _,step:=range s.Steps{
+    before:=c.Stats();apply(step.Updates);compare(step.Queries,s.Error)
+    want:=int32(2);if s.Name=="macro-chain"{want=3}
+    if got:=c.Stats().ParseObjects-before.ParseObjects;got!=want{t.Errorf("reparsed %d owners, want %d",got,want)}
+    apply(step.After);compare(step.Queries,"")
+   }
+  })
+ }}
+}

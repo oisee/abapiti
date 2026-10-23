@@ -17,6 +17,8 @@ type Issue struct {
  Filename, Key, Severity, Message string
  Row, Column, EndRow, EndColumn int32
 }
+// ParseRuns/ParseObjects count pending invalidations submitted after Update.
+// Untouched inert objects are excluded even if the core never clears their dirty flag.
 type Stats struct {
  Updates, Noops, IndexedObjects, ReaderVisits, DirtiedObjects, ParseRuns, ParseObjects int32
 }
@@ -34,13 +36,14 @@ type Checker struct {
  registry @Registry@
  readers map[string]map[@Object@]bool
  words map[@Object@][]string
+ pending map[@Object@]bool
  stats Stats
 }
 
 // Prime replaces the baseline, including files, dependencies and config.
 func (c *Checker) Prime(files, deps []File, config string) {
  libraryMu.Lock(); defer libraryMu.Unlock()
- *c = Checker{readers: map[string]map[@Object@]bool{}, words: map[@Object@][]string{}}
+ *c = Checker{readers: map[string]map[@Object@]bool{}, words: map[@Object@][]string{}, pending: map[@Object@]bool{}}
  h := @newRun@()
  for _, f := range files { h.@addFile@(str(f.Filename), str(f.Raw)) }
  for _, f := range deps { h.@addDependency@(str(f.Filename), str(f.Raw)) }
@@ -85,7 +88,9 @@ func (c *Checker) unindex(obj @Object@) {
 
 // Update batches edits without parsing. nil removes a file; &"" installs an
 // empty file. The host implements overlay+restore by deferring Update(original).
-// Lexical readers include comments/strings, matching OSG's conservative closure.
+// Reparse the owner and direct lexical readers (including comments/strings).
+// Transitive consumers lose only cached syntax, except potential stored macro
+// expansions: those must be rebuilt from source, even before the first check.
 func (c *Checker) Update(filename string, raw *string) {
  libraryMu.Lock(); defer libraryMu.Unlock()
  c.require()
@@ -94,7 +99,7 @@ func (c *Checker) Update(filename string, raw *string) {
  if raw == nil && before == nil || raw != nil && before != nil && before.@getRaw@().String() == *raw { c.stats.Noops++; return }
  var old @Object@
  if before != nil { old = c.registry.@findObjectForFile@(before) }
- if old != nil { c.unindex(old) }
+ if old != nil { c.unindex(old); delete(c.pending, old) }
  file := before
  var obj @Object@
  if raw == nil {
@@ -107,19 +112,49 @@ func (c *Checker) Update(filename string, raw *string) {
  }
  dirty := map[@Object@]bool{}
  if obj != nil { c.index(obj); dirty[obj] = true }
- queue := []string{strings.ToUpper(file.@getObjectName@().String())}
- reached := map[string]bool{queue[0]: true}
- for at := 0; at < len(queue); at++ {
-  for reader := range c.readers[queue[at]] {
+ name := strings.ToUpper(file.@getObjectName@().String())
+ // Walk owner names, not words in consumer sources. Visit each name once so
+ // cycles, multiple object types sharing a name, and diamonds terminate.
+ consumers := map[@Object@]bool{}
+ names := []string{name}
+ seen := map[string]bool{name:true}
+ for at := 0; at < len(names); at++ {
+  for reader := range c.readers[names[at]] {
    c.stats.ReaderVisits++
-   if dirty[reader] { continue }
-   dirty[reader] = true
-   reader.@setDirty@()
-   name := strings.ToUpper(reader.@getName@().String())
-   if !reached[name] { reached[name] = true; queue = append(queue, name) }
+   consumers[reader] = true
+   if at == 0 { dirty[reader] = true }
+   next := strings.ToUpper(reader.@getName@().String())
+   if !seen[next] { seen[next] = true; names = append(names, next) }
   }
  }
+ for reader := range consumers {
+  if abap, ok := reader.(@ABAPObject@); ok {
+   // Use the emitted base accessor: one field write, retaining parsed files,
+   // OO definitions, text/XML caches, and the object's clean parse flag.
+   abap.@ABAPObjectBase@().@syntaxResult@ = nil
+   if !dirty[reader] && libraryStoredMacros(abap) { dirty[reader] = true }
+  }
+ }
+ for reader := range dirty { reader.@setDirty@() }
+ for object := range dirty { c.pending[object] = true }
  c.stats.DirtiedObjects += int32(len(dirty))
+}
+
+// ExpandMacros inserts expanded statements into parsed files. A MacroCall
+// therefore needs a source reparse when an upstream owner changes. Unknown is
+// also a potential macro call (e.g. adding a previously missing definition).
+// The core's macro reference table is incomplete for nested/include expansion;
+// conservatively rebuild these candidates within the lexical consumer closure.
+func libraryStoredMacros(obj @ABAPObject@) bool {
+ files := obj.@getABAPFiles@()
+ for i := int32(0); i < libraryLength(files); i++ {
+  statements := libraryUnwrap(libraryAt(files, i)).(@ABAPFile@).@getStatements@()
+  for j := int32(0); j < libraryLength(statements); j++ {
+   kind := classOf(libraryUnwrap(libraryAt(statements, j)).(@StatementNode@).@get@()).Name.String()
+   if kind == "MacroCall" || kind == "Unknown" { return true }
+  }
+ }
+ return false
 }
 
 // Full-core arrays can be live views; small emitted packages use plain Items.
@@ -172,13 +207,14 @@ func (c *Checker) CheckObject(typ, name string) ([]Issue, bool) {
 
 func (c *Checker) countParse() {
  dirty := int32(0)
- for object := range c.words { if object.@isDirty@() { dirty++ } }
+ for object := range c.pending { if object.@isDirty@() { dirty++ } }
  if dirty > 0 { c.stats.ParseRuns++; c.stats.ParseObjects += dirty }
 }
 
 func (c *Checker) checkObject(obj @Object@) []Issue {
  c.countParse()
  issues := c.registry.@findIssuesObject@(obj)
+ clear(c.pending)
  out := make([]Issue, 0, libraryLength(issues))
  for at := int32(0); at < libraryLength(issues); at++ {
   issue := any(libraryAt(issues, at)).(@Issue@)
@@ -268,9 +304,45 @@ func (c *Checker) Tree(typ, name string) ([]FileTree, bool) {
  if obj == nil { return nil, false }
  c.countParse()
  c.registry.@parse@()
+ clear(c.pending)
+ return libraryTree(obj), true
+}
+
+// TreeOf builds an isolated outline from the supplied files using the core's
+// default configuration. INCLUDEs and macros in objects outside files are absent.
+// Use TreeOfWithConfig to match a Checker's release and global macro settings.
+func TreeOf(files []File, typ, name string) ([]FileTree, bool) {
+ return TreeOfWithConfig(files, typ, name, "{}")
+}
+
+// TreeOfWithConfig is TreeOf with the same configuration accepted by Prime.
+// No baseline or reader index is built. Core access and snapshot copying remain
+// serialised with all Checkers, and returned slices never alias the registry.
+func TreeOfWithConfig(files []File, typ, name, config string) ([]FileTree, bool) {
+ libraryMu.Lock(); defer libraryMu.Unlock()
+ registry := @newRegistry@(@newConfig@(str(config)))
+ for _, file := range files { registry.@addFile@(@newFile@(str(file.Filename), str(file.Raw))) }
+ @clearParsingPerformance@()
+ // The outline needs parsing and cross-include macros, but not global OO/DDIC
+ // type discovery. Use the pinned registry's own per-object parser/configuration.
+ objects := registry.@getObjects@()
+ defer objects.@close@()
+ for {
+  next := objects.@next@()
+  if next.@done@ { break }
+  registry.@parsePrivate@(next.@value@)
+ }
+ @newCrossIncludeMacros@(registry).@run@()
+ obj := registry.@getObject@(present(str(typ)), present(str(name)))
+ if obj == nil { return nil, false }
+ return libraryTree(obj), true
+}
+
+// Caller holds libraryMu and has parsed the owning registry.
+func libraryTree(obj @Object@) []FileTree {
  out := make([]FileTree, 0)
  abap, ok := obj.(@ABAPObject@)
- if !ok { return out, true }
+ if !ok { return out }
  files := abap.@getABAPFiles@()
  ordered := make([]@ABAPFile@, 0, libraryLength(files))
  if obj.@getType@().String() == "CLAS" || obj.@getType@().String() == "INTF" {
@@ -289,7 +361,7 @@ func (c *Checker) Tree(typ, name string) ([]FileTree, bool) {
   for i := int32(0); i < libraryLength(statements); i++ { tree.Statements = append(tree.Statements, libraryStatement(libraryUnwrap(libraryAt(statements, i)).(@StatementNode@))) }
   out = append(out, tree)
  }
- return out, true
+ return out
 }
 
 // Expression copies CDS expression nodes, omitting TokenNode children. Bounds
@@ -313,6 +385,7 @@ func (c *Checker) CDS(name string) (tree *Expression, sqlView *string, found boo
  c.require()
  c.countParse()
  c.registry.@parse@()
+ clear(c.pending)
  obj := c.registry.@getObject@(present(str("DDLS")), present(str(name)))
  if obj == nil { return nil, nil, false }
  definition := obj.(@DataDefinition@)
@@ -329,6 +402,7 @@ func (c *Checker) DDIC(typ, name string) (components, keys []string, found bool)
  c.require()
  c.countParse()
  c.registry.@parse@()
+ clear(c.pending)
  obj := c.registry.@getObject@(present(str(typ)), present(str(name)))
  if obj == nil { return nil, nil, false }
  var parsed @AbstractType@
@@ -362,6 +436,7 @@ func (c *Checker) Files(typ, name string) (files []File, found bool) {
  c.require()
  c.countParse()
  c.registry.@parse@()
+ clear(c.pending)
  obj := c.registry.@getObject@(present(str(typ)), present(str(name)))
  if obj == nil { return nil, false }
  values := obj.@getFiles@()

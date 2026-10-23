@@ -1,0 +1,3 @@
+package main
+import lint "zabaplint"
+func outline(files []lint.File, config string){var c lint.Checker;c.Prime(files,nil,config);c.Tree("CLAS","ZCL_OSD_ADT_URI")}

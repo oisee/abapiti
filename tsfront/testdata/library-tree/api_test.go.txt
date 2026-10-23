@@ -84,3 +84,36 @@ func TestConcurrentReaders(t *testing.T){
  for _,checker:=range []*lint.Checker{c,other}{wg.Go(func(){for i:=0;i<3;i++{checker.Tree("CLAS","ZOUTLINE");checker.CheckObject("PROG","ZBAD")}})}
  wg.Wait()
 }
+
+func TestTreeOf(t *testing.T){
+ c:=prime(t)
+ for _,q:=range [][2]string{{"CLAS","ZOUTLINE"},{"INTF","ZOUTLINE"},{"PROG","ZOUTLINE"},{"PROG","ZBAD"},{"PROG","ZEMPTY"},{"PROG","ZPRAGMA"},{"DEVC","ZOTHER"}}{
+  files,found:=c.Files(q[0],q[1]);if !found{t.Fatal(q)}
+  want,_:=c.Tree(q[0],q[1])
+  got,found:=lint.TreeOfWithConfig(files,q[0],q[1],`{"syntax":{"version":"open-abap","errorNamespace":"."},"rules":{"parser_error":true,"check_syntax":true}}`)
+  if !found||!reflect.DeepEqual(got,want){t.Fatalf("TreeOf %v differs",q)}
+  defaults:=new(lint.Checker);defaults.Prime(files,nil,"{}")
+  defaultTree,_:=defaults.Tree(q[0],q[1]);got,found=lint.TreeOf(files,q[0],q[1])
+  if !found||!reflect.DeepEqual(got,defaultTree){t.Fatalf("default TreeOf %v differs",q)}
+ }
+ if files,found:=lint.TreeOf(nil,"CLAS","MISSING");files!=nil||found{t.Fatal(files,found)}
+ // INCLUDE/macro definitions outside the supplied files cannot be expanded.
+ var wg sync.WaitGroup
+ for range 2{wg.Go(func(){for range 3{lint.TreeOf([]lint.File{{Filename:"zmini.prog.abap",Raw:"REPORT zmini."}},"PROG","ZMINI")}})};wg.Wait()
+}
+
+func TestTreeOfCrossIncludeMacros(t *testing.T){
+ files:=[]lint.File{
+  {Filename:"zmain.prog.abap",Raw:"REPORT zmain.\nINCLUDE zmacro.\nINCLUDE zuse."},
+  {Filename:"zmacro.prog.abap",Raw:"DEFINE hello.\nWRITE 'x'.\nEND-OF-DEFINITION."},
+  {Filename:"zuse.prog.abap",Raw:"hello."},
+ }
+ for _,name:=range []string{"zmacro","zuse"}{files=append(files,lint.File{Filename:name+".prog.xml",Raw:`<abapGit><asx:abap xmlns:asx="http://www.sap.com/abapxml" version="1.0"><asx:values><PROGDIR><SUBC>I</SUBC></PROGDIR></asx:values></asx:abap></abapGit>`})}
+ var c lint.Checker;c.Prime(files,nil,"{}")
+ want,_:=c.Tree("PROG","ZUSE")
+ got,found:=lint.TreeOf(files,"PROG","ZUSE")
+ if !found||!reflect.DeepEqual(got,want)||got[0].Statements[0].Kind!="MacroCall"{t.Fatal("supplied cross-include macros differ",got,want)}
+ own,_:=c.Files("PROG","ZUSE")
+ isolated,found:=lint.TreeOf(own,"PROG","ZUSE")
+ if !found||isolated[0].Statements[0].Kind!="Unknown"{t.Fatal("external macro unexpectedly expanded",isolated)}
+}

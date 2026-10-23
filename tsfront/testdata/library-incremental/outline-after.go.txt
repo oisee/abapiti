@@ -1,0 +1,3 @@
+package main
+import lint "zabaplint"
+func outline(files []lint.File, config string){lint.TreeOfWithConfig(files,"CLAS","ZCL_OSD_ADT_URI",config)}
